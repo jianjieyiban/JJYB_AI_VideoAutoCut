@@ -45,13 +45,13 @@
     "enable_gtts": false,
     "gtts_lang": "zh-CN",
     "enable_voice_clone": true,
-    "voice_clone_model_path": "D:/Users/LW/voice_clone-0.1.1/checkpoints_v2",
-    "voice_clone_executable_path": "D:/Users/LW/voice_clone-0.1.1/voice_clone.exe",
+    "voice_clone_model_path": "",
+    "voice_clone_executable_path": "",
     "voice_pro_enabled": true,
-    "voice_pro_root": "F:/Users/LW/voice-pro-3.1.4",
-    "voice_pro_python_exe": "F:/Users/LW/voice-pro-3.1.4/installer_files/env/python.exe",
+    "voice_pro_root": "",
+    "voice_pro_python_exe": "",
     "voice_pro_tts_script": "voicepro_tts_cli.py",
-    "default_tts": "edge"
+    "default_tts": "pyttsx3"
   },
   "proxy": {
     "use_proxy": false,

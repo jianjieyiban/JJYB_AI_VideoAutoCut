@@ -2245,7 +2245,7 @@
     <script src="/static/js/common.js"></script>
     <script>
         let selectedVoice = 'zh-CN-XiaoxiaoNeural';
-        let selectedEngine = 'edge-tts'; // 默认选择Edge-TTS
+        let selectedEngine = 'pyttsx3'; // 默认选择pyttsx3
         let cloneAudioFile = null;
 
         function selectEngine(engine, element) {
@@ -3393,7 +3393,7 @@
                 const pitchEl = document.getElementById('pitch');
                 const volumeEl = document.getElementById('volume');
                 const prefs = {
-                    engine: selectedEngine || 'edge-tts',
+                    engine: selectedEngine || 'pyttsx3',
                     voice: selectedVoice || 'zh-CN-XiaoxiaoNeural',
                     rate: rateEl ? rateEl.value : null,
                     pitch: pitchEl ? pitchEl.value : null,
@@ -3525,7 +3525,7 @@
                 return;
             }
 
-            const engine = (selectedEngine || 'edge-tts').toLowerCase();
+            const engine = (selectedEngine || 'pyttsx3').toLowerCase();
             Notification.info('正在生成试听音频...');
 
             try {
@@ -3629,14 +3629,15 @@
             const len = trimmed.length;
             const estSeconds = Math.max(1, Math.round(len / 4));
             const engineLabelMap = {
-                'edge-tts': 'Edge-TTS（推荐）',
+                'pyttsx3': '本地离线引擎（推荐）',
+                'edge-tts': 'Edge-TTS（在线）',
                 'azure-tts': 'Azure TTS',
                 'azure': 'Azure TTS',
                 'voice-clone': '本地克隆音色',
                 'voice-pro': 'Voice-Pro 外部引擎',
                 'gtts': 'Google TTS'
             };
-            const engineLabel = engineLabelMap[selectedEngine] || selectedEngine || 'Edge-TTS（推荐）';
+            const engineLabel = engineLabelMap[selectedEngine] || selectedEngine || '本地离线引擎（推荐）';
             const rateVal = document.getElementById('rate').value;
             const pitchVal = document.getElementById('pitch').value;
             const volumeVal = document.getElementById('volume').value;
@@ -3696,7 +3697,7 @@
             }
             
             // 规范化引擎标识
-            let engine = selectedEngine || 'edge-tts';
+            let engine = selectedEngine || 'pyttsx3';
             if (engine === 'azure-tts') {
                 engine = 'azure';
             }
@@ -3957,7 +3958,7 @@
                 Notification.warning('请先选择音色');
                 return;
             }
-            let engine = selectedEngine || 'edge-tts';
+            let engine = selectedEngine || 'pyttsx3';
             if (engine === 'azure-tts') {
                 engine = 'azure';
             }

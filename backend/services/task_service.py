@@ -688,57 +688,34 @@ class TaskService:
             text = data.get('text') or ''
             voice = data.get('voice', 'zh-CN-XiaoxiaoNeural')
             
-            # 回退链路：edge-tts -> gTTS -> pyttsx3
+            # 统一使用本地 pyttsx3 离线引擎，忽略在线TTS请求
+            engine_req = ''
+            try:
+                engine_req = (data.get('engine') or '').strip().lower()
+            except Exception:
+                engine_req = ''
+
+            if engine_req and engine_req not in ('pyttsx3', 'local', 'offline'):
+                logger.warning(
+                    f"TTS 任务 {task_id} 请求在线引擎 {engine_req}，当前版本仅支持本地 pyttsx3，将自动切换为离线引擎。"
+                )
+
             ok = False
             try:
                 ok = tts_engine.synthesize(
                     text=text,
                     output_path=str(out_path),
-                    engine='edge-tts',
+                    engine='pyttsx3',
                     voice=voice,
                     rate='+0%',
                     volume='+0%'
                 )
-            except Exception:
+            except Exception as e:
+                logger.error(f'❌ 本地 pyttsx3 合成失败: {e}', exc_info=True)
                 ok = False
-            if not ok:
-                # 语言推断
-                lang = 'zh-CN'
-                try:
-                    if isinstance(voice, str) and '-' in voice:
-                        prefix = voice.split('-', 1)[0].lower()
-                        if prefix in ('en', 'enus', 'en-us'):
-                            lang = 'en'
-                        elif prefix in ('ja', 'ja-jp'):
-                            lang = 'ja'
-                        elif prefix in ('ko', 'ko-kr'):
-                            lang = 'ko'
-                except Exception:
-                    pass
-                try:
-                    ok = tts_engine.synthesize(
-                        text=text,
-                        output_path=str(out_path),
-                        engine='gtts',
-                        lang=lang,
-                        slow=False
-                    )
-                except Exception:
-                    ok = False
-            if not ok:
-                try:
-                    ok = tts_engine.synthesize(
-                        text=text,
-                        output_path=str(out_path),
-                        engine='pyttsx3',
-                        rate='+0%',
-                        volume='+0%'
-                    )
-                except Exception:
-                    ok = False
             
             if not ok or not out_path.exists():
-                raise RuntimeError('TTS 合成失败')
+                raise RuntimeError('TTS 合成失败（本地 pyttsx3）')
             
             self.db_manager.update_task_status(task_id, 'completed', output_data={'output_path': str(out_path)})
             self.socketio.emit('task_status', {'task_id': task_id, 'status': 'completed'})

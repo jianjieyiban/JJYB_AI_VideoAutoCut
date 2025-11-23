@@ -68,7 +68,7 @@ class AutoClipController:
                     "llm_temperature": 0.7,
                     
                     # TTS配置
-                    "tts_provider": "edge-tts",
+                    "tts_provider": "pyttsx3",
                     "tts_voice": "zh-CN-XiaoxiaoNeural",
                     "tts_rate": 1.0,
                     
@@ -121,9 +121,7 @@ class AutoClipController:
             logger.info("✅ ScriptGenerator初始化完成")
             
             # 3. TTS引擎
-            self.tts_engine = TTSEngine(
-                default_engine=self.config.get('tts_provider', 'edge-tts')
-            )
+            self.tts_engine = TTSEngine()
             logger.info("✅ TTSEngine初始化完成")
             
             # 4. 视频剪辑器
@@ -355,7 +353,7 @@ class AutoClipController:
             ok = self.tts_engine.synthesize(
                 text=text,
                 output_path=str(audio_path),
-                engine=self.config.get('tts_provider', None),
+                engine=None,
                 voice=self.config.get('tts_voice', 'zh-CN-XiaoxiaoNeural')
             )
             if not ok or not audio_path.exists():
@@ -571,7 +569,7 @@ if __name__ == '__main__':
         'llm_api_key': 'sk-xxx',
         'llm_base_url': 'https://api.openai.com/v1',
         'llm_model': 'gpt-4-vision-preview',
-        'tts_provider': 'edge-tts',
+        'tts_provider': 'pyttsx3',
         'tts_voice': 'zh-CN-XiaoxiaoNeural',
         'output_dir': './output',
         'temp_dir': './temp'

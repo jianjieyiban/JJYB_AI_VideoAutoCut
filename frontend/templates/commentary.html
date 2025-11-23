@@ -2296,7 +2296,7 @@
             }
         }
 
-        let selectedTTSEngine = 'edge-tts'; // 默认Edge-TTS
+        let selectedTTSEngine = 'pyttsx3'; // 默认Edge-TTS
         let selectedCommentaryVoice = 'zh-CN-XiaoxiaoNeural'; // 默认晓晓
 
         // 选择TTS引擎（原创解说）
@@ -2350,7 +2350,7 @@
                 return;
             }
 
-            const engine = selectedTTSEngine || 'edge-tts';
+            const engine = selectedTTSEngine || 'pyttsx3';
             Notification.info('正在生成试听音频...');
 
             try {
@@ -3983,7 +3983,7 @@
                         video_path: videoPath,
                         script: script,
                         voice: voice,
-                        tts_engine: selectedTTSEngine || 'edge-tts',
+                        tts_engine: selectedTTSEngine || 'pyttsx3',
                         auto_subtitle: autoSubtitle,
                         auto_bgm: autoBGM,
                         style: scriptStyle,
@@ -4022,7 +4022,7 @@
                         video_path: videoPath,
                         config: {
                             voice: voice,
-                            tts_engine: selectedTTSEngine || 'edge-tts',
+                            tts_engine: selectedTTSEngine || 'pyttsx3',
                             auto_subtitle: autoSubtitle,
                             auto_bgm: autoBGM,
                             style: scriptStyle,

@@ -120,8 +120,8 @@ class TTSModelConfig:
     voice_pro_python_exe: str = ""
     voice_pro_tts_script: str = ""
 
-    # 默认使用的TTS
-    default_tts: str = "edge"  # edge/gtts/azure/voice_clone
+    # 默认使用的TTS（当前版本默认使用本地 pyttsx3 离线引擎）
+    default_tts: str = "pyttsx3"  # pyttsx3/edge/gtts/azure/voice_clone
 
 
 @dataclass
@@ -438,6 +438,9 @@ class AIConfigManager:
         tts_type = tts_type or self.tts_model_config.default_tts
         
         config_map = {
+            'pyttsx3': {
+                'enabled': True
+            },
             'azure': {
                 'key': self.tts_model_config.azure_tts_key,
                 'region': self.tts_model_config.azure_tts_region

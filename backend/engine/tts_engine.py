@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 class TTSEngine:
     """TTS引擎 - 完整版"""
     
-    def __init__(self, default_engine: str = 'edge-tts'):
+    def __init__(self, default_engine: str = 'pyttsx3'):
         """
         初始化TTS引擎
         
