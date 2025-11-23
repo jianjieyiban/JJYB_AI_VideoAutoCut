@@ -73,13 +73,14 @@ http://localhost:5000
 - ✅ **Gemini Vision** (Google)
 - ✅ **Claude Vision** (Anthropic)
 
-### 语音TTS模型（4种）
+### 语音TTS模型（5种）
+- ✅ **pyttsx3** - 本地离线引擎（当前版本原创解说 / AI 配音默认使用）
 - ✅ **Edge-TTS** - 免费推荐（23+音色）
 - ✅ **Google TTS (gTTS)** - 免费多语言
 - ✅ **Azure TTS** - 专业级（付费）
 - ✅ **Voice Clone** - 本地语音克隆
-  
-> ℹ️ 内置回退：已集成 pyttsx3（离线），在网络受限时会自动回退以保证配音可用。
+
+> ℹ️ 当前版本中，原创解说和 AI 配音主流程默认使用本地 pyttsx3 离线引擎；Edge-TTS / gTTS / Azure / Voice Clone 作为可选扩展，需要在设置中单独启用或配置。
 
 ---
 
@@ -170,7 +171,7 @@ JJYB_AI智剪/
 - **目标检测**: Ultralytics (YOLOv8)
 - **音频处理**: Librosa, SoundFile, Pydub
 - **语音识别**: Whisper / faster-whisper（当前实现）
-- **语音合成**: Edge-TTS, gTTS, Azure TTS
+- **语音合成**: pyttsx3（离线默认）+ Edge-TTS / gTTS / Azure TTS
 - **语音克隆**: Voice Clone (本地部署)
 
 ### 大语言模型（9种）
@@ -203,7 +204,7 @@ JJYB_AI智剪/
 **可选配置**：
 2. **视觉分析模型API**（用于视频内容理解）
    - 推荐：通义千问VL
-3. **TTS语音服务**（已内置Edge-TTS免费服务）
+3. **TTS语音服务**（默认使用本地 pyttsx3；Edge-TTS 等在线服务需在设置中单独配置）
    - 专业级：Azure TTS（需付费）
    - 本地克隆：Voice Clone
 
@@ -247,6 +248,7 @@ JJYB_AI智剪/
 **使用流程**：
 1. 输入文本内容
 2. 选择TTS引擎：
+   - pyttsx3（本地离线，当前版本默认用于解说/配音）
    - Edge-TTS（推荐，免费，23+音色）
    - Google TTS（免费，100+语言）
    - Azure TTS（专业级，需付费）

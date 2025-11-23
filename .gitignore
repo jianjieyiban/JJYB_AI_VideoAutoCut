@@ -7,3 +7,14 @@ uploads/*
 temp/*
 !temp/.gitkeep
 
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+*.log
+*.sqlite3
+*.db-journal
+.venv/
+venv/

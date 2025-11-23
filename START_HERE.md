@@ -44,7 +44,8 @@ URL: http://localhost:5000/
 ```
 URL: http://localhost:5000/voiceover
 功能: 多引擎TTS、音色库、声音克隆
-支持: Edge-TTS、gTTS、voice_clone
+默认: 本地 pyttsx3 离线引擎（当前版本原创解说/配音默认使用）
+可选: Edge-TTS、gTTS、Voice Clone 等在线/高级引擎
 ```
 
 ### **⭐ 原创解说**
@@ -174,7 +175,7 @@ python frontend/app.py  (启动)
 ### **3. 完整AI流程** ✅
 - 视觉理解 (Qwen2-VL等)
 - LLM文案生成 (GPT-4/Claude/DeepSeek)
-- TTS配音 (Edge-TTS/gTTS/voice_clone)
+- TTS配音 (默认本地 pyttsx3，可选 Edge-TTS/gTTS/Voice Clone 等)
 - 视频合成 (FFmpeg + MoviePy)
 
 ### **4. 专业视频处理** ✅
