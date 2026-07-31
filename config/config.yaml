@@ -1,0 +1,37 @@
+# JJYB_AI智剪 配置文件
+
+app:
+  name: JJYB_AI智剪
+  version: 2.0.0
+  debug: false
+  host: 0.0.0.0
+  port: 5000
+
+database:
+  type: sqlite
+  path: database/jjyb_ai.db
+
+ffmpeg:
+  path: ffmpeg
+  threads: 4
+
+ai:
+  device: cuda  # cuda or cpu
+  models_dir: models
+
+tts:
+  default_engine: pyttsx3
+  voice: zh-CN-XiaoxiaoNeural
+  rate: +0%
+  volume: +0%
+
+asr:
+  default_engine: whisper
+  model: base
+  language: zh
+
+logging:
+  level: INFO
+  file: logs/app.log
+  max_size: 10485760  # 10MB
+  backup_count: 5

@@ -66,14 +66,3 @@ psutil>=5.9.0
 # TTS>=0.22.0                    # Coqui TTS
 # transnetv2                     # 深度分镜（环境兼容时启用，否则使用 OpenCV 方案）
 # azure-cognitiveservices-speech>=1.30.0  # Azure TTS 与 Custom Voice
-
-# ==================== 安装说明 ====================
-# 1. 主程序安装：py -3 -m pip install -r requirements.txt
-# 2. FFmpeg/ffprobe 必须单独安装并加入 PATH。
-#    验证：ffmpeg -version 和 ffprobe -version 均可正常输出。
-# 3. IndexTTS2 不要混装进主 Python 环境；使用 Python 3.10 和
-#    models/index-tts/pyproject.toml 中定义的独立环境。
-# 4. Fish Audio、MiniMax、火山引擎、Azure Custom Voice
-#    均需要在系统设置中提供服务凭据。
-# 5. NVIDIA CUDA 环境可加速部分深度学习任务（分镜、YOLO、Whisper），
-#    请按 PyTorch 官方指引安装对应 CUDA 版本的 torch 包。
