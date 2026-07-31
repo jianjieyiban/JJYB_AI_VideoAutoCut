@@ -12,7 +12,6 @@ from typing import Dict, List
 
 class NarrationStyles:
     """12种解说风格定义 - 每种风格都是完整的人格指令"""
-    
     STYLES = {
         'default': {'name': '默认', 'desc': '标准解说风格，适合大多数内容', 'role': '你是一名资深短视频解说员，语言流畅自然，节奏感强。', 'hook': '直接抛出核心冲突或悬念，吸引观众注意。', 'structure': '按时间顺序推进，开头-发展-高潮-结尾。', 'tone': '客观、清晰、有节奏感', 'high_freq_words': ['接下来', '没想到', '原来', '这时'], 'emotion': '中性偏积极'},
         'colloquial': {'name': '口语化', 'desc': '像朋友聊天一样自然，亲切感强', 'role': '你是一名接地气的解说员，像和朋友聊天一样讲故事，多用口语和俚语。', 'hook': '用"我跟你说啊"、"你猜怎么着"等口语化开头拉近距离。', 'structure': '生活化叙述，多用反问和感叹，节奏轻松。', 'tone': '亲切、自然、接地气', 'high_freq_words': ['我跟你说', '你猜怎么着', '厉害了', '老铁们'], 'emotion': '轻松活泼'},
@@ -27,11 +26,11 @@ class NarrationStyles:
         'film_review': {'name': '影视解说', 'desc': '专业影视解说，剧情梳理+点评', 'role': '你是一名资深影视解说员，擅长梳理复杂剧情，点评精到，节奏感强。', 'hook': '用"注意看"、"这个男人/女人"等经典影视解说开头。', 'structure': '开头悬念-剧情梳理-高潮解析-主题升华。', 'tone': '专业、紧凑、有张力', 'high_freq_words': ['注意看', '这个男人', '没想到', '原来'], 'emotion': '紧张悬疑'},
         'short_drama': {'name': '短剧漫剪', 'desc': '短剧风格，节奏快，反转多', 'role': '你是一名短剧解说员，擅长快节奏叙事和密集反转，每30秒一个钩子。', 'hook': '用强冲突开头，直接进入矛盾核心。', 'structure': '冲突-反转-新冲突-大反转，节奏飞快。', 'tone': '快节奏、强冲突、密集反转', 'high_freq_words': ['结果', '没想到', '更离谱的是', '最终'], 'emotion': '紧张刺激'}
     }
-    
+
     @classmethod
     def get_style(cls, style_key: str) -> Dict:
         return cls.STYLES.get(style_key, cls.STYLES['default'])
-    
+
     @classmethod
     def get_style_prompt(cls, style_key: str) -> str:
         style = cls.get_style(style_key)
@@ -43,32 +42,54 @@ class NarrationStyles:
 - 高频词汇参考：{'、'.join(style['high_freq_words'])}
 - 情感基调：{style['emotion']}
 """
-    
+
     @classmethod
     def get_all_styles(cls) -> Dict[str, Dict]:
         return cls.STYLES
-    
+
     @classmethod
     def get_style_names(cls) -> Dict[str, str]:
         return {k: v['name'] for k, v in cls.STYLES.items()}
-    
+
     @classmethod
     def get_style_list(cls) -> List[Dict]:
         return [{'key': k, 'name': v['name'], 'desc': v['desc']} for k, v in cls.STYLES.items()]
 
 
 class StoryStructure:
-    """六段式故事结构约束"""
-    
+    """六段式故事结构约束 - 融入JJYB-ZJ的剧情重构策略"""
     SIX_PART_STRUCTURE = """
 ## 六段式故事结构约束（必须严格遵循）
 
 ### 第1段：开头钩子（0-3秒，约15字）
+- 用强冲突、悬念或反差立即抓住注意力
+- 必须使用指定的开头钩子类型
+- 禁止平淡铺垫，必须开门见山
+
 ### 第2段：背景设定（3-15秒，约45字）
+- 快速交代故事背景和人物关系
+- 只说必要信息，避免冗长铺垫
+- 用画面感强的具体描述代替抽象说明
+
 ### 第3段：冲突升级（15-30秒，约45字）
+- 主要矛盾逐步升级
+- 每个信息点都推进剧情
+- 制造观众的情绪起伏
+
 ### 第4段：高潮爆发（30-45秒，约45字）
+- 全片最精彩的核心时刻
+- 释放前面积累的情绪张力
+- 关键画面留给原声或留白
+
 ### 第5段：反转/解决（45-55秒，约30字）
+- 揭示真相或解决冲突
+- 如有反转，必须出乎意料但合乎逻辑
+- 情感升华或主题点题
+
 ### 第6段：结尾互动（55-60秒，约15字）
+- 呼应开头，强化记忆点
+- 引导观众互动（点赞/评论/关注）
+- 禁止生硬广告，自然收尾
 
 ### 剧情重构策略（适用于长视频短解说）
 - 高潮片段前置：把最燃的画面放在开头3秒
@@ -76,12 +97,26 @@ class StoryStructure:
 - 推进剧情：按时间顺序快速推进
 - 最终解释：结尾揭示深层含义
 """
-    
     HOOK_TEMPLATES = """
 ## 四种开头钩子模板（选择其一使用）
-### 1. 震惊式  ### 2. 危机式  ### 3. 反转式  ### 4. 提问式
+
+### 1. 震惊式
+模板：[震撼画面描述] + [反常现象] + [疑问]
+示例：注意看，这个男人正在做一件所有人都觉得疯狂的事——他居然...
+
+### 2. 危机式
+模板：[危机信号] + [紧迫感] + [悬念]
+示例：只剩最后30秒，如果他想不出办法，一切都将化为乌有...
+
+### 3. 反转式
+模板：[表面现象] + [转折词] + [真相暗示]
+示例：所有人都以为这只是个普通的日子，然而接下来发生的事...
+
+### 4. 提问式
+模板：[反常问题] + [悬念留白]
+示例：你敢相信吗？人的一生其实会死三次，第一次是...
 """
-    
+
     @classmethod
     def get_structure_prompt(cls) -> str:
         return cls.SIX_PART_STRUCTURE + "\n" + cls.HOOK_TEMPLATES
@@ -89,15 +124,23 @@ class StoryStructure:
 
 class ScriptPurifier:
     """AI提纯文案 - 自动去除非解说词内容"""
-    
     PURIFY_PROMPT = """## 文案提纯任务
 
 你是一名专业的短视频文案编辑，需要对接下来的原始文案进行提纯。
 
 ### 提纯规则：
 1. **保留**：所有解说词、旁白、对白描述
-2. **删除**：章节标题、镜头标注、时间戳标记、导演备注、重复描述
-3. **优化**：修复断句、统一标点、保持口语化、确保上下文连贯
+2. **删除**：
+   - 章节标题（如"第一章"、"场景一"、"片段1"等）
+   - 镜头标注（如"镜头切换"、"特写"、"远景"等）
+   - 时间戳标记（如[00:00-00:05]、[场景1]等）
+   - 导演备注、编剧批注
+   - 重复的描述、过度的修饰
+3. **优化**：
+   - 修复断句不完整的问题
+   - 统一标点符号
+   - 保持口语化表达
+   - 确保上下文连贯
 
 ### 输出格式：
 直接输出提纯后的纯解说文案，不要输出任何说明、标记或元信息。
@@ -106,7 +149,7 @@ class ScriptPurifier:
 {raw_text}
 
 ### 提纯后的文案："""
-    
+
     @classmethod
     def get_purify_prompt(cls, raw_text: str) -> str:
         return cls.PURIFY_PROMPT.format(raw_text=raw_text)
@@ -114,13 +157,20 @@ class ScriptPurifier:
 
 class CoverageAuditor:
     """覆盖审计 - 检查文案与视频的时间覆盖情况"""
-    
     AUDIT_PROMPT = """## 音画覆盖审计任务
 
 你是一名专业的音画对齐审计员，需要检查解说文案与视频时间轴的覆盖情况。
 
 ### 审计维度：
-1. **占位命中率** 2. **时间断层** 3. **尾部覆盖** 4. **重复匹配**
+1. **占位命中率**：有多少文案没有对应的视频画面
+2. **时间断层**：文案时间轴是否有大段空白
+3. **尾部覆盖**：视频最后20%时长是否有文案覆盖
+4. **重复匹配**：是否有多个文案匹配同一场景
+
+### 输入数据：
+- 视频总时长：{duration}秒
+- 场景列表：{scenes}
+- 文案时间戳：{narrations}
 
 ### 输出格式（JSON）：
 {{
@@ -132,7 +182,7 @@ class CoverageAuditor:
   "overall_score": 0.0,
   "suggestions": ["改进建议1", "改进建议2"]
 }}"""
-    
+
     @classmethod
     def get_audit_prompt(cls, duration: float, scenes: list, narrations: list) -> str:
         return cls.AUDIT_PROMPT.format(duration=duration, scenes=str(scenes), narrations=str(narrations))
