@@ -1,0 +1,79 @@
+# JJYB_AI智剪 v3.0 - 主程序依赖
+# 更新日期：2026-07-31
+#
+# 主程序推荐 Python 3.10–3.13。FFmpeg/ffprobe 是系统级依赖，
+# 不会通过 pip 自动安装。IndexTTS2 使用独立 Python 3.10 环境，
+# 其依赖请参照 models/index-tts/pyproject.toml。
+#
+# 三类模型配置（文本LLM / 视觉VLM / 图像生成）完全独立，互不干扰。
+# 图像生成模型仅用于 AI 封面生成，不与文本/视觉模型共享 API 配置。
+
+# ==================== Web 与桌面应用 ====================
+flask>=3.0.0
+flask-socketio>=5.3.0
+flask-cors>=4.0.0
+python-socketio>=5.10.0
+python-engineio>=4.9.0
+pywebview>=4.4.1
+werkzeug>=3.0.0
+
+# ==================== 视频与图像处理 ====================
+ffmpeg-python>=0.2.0
+moviepy>=1.0.3
+opencv-python>=4.8.0
+scenedetect>=0.6.4
+pysrt>=1.1.2
+imageio>=2.31.0
+imageio-ffmpeg>=0.4.9
+pillow>=10.0.0
+
+# ==================== 音频处理与基础 TTS ====================
+librosa>=0.10.0
+soundfile>=0.12.0
+pydub>=0.25.1
+edge-tts>=7.2.8
+gTTS>=2.3.2
+pyttsx3>=2.90
+
+# ==================== AI 与深度学习 ====================
+# 请按 https://pytorch.org/ 为 CPU 或 CUDA 环境选择匹配的 PyTorch 安装包。
+torch>=2.0.0
+torchvision>=0.15.0
+torchaudio>=2.0.0
+ultralytics>=8.0.0
+faster-whisper>=1.0.0
+
+# ==================== 云端模型 SDK ====================
+openai>=1.0.0
+anthropic>=0.7.0
+google-generativeai>=0.7.0
+dashscope>=1.15.0
+zhipuai>=2.0.0
+requests>=2.31.0
+
+# ==================== 数据处理与工具 ====================
+numpy>=1.24.0
+pandas>=2.0.0
+scipy>=1.11.0
+pyyaml>=6.0.0
+python-multipart>=0.0.6
+loguru>=0.7.0
+psutil>=5.9.0
+
+# ==================== 可选能力（按需安装） ====================
+# openai-whisper>=20231117       # OpenAI Whisper ASR（与 faster-whisper 二选一）
+# funasr>=1.1.0                  # 阿里 FunASR ASR
+# TTS>=0.22.0                    # Coqui TTS
+# transnetv2                     # 深度分镜（环境兼容时启用，否则使用 OpenCV 方案）
+# azure-cognitiveservices-speech>=1.30.0  # Azure TTS 与 Custom Voice
+
+# ==================== 安装说明 ====================
+# 1. 主程序安装：py -3 -m pip install -r requirements.txt
+# 2. FFmpeg/ffprobe 必须单独安装并加入 PATH。
+#    验证：ffmpeg -version 和 ffprobe -version 均可正常输出。
+# 3. IndexTTS2 不要混装进主 Python 环境；使用 Python 3.10 和
+#    models/index-tts/pyproject.toml 中定义的独立环境。
+# 4. Fish Audio、MiniMax、火山引擎、Azure Custom Voice
+#    均需要在系统设置中提供服务凭据。
+# 5. NVIDIA CUDA 环境可加速部分深度学习任务（分镜、YOLO、Whisper），
+#    请按 PyTorch 官方指引安装对应 CUDA 版本的 torch 包。

@@ -1,0 +1,69 @@
+# ===== 运行时数据与日志 =====
+logs/*
+!logs/.gitkeep
+output/*
+!output/.gitkeep
+uploads/*
+!uploads/.gitkeep
+temp/*
+!temp/.gitkeep
+
+# ===== 本地敏感配置与用户数据 =====
+config/ai_config.json
+database/*.db
+database/*.db-*
+*.sqlite
+*.sqlite3
+.env
+.env.*
+!.env.example
+
+# ===== Python / Notebook 缓存 =====
+__pycache__/
+*.py[cod]
+.dbg/
+*$py.class
+.ipynb_checkpoints/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ===== 虚拟环境、构建产物与编辑器文件 =====
+.venv/
+venv/
+env/
+build/
+dist/
+*.egg-info/
+.vscode/
+.writerHelper/
+.cursor/
+.idea/
+
+# ===== 本地模型权重、模型缓存与下载包 =====
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.t7
+*.bin
+*.onnx
+*.gguf
+models/index-tts/checkpoints/
+models/index-tts/source_archive/
+models/index-tts/checkpoints/**/*
+
+# ===== 大型二进制资源（Release 包提供，不进 git） =====
+resource/imageMagick/*.exe
+resource/models/transnetv2-weights/**/*.pth
+resource/models/transnetv2-weights/**/*.pb
+resource/models/transnetv2-weights/variables/*
+
+# ===== 操作系统与临时文件 =====
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+*.bak
+*.orig
+*.swp
