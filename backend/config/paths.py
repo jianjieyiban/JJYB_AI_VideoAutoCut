@@ -193,16 +193,16 @@ FRONTEND_TEMPLATES_DIR = FRONTEND_DIR / 'templates'
 def get_font_path(font_name: str = None) -> str:
     """
     获取字体文件路径
-    
+
     Args:
         font_name: 字体文件名，如 'wryh.ttf'，None则返回默认字体
-    
+
     Returns:
         str: 字体文件的绝对路径
     """
     if font_name is None:
         return DEFAULT_FONT
-    
+
     font_path = FONTS_DIR / font_name
     if font_path.exists():
         return str(font_path)
@@ -210,27 +210,30 @@ def get_font_path(font_name: str = None) -> str:
         # 如果指定字体不存在，返回默认字体
         return DEFAULT_FONT
 
+
 def get_subtitle_style(style_name: str = 'default') -> dict:
     """
     获取字幕样式配置
-    
+
     Args:
         style_name: 样式名称 ('default', 'large', 'small', 'colorful')
-    
+
     Returns:
         dict: 字幕样式配置字典
     """
     return SUBTITLE_STYLES.get(style_name, SUBTITLE_STYLES['default']).copy()
 
+
 def ensure_temp_dir() -> Path:
     """
     确保临时目录存在并返回路径
-    
+
     Returns:
         Path: 临时目录路径
     """
     TEMP_DIR.mkdir(exist_ok=True)
     return TEMP_DIR
+
 
 def clean_temp_dir():
     """递归清理临时目录中的普通文件，保留目录结构并返回清理统计。"""
@@ -250,13 +253,14 @@ def clean_temp_dir():
         pass
     return stats
 
+
 def get_output_path(filename: str) -> Path:
     """
     获取输出文件路径
-    
+
     Args:
         filename: 输出文件名
-    
+
     Returns:
         Path: 输出文件的完整路径
     """
@@ -267,7 +271,7 @@ def get_output_path(filename: str) -> Path:
 def validate_paths():
     """
     验证所有关键路径是否存在
-    
+
     Returns:
         dict: 验证结果
     """
@@ -279,7 +283,7 @@ def validate_paths():
         '临时目录': TEMP_DIR.exists(),
         '输出目录': OUTPUTS_DIR.exists()
     }
-    
+
     return results
 
 # ==================== 配置信息输出 ====================
@@ -309,8 +313,7 @@ def print_config():
 if __name__ == '__main__':
     # 测试配置
     print_config()
-    
+
     # 测试获取字体
     print(f"\n默认字体路径: {get_font_path()}")
     print(f"默认字幕样式: {get_subtitle_style('default')}")
-    
