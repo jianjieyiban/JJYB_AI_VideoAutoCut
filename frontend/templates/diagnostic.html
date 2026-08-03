@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系统诊断 - JJYB_AI智剪</title>
+    <!-- 主题同步：必须在其他样式之前加载，以避免主题闪烁 -->
+    <script src="{{ url_for('static', filename='js/theme-sync.js') }}"></script>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #667eea;
+            margin-bottom: 30px;
+            font-size: 32px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+        .test-section h2 {
+            color: #333;
+            font-size: 20px;
+            margin-bottom: 15px;
+        }
+        .test-result {
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-family: 'Consolas', monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 10px;
+            transition: transform 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 JJYB_AI智剪 系统诊断工具</h1>
+
+        <div class="test-section">
+            <h2>1. 后端服务连接测试</h2>
+            <button onclick="testBackendConnection()">测试后端连接</button>
+            <div id="backend-result" class="test-result info">等待测试...</div>
+        </div>
+
+        <div class="test-section">
+            <h2>2. API 配置端点测试</h2>
+            <button onclick="testAPIConfigGet()">测试 GET /api/settings/api-config</button>
+            <button onclick="testAPIConfigPost()">测试 POST /api/settings/api-config</button>
+            <div id="api-config-result" class="test-result info">等待测试...</div>
+        </div>
+
+        <div class="test-section">
+            <h2>3. 浏览器环境检查</h2>
+            <button onclick="checkBrowserEnv()">检查浏览器环境</button>
+            <div id="browser-result" class="test-result info">等待测试...</div>
+        </div>
+
+        <div class="test-section">
+            <h2>4. 清除浏览器缓存</h2>
+            <button onclick="clearCache()">清除缓存并刷新</button>
+            <div id="cache-result" class="test-result info">点击按钮清除缓存...</div>
+        </div>
+
+        <div class="test-section">
+            <h2>5. 完整诊断</h2>
+            <button onclick="runFullDiagnostic()">运行完整诊断</button>
+            <div id="full-result" class="test-result info">等待测试...</div>
+        </div>
+    </div>
+
+    <script>
+        // 测试后端连接
+        async function testBackendConnection() {
+            const resultEl = document.getElementById('backend-result');
+            resultEl.className = 'test-result info';
+            resultEl.textContent = '正在测试...';
+
+            try {
+                const startTime = Date.now();
+                const response = await fetch('/api/health', {
+                    method: 'GET',
+                    cache: 'no-cache'
+                });
+                const endTime = Date.now();
+                const duration = endTime - startTime;
+
+                if (response.ok) {
+                    const data = await response.json();
+                    resultEl.className = 'test-result success';
+                    resultEl.textContent = `✅ 后端连接成功！\n响应时间: ${duration}ms\n响应数据: ${JSON.stringify(data, null, 2)}`;
+                } else {
+                    resultEl.className = 'test-result error';
+                    resultEl.textContent = `❌ 后端响应异常\nHTTP 状态: ${response.status} ${response.statusText}`;
+                }
+            } catch (error) {
+                resultEl.className = 'test-result error';
+                resultEl.textContent = `❌ 连接失败\n错误信息: ${error.message}\n错误类型: ${error.name}`;
+            }
+        }
+
+        // 测试 GET /api/settings/api-config
+        async function testAPIConfigGet() {
+            const resultEl = document.getElementById('api-config-result');
+            resultEl.className = 'test-result info';
+            resultEl.textContent = '正在测试 GET 请求...';
+
+            try {
+                const response = await fetch('/api/settings/api-config', {
+                    method: 'GET',
+                    cache: 'no-cache'
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    resultEl.className = 'test-result success';
+                    resultEl.textContent = `✅ GET 请求成功！\n响应数据: ${JSON.stringify(data, null, 2)}`;
+                } else {
+                    resultEl.className = 'test-result error';
+                    resultEl.textContent = `❌ GET 请求失败\nHTTP 状态: ${response.status}`;
+                }
+            } catch (error) {
+                resultEl.className = 'test-result error';
+                resultEl.textContent = `❌ GET 请求异常\n错误: ${error.message}`;
+            }
+        }
+
+        // 测试 POST /api/settings/api-config
+        async function testAPIConfigPost() {
+            const resultEl = document.getElementById('api-config-result');
+            resultEl.className = 'test-result info';
+            resultEl.textContent = '正在测试 POST 请求...';
+
+            try {
+                const testData = {
+                    openai_api_key: 'test-diagnostic-key-' + Date.now()
+                };
+
+                const response = await fetch('/api/settings/api-config', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(testData),
+                    cache: 'no-cache'
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    resultEl.className = 'test-result success';
+                    resultEl.textContent = `✅ POST 请求成功！\n发送数据: ${JSON.stringify(testData, null, 2)}\n响应数据: ${JSON.stringify(data, null, 2)}`;
+                } else {
+                    resultEl.className = 'test-result error';
+                    resultEl.textContent = `❌ POST 请求失败\nHTTP 状态: ${response.status}`;
+                }
+            } catch (error) {
+                resultEl.className = 'test-result error';
+                resultEl.textContent = `❌ POST 请求异常\n错误: ${error.message}`;
+            }
+        }
+
+        // 检查浏览器环境
+        function checkBrowserEnv() {
+            const resultEl = document.getElementById('browser-result');
+            resultEl.className = 'test-result info';
+
+            const info = {
+                userAgent: navigator.userAgent,
+                language: navigator.language,
+                cookieEnabled: navigator.cookieEnabled,
+                onLine: navigator.onLine,
+                platform: navigator.platform,
+                screenResolution: `${screen.width}x${screen.height}`,
+                windowSize: `${window.innerWidth}x${window.innerHeight}`,
+                localStorage: typeof localStorage !== 'undefined',
+                sessionStorage: typeof sessionStorage !== 'undefined',
+                fetch: typeof fetch !== 'undefined',
+                Promise: typeof Promise !== 'undefined',
+                async: typeof async !== 'undefined'
+            };
+
+            resultEl.className = 'test-result success';
+            resultEl.textContent = `浏览器环境信息:\n${JSON.stringify(info, null, 2)}`;
+        }
+
+        // 清除缓存
+        function clearCache() {
+            const resultEl = document.getElementById('cache-result');
+            resultEl.className = 'test-result info';
+            resultEl.textContent = '正在清除缓存...';
+
+            try {
+                // 清除 localStorage
+                localStorage.clear();
+                // 清除 sessionStorage
+                sessionStorage.clear();
+
+                resultEl.className = 'test-result success';
+                resultEl.textContent = '✅ 缓存已清除！\n3秒后将刷新页面...';
+
+                setTimeout(() => {
+                    window.location.reload(true);
+                }, 3000);
+            } catch (error) {
+                resultEl.className = 'test-result error';
+                resultEl.textContent = `❌ 清除缓存失败\n错误: ${error.message}`;
+            }
+        }
+
+        // 运行完整诊断
+        async function runFullDiagnostic() {
+            const resultEl = document.getElementById('full-result');
+            resultEl.className = 'test-result info';
+            resultEl.textContent = '正在运行完整诊断...\n';
+
+            let report = '=== 完整诊断报告 ===\n\n';
+
+            // 1. 后端连接
+            report += '1. 后端连接测试:\n';
+            try {
+                const response = await fetch('/api/health', { cache: 'no-cache' });
+                if (response.ok) {
+                    report += '   ✅ 后端连接正常\n';
+                } else {
+                    report += `   ❌ 后端响应异常 (${response.status})\n`;
+                }
+            } catch (error) {
+                report += `   ❌ 后端连接失败: ${error.message}\n`;
+            }
+
+            // 2. API 配置端点
+            report += '\n2. API 配置端点测试:\n';
+            try {
+                const response = await fetch('/api/settings/api-config', { cache: 'no-cache' });
+                if (response.ok) {
+                    report += '   ✅ GET /api/settings/api-config 正常\n';
+                } else {
+                    report += `   ❌ GET 请求失败 (${response.status})\n`;
+                }
+            } catch (error) {
+                report += `   ❌ GET 请求异常: ${error.message}\n`;
+            }
+
+            // 3. 浏览器环境
+            report += '\n3. 浏览器环境:\n';
+            report += `   浏览器: ${navigator.userAgent.split(' ').pop()}\n`;
+            report += `   在线状态: ${navigator.onLine ? '在线' : '离线'}\n`;
+            report += `   Cookie: ${navigator.cookieEnabled ? '启用' : '禁用'}\n`;
+            report += `   LocalStorage: ${typeof localStorage !== 'undefined' ? '支持' : '不支持'}\n`;
+
+            // 4. 网络延迟
+            report += '\n4. 网络延迟测试:\n';
+            try {
+                const startTime = Date.now();
+                await fetch('/api/health', { cache: 'no-cache' });
+                const endTime = Date.now();
+                const latency = endTime - startTime;
+                report += `   延迟: ${latency}ms ${latency < 100 ? '(优秀)' : latency < 300 ? '(良好)' : '(较慢)'}\n`;
+            } catch (error) {
+                report += `   ❌ 延迟测试失败\n`;
+            }
+
+            report += '\n=== 诊断完成 ===';
+
+            resultEl.className = 'test-result success';
+            resultEl.textContent = report;
+        }
+
+        // 页面加载时自动运行完整诊断
+        window.addEventListener('load', () => {
+            console.log('诊断页面已加载');
+        });
+    </script>
+</body>
+</html>

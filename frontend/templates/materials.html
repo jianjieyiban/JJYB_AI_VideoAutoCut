@@ -1,0 +1,1256 @@
+{% extends "base.html" %}
+
+{% block title %}JJYB_AI智剪 - 素材库{% endblock %}
+
+{% block content %}
+<!-- 返回首页按钮 -->
+<div class="floating-actions left">
+    <button onclick="window.location.href='/'" style="padding: 10px 20px; background: rgba(255,255,255,0.9); color: #667eea; border: 2px solid #667eea; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+        <span>←</span>
+        <span>返回首页</span>
+    </button>
+</div>
+
+<!-- 快捷导航 -->
+<div class="floating-actions right">
+    <button onclick="window.location.href='/commentary'" style="padding: 8px 16px; background: rgba(255,255,255,0.9); color: #667eea; border: 2px solid #667eea; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600;">
+        🎙️ 原创解说
+    </button>
+    <button onclick="window.location.href='/remix'" style="padding: 8px 16px; background: rgba(255,255,255,0.9); color: #667eea; border: 2px solid #667eea; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600;">
+        ✂️ 混剪模式
+    </button>
+    <button onclick="window.location.href='/voiceover'" style="padding: 8px 16px; background: rgba(255,255,255,0.9); color: #667eea; border: 2px solid #667eea; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600;">
+        🔊 AI配音
+    </button>
+    <button onclick="window.location.href='/editor'" style="padding: 8px 16px; background: rgba(255,255,255,0.9); color: #667eea; border: 2px solid #667eea; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600;">
+        🎬 编辑器
+    </button>
+</div>
+
+<!-- 主内容区域 -->
+<div class="layui-row layui-col-space15" style="margin-top: 0; padding: 0 0 16px; display: flex; flex-direction: column;">
+
+    <!-- 素材统计 - 现代化卡片 -->
+    <div class="layui-col-md12" style="margin-bottom: 25px;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+            <!-- 视频素材卡片 -->
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 20px; padding: 30px; text-align: center; box-shadow: 0 8px 25px rgba(102,126,234,0.3); color: white; transition: all 0.3s;" onmouseover="this.style.transform='translateY(-8px)'" onmouseout="this.style.transform='translateY(0)'">
+                <div style="width: 80px; height: 80px; margin: 0 auto 20px; background: rgba(255,255,255,0.2); border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 40px;">🎬</div>
+                <h3 style="margin: 0 0 10px 0; font-size: 18px; font-weight: 700;">视频素材</h3>
+                <div style="font-size: 36px; font-weight: 900;" id="video-count">0</div>
+                <p style="margin: 10px 0 0 0; opacity: 0.9; font-size: 14px;">个视频文件</p>
+            </div>
+
+            <!-- 音频素材卡片 -->
+            <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border-radius: 20px; padding: 30px; text-align: center; box-shadow: 0 8px 25px rgba(240,147,251,0.3); color: white; transition: all 0.3s;" onmouseover="this.style.transform='translateY(-8px)'" onmouseout="this.style.transform='translateY(0)'">
+                <div style="width: 80px; height: 80px; margin: 0 auto 20px; background: rgba(255,255,255,0.2); border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 40px;">🎵</div>
+                <h3 style="margin: 0 0 10px 0; font-size: 18px; font-weight: 700;">音频素材</h3>
+                <div style="font-size: 36px; font-weight: 900;" id="audio-count">0</div>
+                <p style="margin: 10px 0 0 0; opacity: 0.9; font-size: 14px;">个音频文件</p>
+            </div>
+
+            <!-- 图片素材卡片 -->
+            <div style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); border-radius: 20px; padding: 30px; text-align: center; box-shadow: 0 8px 25px rgba(79,172,254,0.3); color: white; transition: all 0.3s;" onmouseover="this.style.transform='translateY(-8px)'" onmouseout="this.style.transform='translateY(0)'">
+                <div style="width: 80px; height: 80px; margin: 0 auto 20px; background: rgba(255,255,255,0.2); border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 40px;">🖼️</div>
+                <h3 style="margin: 0 0 10px 0; font-size: 18px; font-weight: 700;">图片素材</h3>
+                <div style="font-size: 36px; font-weight: 900;" id="image-count">0</div>
+                <p style="margin: 10px 0 0 0; opacity: 0.9; font-size: 14px;">张图片</p>
+            </div>
+
+            <!-- 文字模板卡片 -->
+            <div style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); border-radius: 20px; padding: 30px; text-align: center; box-shadow: 0 8px 25px rgba(67,233,123,0.3); color: white; transition: all 0.3s;" onmouseover="this.style.transform='translateY(-8px)'" onmouseout="this.style.transform='translateY(0)'">
+                <div style="width: 80px; height: 80px; margin: 0 auto 20px; background: rgba(255,255,255,0.2); border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 40px;">📝</div>
+                <h3 style="margin: 0 0 10px 0; font-size: 18px; font-weight: 700;">文字模板</h3>
+                <div style="font-size: 36px; font-weight: 900;" id="text-count">0</div>
+                <p style="margin: 10px 0 0 0; opacity: 0.9; font-size: 14px;">个模板</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 素材分类和搜索 - 现代化工具栏 -->
+    <div class="layui-col-md12" style="margin-bottom: 25px;">
+        <div style="background: linear-gradient(135deg, rgba(15,23,42,0.6) 0%, rgba(30,41,59,0.6) 100%); border-radius: 20px; padding: 20px; border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
+            <!-- 分类按钮组 -->
+            <div style="display: flex; gap: 8px; flex: 1;">
+                <button style="padding: 10px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 15px rgba(102,126,234,0.3); transition: all 0.3s;" data-filter="all">
+                    <i class="fa fa-th" style="margin-right: 6px;"></i>全部素材
+                </button>
+                <button style="padding: 10px 20px; background: rgba(15,23,42,0.8); color: rgba(255,255,255,0.8); border: 1px solid rgba(102,126,234,0.3); border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.3s;" data-filter="video" onmouseover="this.style.background='rgba(102,126,234,0.2)'; this.style.borderColor='rgba(102,126,234,0.5)'" onmouseout="this.style.background='rgba(15,23,42,0.8)'; this.style.borderColor='rgba(102,126,234,0.3)'">
+                    <i class="fa fa-play-circle" style="margin-right: 6px;"></i>视频
+                </button>
+                <button style="padding: 10px 20px; background: rgba(15,23,42,0.8); color: rgba(255,255,255,0.8); border: 1px solid rgba(240,147,251,0.3); border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.3s;" data-filter="audio" onmouseover="this.style.background='rgba(240,147,251,0.2)'; this.style.borderColor='rgba(240,147,251,0.5)'" onmouseout="this.style.background='rgba(15,23,42,0.8)'; this.style.borderColor='rgba(240,147,251,0.3)'">
+                    <i class="fa fa-music" style="margin-right: 6px;"></i>音频
+                </button>
+                <button style="padding: 10px 20px; background: rgba(15,23,42,0.8); color: rgba(255,255,255,0.8); border: 1px solid rgba(79,172,254,0.3); border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.3s;" data-filter="image" onmouseover="this.style.background='rgba(79,172,254,0.2)'; this.style.borderColor='rgba(79,172,254,0.5)'" onmouseout="this.style.background='rgba(15,23,42,0.8)'; this.style.borderColor='rgba(79,172,254,0.3)'">
+                    <i class="fa fa-picture-o" style="margin-right: 6px;"></i>图片
+                </button>
+                <button style="padding: 10px 20px; background: rgba(15,23,42,0.8); color: rgba(255,255,255,0.8); border: 1px solid rgba(67,233,123,0.3); border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.3s;" data-filter="text" onmouseover="this.style.background='rgba(67,233,123,0.2)'; this.style.borderColor='rgba(67,233,123,0.5)'" onmouseout="this.style.background='rgba(15,23,42,0.8)'; this.style.borderColor='rgba(67,233,123,0.3)'">
+                    <i class="fa fa-file-text-o" style="margin-right: 6px;"></i>文字
+                </button>
+            </div>
+
+            <!-- 搜索框 -->
+            <div style="display: flex; align-items: center; min-width: 300px;">
+                <div style="position: relative; flex: 1;">
+                    <input type="text" id="material-search" placeholder="搜索素材名称、标签..." style="width: 100%; padding: 10px 40px 10px 15px; background: rgba(15,23,42,0.8); border: 1px solid rgba(102,126,234,0.3); border-radius: 10px; color: rgba(255,255,255,0.9); font-size: 13px; outline: none;" onfocus="this.style.borderColor='rgba(102,126,234,0.6)'; this.style.background='rgba(15,23,42,0.95)'" onblur="this.style.borderColor='rgba(102,126,234,0.3)'; this.style.background='rgba(15,23,42,0.8)'">
+                    <button onclick="searchMaterials()" style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); padding: 6px 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.boxShadow='0 4px 15px rgba(102,126,234,0.4)'" onmouseout="this.style.boxShadow='none'">
+                        <i class="fa fa-search"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 上传区域 - 现代化拖拽式 -->
+    <div class="layui-col-md12" style="margin-bottom: 25px;">
+        <div onclick="document.getElementById('material-upload').click()" style="background: linear-gradient(135deg, rgba(102,126,234,0.05) 0%, rgba(118,75,162,0.05) 100%); border: 3px dashed #667eea; border-radius: 25px; padding: 60px; text-align: center; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.background='linear-gradient(135deg, rgba(102,126,234,0.1) 0%, rgba(118,75,162,0.1) 100%)'; this.style.borderColor='#764ba2'; this.style.transform='scale(1.02)'" onmouseout="this.style.background='linear-gradient(135deg, rgba(102,126,234,0.05) 0%, rgba(118,75,162,0.05) 100%)'; this.style.borderColor='#667eea'; this.style.transform='scale(1)'">
+            <div style="font-size: 80px; margin-bottom: 20px;">☁️</div>
+            <h2 style="margin: 0 0 10px 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 28px; font-weight: 900;">拖拽文件到此处上传</h2>
+            <p style="margin: 0 0 10px 0; color: #999; font-size: 16px;">或点击选择文件</p>
+            <div style="margin-top: 20px; display: inline-flex; gap: 15px;">
+                <span style="padding: 8px 16px; background: rgba(102,126,234,0.1); color: #667eea; border-radius: 20px; font-size: 13px; font-weight: 600;">🎬 视频</span>
+                <span style="padding: 8px 16px; background: rgba(240,147,251,0.1); color: #f093fb; border-radius: 20px; font-size: 13px; font-weight: 600;">🎵 音频</span>
+                <span style="padding: 8px 16px; background: rgba(79,172,254,0.1); color: #4facfe; border-radius: 20px; font-size: 13px; font-weight: 600;">🖼️ 图片</span>
+                <span style="padding: 8px 16px; background: rgba(67,233,123,0.1); color: #43e97b; border-radius: 20px; font-size: 13px; font-weight: 600;">📝 文本</span>
+            </div>
+            <input type="file" id="material-upload" style="display: none;" multiple accept="video/*,audio/*,image/*,.txt">
+        </div>
+    </div>
+
+    <!-- 素材列表 - 现代化网格布局 -->
+    <div class="layui-col-md12">
+        <div style="background: linear-gradient(135deg, rgba(15,23,42,0.6) 0%, rgba(30,41,59,0.6) 100%); border-radius: 20px; padding: 25px; border: 1px solid rgba(255,255,255,0.1);">
+            <!-- 标题栏 -->
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 25px; padding-bottom: 20px; border-bottom: 2px solid rgba(255,255,255,0.1);">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 45px; height: 45px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fa fa-th" style="color: white; font-size: 20px;"></i>
+                    </div>
+                    <h3 style="margin: 0; font-size: 20px; font-weight: 700; color: rgba(255,255,255,0.95);">素材列表</h3>
+                </div>
+                <select id="sort-materials" style="padding: 10px 18px; background: rgba(15,23,42,0.8); border: 1px solid rgba(102,126,234,0.3); border-radius: 10px; color: rgba(255,255,255,0.9); font-size: 13px; font-weight: 600; cursor: pointer;">
+                    <option value="newest">最新上传</option>
+                    <option value="name">按名称</option>
+                    <option value="size">按大小</option>
+                    <option value="type">按类型</option>
+                </select>
+            </div>
+
+            <!-- 素材网格：内容由 getMaterialList/renderMaterialGrid 通过真实API加载 -->
+            <div id="material-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; margin-bottom: 24px; align-items: stretch;"></div>
+
+            <!-- 分页 -->
+            <div id="material-pagination" style="display: flex; justify-content: center; align-items: center; gap: 10px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);"></div>
+        </div>
+    </div>
+
+    <!-- 最近使用 - 横向滚动卡片 -->
+    <div class="layui-col-md12" style="margin-top: 25px;">
+        <div style="background: linear-gradient(135deg, rgba(15,23,42,0.6) 0%, rgba(30,41,59,0.6) 100%); border-radius: 20px; padding: 25px; border: 1px solid rgba(255,255,255,0.1);">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+                <div style="width: 42px; height: 42px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                    <i class="fa fa-history" style="color: white; font-size: 18px;"></i>
+                </div>
+                <h3 style="margin: 0; font-size: 18px; font-weight: 700; color: rgba(255,255,255,0.95);">最近使用</h3>
+            </div>
+            <div id="recent-materials" style="display: flex; gap: 15px; overflow-x: auto; padding-bottom: 10px;"></div>
+        </div>
+    </div>
+
+    <!-- 收藏夹 - 横向滚动卡片 -->
+    <div class="layui-col-md12" style="margin-top: 25px;">
+        <div style="background: linear-gradient(135deg, rgba(15,23,42,0.6) 0%, rgba(30,41,59,0.6) 100%); border-radius: 20px; padding: 25px; border: 1px solid rgba(255,255,255,0.1);">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+                <div style="width: 42px; height: 42px; background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                    <i class="fa fa-star" style="color: white; font-size: 18px;"></i>
+                </div>
+                <h3 style="margin: 0; font-size: 18px; font-weight: 700; color: rgba(255,255,255,0.95);">收藏夹</h3>
+            </div>
+            <div id="favorite-materials" style="display: flex; gap: 15px; overflow-x: auto; padding-bottom: 10px;"></div>
+        </div>
+    </div>
+
+    <!-- 底部：横向快捷操作面板 - 填充空白区域 -->
+    <div class="layui-col-md12" style="margin-top: 30px;">
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
+
+            <!-- 素材管理卡片 -->
+            <div style="background: linear-gradient(135deg, rgba(102,126,234,0.08) 0%, rgba(118,75,162,0.08) 100%); border-radius: 16px; padding: 20px; border: 1px solid rgba(102,126,234,0.15);">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px; padding-bottom: 12px; border-bottom: 2px solid rgba(102,126,234,0.1);">
+                    <div style="width: 38px; height: 38px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fa fa-folder-open" style="color: white; font-size: 16px;"></i>
+                    </div>
+                    <h4 style="margin: 0; font-size: 14px; font-weight: 700; color: rgba(255,255,255,0.95);">素材管理</h4>
+                </div>
+                <div style="display: grid; gap: 10px;">
+                    <button onclick="document.getElementById('material-upload').click()" style="width: 100%; padding: 10px; background: rgba(102,126,234,0.2); color: #667eea; border: 1px solid rgba(102,126,234,0.3); border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer;">
+                        <i class="fa fa-upload" style="margin-right: 6px;"></i>批量上传
+                    </button>
+                    <button onclick="refreshMaterials()" style="width: 100%; padding: 10px; background: rgba(102,126,234,0.2); color: #667eea; border: 1px solid rgba(102,126,234,0.3); border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer;">
+                        <i class="fa fa-refresh" style="margin-right: 6px;"></i>刷新素材
+                    </button>
+                </div>
+            </div>
+
+            <!-- 存储统计卡片 -->
+            <div style="background: linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(5,150,105,0.08) 100%); border-radius: 16px; padding: 20px; border: 1px solid rgba(16,185,129,0.15);">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px; padding-bottom: 12px; border-bottom: 2px solid rgba(16,185,129,0.1);">
+                    <div style="width: 38px; height: 38px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fa fa-database" style="color: white; font-size: 16px;"></i>
+                    </div>
+                    <h4 style="margin: 0; font-size: 14px; font-weight: 700; color: rgba(255,255,255,0.95);">存储统计</h4>
+                </div>
+                <div style="display: grid; gap: 12px;">
+                    <div>
+                        <div style="display: flex; justify-content: space-between; font-size: 11px; color: rgba(255,255,255,0.7); margin-bottom: 6px;">
+                            <span>已使用</span>
+                            <span style="color: #10b981; font-weight: 600;" id="storage-used-text">加载中...</span>
+                        </div>
+                        <div style="height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden;">
+                            <div id="storage-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #10b981 0%, #059669 100%); transition: width 0.5s ease;"></div>
+                        </div>
+                    </div>
+                    <div style="font-size: 11px; color: rgba(255,255,255,0.6);">
+                        <div>📁 素材总数: <span id="storage-material-count">0</span> 个</div>
+                        <div style="margin-top: 4px;">⭐ 收藏: <span id="storage-favorite-count">0</span> 个</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+</div><!-- 闭合主内容区域 -->
+{% endblock %}
+
+{% block extra_js %}
+<script type="text/javascript">
+    layui.use(['element', 'layer', 'form', 'upload'], function() {
+        var element = layui.element;
+        var layer = layui.layer;
+        var form = layui.form;
+        var upload = layui.upload;
+
+        // 页面加载完成后获取素材列表
+        $(function() {
+            getMaterialList();
+            getMaterialStats();
+            getRecentMaterials();
+            getFavoriteMaterials();
+            loadStorageStats();
+            loadStorageMaterialCount();
+
+            // 初始化拖拽上传
+            initDragUpload();
+
+            // 初始化文件上传
+            initFileUpload();
+
+            // 初始化搜索功能
+            initSearch();
+        });
+
+        // 素材筛选 - 绑定到带 data-filter 属性的按钮
+        window.currentFilter = 'all';
+        window.currentSortBy = 'newest';
+        $('[data-filter]').on('click', function() {
+            var filter = $(this).data('filter');
+            window.currentFilter = filter;
+            // 更新按钮高亮状态
+            $('[data-filter]').each(function() {
+                var $btn = $(this);
+                if ($btn.data('filter') === filter) {
+                    $btn.css('background', 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)');
+                    $btn.css('color', 'white');
+                    $btn.css('border', 'none');
+                } else {
+                    $btn.css('background', 'rgba(15,23,42,0.8)');
+                    $btn.css('color', 'rgba(255,255,255,0.8)');
+                    $btn.css('border', '1px solid rgba(102,126,234,0.3)');
+                }
+            });
+            getMaterialList(filter, window.currentSortBy, $('#material-search').val() || '', 1);
+        });
+
+        // 搜索素材
+        $('#material-search').on('keypress', function(e) {
+            if (e.keyCode === 13) {
+                searchMaterials();
+            }
+        });
+
+        // 排序素材 - 绑定到排序下拉框
+        $('#sort-materials').on('change', function() {
+            var sortBy = $(this).val() || 'newest';
+            window.currentSortBy = sortBy;
+            getMaterialList(window.currentFilter, sortBy, $('#material-search').val() || '', 1);
+        });
+    });
+
+    // 获取素材列表 - 完整实现版本，从真实后端API加载
+    function getMaterialList(filter, sortBy, search, page) {
+        filter = filter || window.currentFilter || 'all';
+        sortBy = sortBy || window.currentSortBy || 'newest';
+        search = search !== undefined ? search : (window.currentMaterialSearch || '');
+        page = page || 1;
+        window.currentFilter = filter;
+        window.currentSortBy = sortBy;
+        window.currentMaterialSearch = search;
+
+        console.log(`📥 加载素材列表: filter=${filter}, sortBy=${sortBy}, search=${search}, page=${page}`);
+
+        showMaterialListLoading();
+
+        // 后端负责搜索、排序和分页，素材数量再多也只加载当前页
+        var pageSize = 12;
+        apiRequest('/api/materials/list', 'GET', {
+            type: filter !== 'all' ? filter : undefined,
+            search: search,
+            sort_by: sortBy,
+            page: page,
+            per_page: pageSize
+        }, function(data) {
+            hideMaterialListLoading();
+
+            // 后端已完成搜索、排序与分页
+            var materials = (data && data.materials) ? data.materials : [];
+            var total = (data && data.total) ? data.total : materials.length;
+            var displayMaterials = materials;
+
+            console.log(`✅ 加载成功：第${page}页 ${displayMaterials.length} 个素材（共${total}个）`);
+
+            renderMaterialGrid(displayMaterials);
+            renderMaterialPagination(total, page, pageSize);
+        }, function(error) {
+            hideMaterialListLoading();
+            console.error('❌ 加载素材列表失败:', error);
+            layer.msg('❌ 加载失败: ' + (error || '网络错误'), {icon: 2, time: 2000});
+            renderMaterialGrid([]);
+        });
+    }
+
+    function showMaterialListLoading() {
+        $('#material-list-loading').css('display', 'flex');
+        $('#material-grid').hide();
+    }
+
+    function hideMaterialListLoading() {
+        $('#material-list-loading').hide();
+        $('#material-grid').css('display', 'grid');
+    }
+
+    // 渲染素材网格
+    function renderMaterialGrid(materials) {
+        var materialGrid = $('#material-grid');
+        if (materials.length === 0) {
+            materialGrid.html(`
+                <div style="grid-column:1 / -1; min-height:220px; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#94a3b8;">
+                    <i class="layui-icon layui-icon-folder-open" style="font-size:50px; color:#64748b;"></i>
+                    <p style="margin:16px 0;">暂无符合条件的素材</p>
+                    <button class="layui-btn layui-btn-primary" onclick="uploadMaterial()"><i class="layui-icon layui-icon-add"></i>上传素材</button>
+                </div>
+            `);
+            return;
+        }
+
+        // 扩展名 → 类别映射
+        var extMap = {
+            mp4:'video', avi:'video', mov:'video', mkv:'video', flv:'video', wmv:'video',
+            mp3:'audio', wav:'audio', aac:'audio', m4a:'audio', ogg:'audio', flac:'audio',
+            jpg:'image', jpeg:'image', png:'image', gif:'image', bmp:'image', webp:'image', svg:'image',
+            srt:'text', ass:'text', vtt:'text'
+        };
+
+        var html = '';
+        materials.forEach(material => {
+            // 标准化字段：后端返回 filename/type(扩展名)/relative_path，前端期望 name/type(类别)/url
+            var rawType = (material.type || '').toLowerCase();
+            var category = extMap[rawType] || material.type || 'unknown';
+            var name = material.name || material.filename || '未命名';
+            var url = material.url || material.relative_path || ('/uploads/materials/' + (material.filename || ''));
+            // 规范化：确保以 / 开头，避免相对路径解析问题
+            if (url && !url.startsWith('/') && !url.startsWith('http')) url = '/' + url;
+
+            var typeIcon = '';
+            var typeColor = '';
+            var typeText = '';
+            var previewHtml = '';
+
+            switch(category) {
+                case 'video':
+                    typeIcon = 'layui-icon-video';
+                    typeColor = 'layui-btn-primary';
+                    typeText = '视频';
+                    previewHtml = `
+                        <div class="mat-video-thumb" data-src="${url}" onclick="loadVideoPreview(this)" style="width:100%; height:100%; position:relative; background:linear-gradient(135deg,#1e293b,#0f172a); display:flex; align-items:center; justify-content:center; cursor:pointer;">
+                            <i class="layui-icon layui-icon-play" style="font-size:38px; color:#5eead4; opacity:0.85; text-shadow:0 2px 8px rgba(0,0,0,0.5);"></i>
+                        </div>
+                    `;
+                    break;
+                case 'audio':
+                    typeIcon = 'layui-icon-music';
+                    typeColor = 'layui-btn-normal';
+                    typeText = '音频';
+                    previewHtml = `
+                        <div style="width:100%; height:100%; background:linear-gradient(135deg,#172554,#0f766e); display:flex; flex-direction:column; gap:8px; align-items:center; justify-content:center;">
+                            <i class="layui-icon ${typeIcon}" style="font-size:42px; color:#5eead4;"></i><span style="font-size:12px; color:#ccfbf1;">音频素材</span>
+                        </div>
+                    `;
+                    break;
+                case 'image':
+                    typeIcon = 'layui-icon-picture';
+                    typeColor = 'layui-btn-success';
+                    typeText = '图片';
+                    previewHtml = `
+                        <img src="${url}" alt="${name}"
+                             style="width:100%; height:100%; object-fit:cover; display:block;"
+                             onerror="this.replaceWith(document.createTextNode('图片预览不可用'))">
+                    `;
+                    break;
+                case 'text':
+                    typeIcon = 'layui-icon-fonts';
+                    typeColor = 'layui-btn-danger';
+                    typeText = '文字';
+                    previewHtml = `
+                        <div style="width: 100%; height: 120px; background: #f8f8f8; border-radius: 4px; display: flex; align-items: center; justify-content: center;">
+                            <i class="layui-icon ${typeIcon}" style="font-size: 40px; color: #ff4d4f;"></i>
+                        </div>
+                    `;
+                    break;
+                default:
+                    typeIcon = 'layui-icon-file';
+                    typeColor = 'layui-btn-warm';
+                    typeText = '其他';
+                    previewHtml = `
+                        <div style="width: 100%; height: 120px; background: #f8f8f8; border-radius: 4px; display: flex; align-items: center; justify-content: center;">
+                            <i class="layui-icon ${typeIcon}" style="font-size: 40px; color: #999;"></i>
+                        </div>
+                    `;
+            }
+
+            var favoriteIcon = material.favorite ? 'layui-icon-star' : 'layui-icon-star-o';
+            var favoriteColor = material.favorite ? 'text-yellow-400' : 'text-gray-400';
+
+            html += `
+                <article class="material-item" id="material-${material.id}" style="min-width:0; overflow:hidden; background:rgba(15,23,42,.72); border:1px solid rgba(148,163,184,.22); border-radius:12px; box-shadow:0 6px 16px rgba(0,0,0,.18);">
+                    <div style="position:relative; height:140px; overflow:hidden; background:#0f172a;">
+                            ${previewHtml}
+                            <div class="absolute top-2 right-2">
+                                <span class="layui-btn ${typeColor} layui-btn-xs" style="border-radius: 12px;">${typeText}</span>
+                            </div>
+                            <div class="absolute top-2 left-2">
+                                <i class="layui-icon ${favoriteIcon} ${favoriteColor}" style="font-size: 16px; cursor: pointer;" onclick="toggleFavorite('${material.id}', this)"></i>
+                            </div>
+                        </div>
+                        <div style="padding:12px 14px;">
+                            <h4 title="${name}" style="margin:0; color:#f8fafc; font-size:14px; line-height:20px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${name}</h4>
+                            <p style="margin:4px 0 10px; font-size:12px; color:#94a3b8;">${formatFileSize(material.size || 0)}</p>
+                            <div style="display:flex; gap:8px;">
+                                <button title="预览素材" aria-label="预览素材" class="layui-btn layui-btn-primary layui-btn-xs operation-btn" onclick="previewMaterial('${material.id}')">
+                                    <i class="layui-icon layui-icon-eye"></i><span style="margin-left:4px;">预览</span>
+                                </button>
+                                <button title="添加到项目" aria-label="添加到项目" class="layui-btn layui-btn-normal layui-btn-xs operation-btn" onclick="addMaterialToProject('${material.id}')">
+                                    <i class="layui-icon layui-icon-plus"></i><span style="margin-left:4px;">添加</span>
+                                </button>
+                                <button title="删除素材" aria-label="删除素材" data-material-name="${encodeURIComponent(name)}" data-material-path="${encodeURIComponent(material.relative_path || '')}" class="layui-btn layui-btn-danger layui-btn-xs operation-btn" onclick="deleteMaterial('${material.id}', decodeURIComponent(this.dataset.materialName), decodeURIComponent(this.dataset.materialPath || ''))">
+                                    <i class="layui-icon layui-icon-delete"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </article>
+            `;
+        });
+
+        materialGrid.html(html);
+    }
+
+    // 渲染分页
+    function renderMaterialPagination(total, page, limit) {
+        var pagination = $('#material-pagination');
+        var totalPages = Math.ceil(total / limit);
+
+        if (totalPages <= 1) {
+            pagination.html('');
+            return;
+        }
+
+        var html = '<div class="layui-box layui-laypage layui-laypage-default">';
+        var startPage = Math.max(1, page - 2);
+        var endPage = Math.min(totalPages, startPage + 4);
+        startPage = Math.max(1, endPage - 4);
+        if (startPage > 1) {
+            html += `<a href="javascript:;" onclick="changeMaterialPage(1)">1</a><span class="layui-laypage-spr">…</span>`;
+        }
+        if (page > 1) {
+            html += `<a href="javascript:;" class="layui-laypage-prev" onclick="changeMaterialPage(${page - 1})">上一页</a>`;
+        }
+        for (var i = startPage; i <= endPage; i++) {
+            if (i === page) {
+                html += `<span class="layui-laypage-curr"><em class="layui-laypage-em"></em><em>${i}</em></span>`;
+            } else {
+                html += `<a href="javascript:;" onclick="changeMaterialPage(${i})">${i}</a>`;
+            }
+        }
+        if (endPage < totalPages) {
+            html += `<span class="layui-laypage-spr">…</span><a href="javascript:;" onclick="changeMaterialPage(${totalPages})">${totalPages}</a>`;
+        }
+        if (page < totalPages) {
+            html += `<a href="javascript:;" class="layui-laypage-next" onclick="changeMaterialPage(${page + 1})">下一页</a>`;
+        }
+
+        html += '</div>';
+        pagination.html(html);
+    }
+
+    // 切换页码
+    function changeMaterialPage(page) {
+        var search = $('#material-search').val() || '';
+        getMaterialList(window.currentFilter, window.currentSortBy, search, page);
+    }
+
+    // 刷新素材 - 重新加载全部数据
+    function refreshMaterials() {
+        getMaterialList(window.currentFilter, window.currentSortBy, $('#material-search').val() || '', 1);
+        getMaterialStats();
+        getRecentMaterials();
+        getFavoriteMaterials();
+        loadStorageStats();
+        loadStorageMaterialCount();
+    }
+
+    // 获取素材统计 - 通过 /api/materials/list 拉取全量后按类别计数
+    function getMaterialStats() {
+        console.log('📊 加载素材统计...');
+
+        apiRequest('/api/materials/list', 'GET', {page: 1, per_page: 1000}, function(data) {
+            var materials = (data && data.materials) ? data.materials : [];
+            var stats = { video: 0, audio: 0, image: 0, text: 0 };
+            var extMap = { mp4:'video', avi:'video', mov:'video', mkv:'video', flv:'video', wmv:'video',
+                           mp3:'audio', wav:'audio', aac:'audio', m4a:'audio', ogg:'audio', flac:'audio',
+                           jpg:'image', jpeg:'image', png:'image', gif:'image', bmp:'image', webp:'image', svg:'image',
+                           srt:'text', ass:'text', vtt:'text' };
+            materials.forEach(function(m) {
+                var cat = extMap[(m.type || '').toLowerCase()] || (m.category || '');
+                if (cat && stats[cat] !== undefined) stats[cat]++;
+            });
+            $('#video-count').text(stats.video);
+            $('#audio-count').text(stats.audio);
+            $('#image-count').text(stats.image);
+            $('#text-count').text(stats.text);
+            console.log('✅ 素材统计:', stats);
+        }, function(error) {
+            console.error('❌ 加载素材统计失败:', error);
+            $('#video-count').text(0);
+            $('#audio-count').text(0);
+            $('#image-count').text(0);
+            $('#text-count').text(0);
+        });
+    }
+
+    // 获取最近使用的素材 - 复用 /api/materials/list 按修改时间倒序取前6个
+    function getRecentMaterials() {
+        apiRequest('/api/materials/list', 'GET', {page: 1, per_page: 6}, function(data) {
+            var materials = (data && data.materials) ? data.materials : [];
+            renderRecentMaterials(materials);
+        }, function() {
+            renderRecentMaterials([]);
+        });
+    }
+
+    // 渲染最近使用的素材
+    function renderRecentMaterials(materials) {
+        var recentMaterials = $('#recent-materials');
+        if (materials.length === 0) {
+            recentMaterials.html('<p class="text-center text-gray-500">暂无最近使用的素材</p>');
+            return;
+        }
+
+        var extMap = {
+            mp4:'video', avi:'video', mov:'video', mkv:'video', flv:'video', wmv:'video',
+            mp3:'audio', wav:'audio', aac:'audio', m4a:'audio', ogg:'audio', flac:'audio',
+            jpg:'image', jpeg:'image', png:'image', gif:'image', bmp:'image', webp:'image', svg:'image',
+            srt:'text', ass:'text', vtt:'text'
+        };
+
+        var html = '';
+        materials.forEach(material => {
+            var category = extMap[(material.type || '').toLowerCase()] || material.type || 'unknown';
+            var name = material.name || material.filename || '未命名';
+            var typeIcon = {video:'layui-icon-video', audio:'layui-icon-music', image:'layui-icon-picture', text:'layui-icon-fonts'}[category] || 'layui-icon-file';
+            var typeText = getMaterialTypeText(category);
+            var color = {video:'#60a5fa', audio:'#5eead4', image:'#93c5fd', text:'#fda4af'}[category] || '#cbd5e1';
+            var url = material.relative_path ? '/' + material.relative_path.replace(/^\/+/, '') : (material.url || '');
+            var thumbnail = category === 'image'
+                ? `<img src="${url}" alt="" style="width:100%;height:72px;object-fit:cover;display:block;" onerror="this.style.display='none'">`
+                : `<i class="layui-icon ${typeIcon}" style="font-size:28px;color:${color};"></i>`;
+            html += `
+                <article style="flex:0 0 235px; min-width:235px; overflow:hidden; background:rgba(15,23,42,.72); border:1px solid rgba(148,163,184,.2); border-radius:10px; cursor:pointer;" onclick="previewMaterial('${material.id}')" title="查看 ${name}">
+                    <div style="height:72px; background:linear-gradient(135deg,#172554,#0f172a); display:flex; align-items:center; justify-content:center; overflow:hidden;">${thumbnail}</div>
+                    <div style="padding:10px 12px;">
+                        <div style="display:flex; align-items:center; gap:6px; color:${color}; font-size:12px;"><i class="layui-icon ${typeIcon}"></i><span>${typeText}</span><span style="margin-left:auto; color:#94a3b8;">${formatFileSize(material.size || 0)}</span></div>
+                        <div title="${name}" style="margin-top:6px; color:#f8fafc; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${name}</div>
+                        <div style="margin-top:4px; color:#94a3b8; font-size:11px;">最近上传：${formatDate(material.modified_time ? new Date(material.modified_time * 1000).toISOString() : material.created_at)}</div>
+                        <div style="display:flex; gap:6px; margin-top:9px;" onclick="event.stopPropagation()">
+                            <button class="layui-btn layui-btn-primary layui-btn-xs" onclick="previewMaterial('${material.id}')"><i class="layui-icon layui-icon-eye"></i>预览</button>
+                            <button class="layui-btn layui-btn-normal layui-btn-xs" onclick="addMaterialToProject('${material.id}')"><i class="layui-icon layui-icon-plus"></i>添加</button>
+                        </div>
+                    </div>
+                </article>`;
+        });
+
+        recentMaterials.html(html);
+    }
+
+    // 获取收藏的素材 - 收藏信息存储于 localStorage，复用 /api/materials/list 数据
+    function getFavoriteMaterials() {
+        var favIds = [];
+        try { favIds = JSON.parse(localStorage.getItem('material_favorites') || '[]'); } catch(_) {}
+        $('#storage-favorite-count').text(favIds.length);
+        if (favIds.length === 0) {
+            renderFavoriteMaterials([]);
+            return;
+        }
+        apiRequest('/api/materials/list', 'GET', {page: 1, per_page: 1000}, function(data) {
+            var materials = (data && data.materials) ? data.materials : [];
+            var favs = materials.filter(function(m) { return favIds.indexOf(m.id) >= 0; });
+            renderFavoriteMaterials(favs.slice(0, 6));
+        }, function() {
+            renderFavoriteMaterials([]);
+        });
+    }
+
+    // 加载存储统计 - 调用 /api/system/metrics 获取真实存储数据
+    function loadStorageStats() {
+        apiRequest('/api/system/metrics', 'GET', {}, function(data) {
+            // data 即 {storage, projects, api, system}
+            if (data && data.storage) {
+                var storage = data.storage;
+                var used = storage.app_used || 0;
+                var total = storage.disk_total || 0;
+                var usedText = formatFileSize(used) + ' / ' + formatFileSize(total);
+                $('#storage-used-text').text(usedText);
+
+                // 进度条宽度按真实占比计算
+                var percent = 0;
+                if (total > 0) {
+                    percent = Math.min(100, Math.max(0, (used / total) * 100));
+                }
+                $('#storage-progress-bar').css('width', percent.toFixed(1) + '%');
+            } else {
+                $('#storage-used-text').text('获取失败');
+                $('#storage-progress-bar').css('width', '0%');
+            }
+        }, function(error) {
+            console.error('❌ 加载存储统计失败:', error);
+            $('#storage-used-text').text('获取失败');
+            $('#storage-progress-bar').css('width', '0%');
+        });
+    }
+
+    // 加载素材总数 - 调用 /api/materials/list 获取真实素材数量
+    function loadStorageMaterialCount() {
+        apiRequest('/api/materials/list', 'GET', {page: 1, per_page: 1}, function(data) {
+            // data 即 {materials, total, page, per_page, total_pages}
+            if (data && data.total !== undefined) {
+                $('#storage-material-count').text(data.total);
+            } else {
+                $('#storage-material-count').text(0);
+            }
+        }, function(error) {
+            console.error('❌ 加载素材总数失败:', error);
+            $('#storage-material-count').text(0);
+        });
+    }
+
+    // 渲染收藏的素材
+    function renderFavoriteMaterials(materials) {
+        var favoriteMaterials = $('#favorite-materials');
+        if (materials.length === 0) {
+            favoriteMaterials.html('<p class="text-center text-gray-500">暂无收藏的素材</p>');
+            return;
+        }
+
+        var extMap = {
+            mp4:'video', avi:'video', mov:'video', mkv:'video', flv:'video', wmv:'video',
+            mp3:'audio', wav:'audio', aac:'audio', m4a:'audio', ogg:'audio', flac:'audio',
+            jpg:'image', jpeg:'image', png:'image', gif:'image', bmp:'image', webp:'image', svg:'image',
+            srt:'text', ass:'text', vtt:'text'
+        };
+
+        var html = '';
+        materials.forEach(material => {
+            var category = extMap[(material.type || '').toLowerCase()] || material.type || 'unknown';
+            var name = material.name || material.filename || '未命名';
+            var typeIcon = {video:'layui-icon-video', audio:'layui-icon-music', image:'layui-icon-picture', text:'layui-icon-fonts'}[category] || 'layui-icon-file';
+            var typeText = getMaterialTypeText(category);
+            var color = {video:'#60a5fa', audio:'#5eead4', image:'#93c5fd', text:'#fda4af'}[category] || '#cbd5e1';
+            html += `
+                <article style="flex:0 0 220px; min-width:220px; overflow:hidden; background:rgba(15,23,42,.72); border:1px solid rgba(52,211,153,.25); border-radius:10px; padding:12px; cursor:pointer;" onclick="previewMaterial('${material.id}')" title="查看 ${name}">
+                    <div style="display:flex; align-items:center; gap:8px; color:${color};"><i class="layui-icon ${typeIcon}" style="font-size:25px;"></i><span style="font-size:12px;">${typeText}</span><i class="layui-icon layui-icon-star" style="margin-left:auto;color:#facc15;"></i></div>
+                    <div title="${name}" style="margin-top:10px; color:#f8fafc; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${name}</div>
+                    <div style="margin-top:5px; color:#94a3b8; font-size:11px;">${formatFileSize(material.size || 0)}</div>
+                    <button class="layui-btn layui-btn-primary layui-btn-xs" style="margin-top:10px;" onclick="event.stopPropagation(); previewMaterial('${material.id}')"><i class="layui-icon layui-icon-eye"></i>预览</button>
+                </article>`;
+        });
+
+        favoriteMaterials.html(html);
+    }
+
+    // 上传素材 - 完整实现版本
+    function uploadMaterial() {
+        console.log('📤 打开文件选择器');
+        $('#material-upload').click();
+    }
+
+    // 初始化文件上传 - 完整实现版本
+    function initFileUpload() {
+        $('#material-upload').on('change', function(e) {
+            var files = e.target.files;
+            if (files && files.length > 0) {
+                console.log(`📁 选择了 ${files.length} 个文件`);
+                uploadFiles(files);
+            }
+            // 清空input，允许重复上传相同文件
+            $(this).val('');
+        });
+    }
+
+    // 初始化拖拽上传 - 完整实现版本
+    function initDragUpload() {
+        var uploadArea = $('#upload-area');
+
+        if (uploadArea.length === 0) {
+            console.log('⚠️ 未找到上传区域');
+            return;
+        }
+
+        uploadArea.on('dragover', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            $(this).css('border-color', '#667eea');
+            $(this).css('background', 'rgba(102,126,234,0.05)');
+        });
+
+        uploadArea.on('dragleave', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            $(this).css('border-color', '#e6e6e6');
+            $(this).css('background', 'transparent');
+        });
+
+        uploadArea.on('drop', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            $(this).css('border-color', '#e6e6e6');
+            $(this).css('background', 'transparent');
+
+            var files = e.originalEvent.dataTransfer.files;
+            if (files.length > 0) {
+                console.log(`🎯 拖拽了 ${files.length} 个文件`);
+                uploadFiles(files);
+            }
+        });
+
+        uploadArea.on('click', function() {
+            $('#material-upload').click();
+        });
+
+        console.log('✅ 拖拽上传已初始化');
+    }
+
+    // 上传文件 - 完整实现版本，精确不简化
+    function uploadFiles(files) {
+        console.log('🚀 开始上传流程...');
+
+        // 1. 文件验证
+        var validFiles = [];
+        var invalidFiles = [];
+
+        // 支持的文件类型
+        var videoExts = ['mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv', 'webm'];
+        var audioExts = ['mp3', 'wav', 'aac', 'flac', 'ogg', 'm4a'];
+        var imageExts = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'];
+        var textExts = ['txt', 'md', 'srt', 'vtt'];
+
+        var allExts = videoExts.concat(audioExts).concat(imageExts).concat(textExts);
+
+        // 最大文件大小（500MB）
+        var maxSize = 500 * 1024 * 1024;
+
+        for (var i = 0; i < files.length; i++) {
+            var file = files[i];
+            var fileName = file.name;
+            var fileSize = file.size;
+            var fileExt = fileName.split('.').pop().toLowerCase();
+
+            console.log(`📋 检查文件: ${fileName} (${(fileSize / 1024 / 1024).toFixed(2)}MB)`);
+
+            // 验证文件扩展名
+            if (!allExts.includes(fileExt)) {
+                invalidFiles.push({
+                    name: fileName,
+                    reason: '不支持的文件类型'
+                });
+                continue;
+            }
+
+            // 验证文件大小
+            if (fileSize > maxSize) {
+                invalidFiles.push({
+                    name: fileName,
+                    reason: '文件过大（超过500MB）'
+                });
+                continue;
+            }
+
+            validFiles.push(file);
+        }
+
+        // 显示验证结果
+        if (invalidFiles.length > 0) {
+            var errorMsg = '以下文件无法上传：\n';
+            invalidFiles.forEach(function(f) {
+                errorMsg += `- ${f.name}: ${f.reason}\n`;
+            });
+            layer.alert(errorMsg, {icon: 0, title: '文件验证失败'});
+        }
+
+        if (validFiles.length === 0) {
+            layer.msg('❌ 没有可上传的文件', {icon: 2});
+            return;
+        }
+
+        console.log(`✅ 验证通过：${validFiles.length} 个文件`);
+
+        // 2. 逐个上传（后端 /api/upload/material 只接受单文件，字段名 'file'）
+        var uploadIndex = layer.msg(`正在上传 0/${validFiles.length} 个文件...`, {
+            icon: 16,
+            time: 0,
+            shade: 0.3
+        });
+
+        var successCount = 0;
+        var failCount = 0;
+
+        function uploadNext(idx) {
+            if (idx >= validFiles.length) {
+                layer.close(uploadIndex);
+                if (successCount > 0) {
+                    layer.msg(`✅ 成功上传 ${successCount} 个素材${failCount > 0 ? '，失败 ' + failCount + ' 个' : ''}！`, {
+                        icon: 1,
+                        time: 2500
+                    });
+                    // 刷新素材列表和统计
+                    getMaterialList();
+                    getMaterialStats();
+                    getRecentMaterials();
+                    getFavoriteMaterials();
+                    loadStorageStats();
+                    loadStorageMaterialCount();
+                } else {
+                    layer.msg('❌ 上传失败，请检查文件类型', {icon: 2, time: 3000});
+                }
+                return;
+            }
+
+            var file = validFiles[idx];
+            var formData = new FormData();
+            formData.append('file', file);
+            // 根据扩展名推断类型
+            var ext = (file.name.split('.').pop() || '').toLowerCase();
+            var fileType = 'video';
+            var videoExts = ['mp4','avi','mov','mkv','flv','wmv'];
+            var audioExts = ['mp3','wav','aac','m4a','ogg','flac'];
+            var imageExts = ['jpg','jpeg','png','gif','bmp','webp','svg'];
+            var subExts = ['srt','ass','vtt'];
+            if (videoExts.indexOf(ext) >= 0) fileType = 'video';
+            else if (audioExts.indexOf(ext) >= 0) fileType = 'audio';
+            else if (imageExts.indexOf(ext) >= 0) fileType = 'image';
+            else if (subExts.indexOf(ext) >= 0) fileType = 'subtitle';
+            formData.append('type', fileType);
+
+            layer.msg(`上传中 ${idx + 1}/${validFiles.length}: ${file.name}`, {
+                icon: 16,
+                time: 0,
+                shade: 0.3
+            });
+
+            $.ajax({
+                url: '/api/upload/material',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    if (response.code === 0) {
+                        successCount++;
+                        console.log(`✅ 上传成功: ${file.name}`);
+                    } else {
+                        failCount++;
+                        console.error(`❌ 上传失败: ${file.name} - ${response.msg}`);
+                    }
+                    uploadNext(idx + 1);
+                },
+                error: function(xhr, status, error) {
+                    failCount++;
+                    console.error(`❌ 上传请求失败: ${file.name} - ${error}`);
+                    uploadNext(idx + 1);
+                }
+            });
+        }
+
+        uploadNext(0);
+    }
+
+    // 点击缩略图才加载视频，避免列表页多个视频同时请求被浏览器中止(ERR_ABORTED)
+    function loadVideoPreview(container){
+        var src=container.getAttribute('data-src');
+        if(!src) return;
+        var video=document.createElement('video');
+        video.style.cssText='width:100%;height:100%;object-fit:cover;display:block;';
+        video.preload='auto'; video.muted=true; video.loop=true; video.autoplay=true;
+        var source=document.createElement('source');
+        source.src=src; source.type='video/mp4';
+        video.appendChild(source);
+        container.replaceWith(video);
+        video.play().catch(function(){});
+    }
+
+    // 预览素材：以应用内弹窗展示，关闭预览只关闭弹窗，不影响桌面应用窗口
+    function previewMaterial(materialId) {
+        console.log(`👁️ 预览素材: ${materialId}`);
+
+        var loading = showLoading('加载素材详情...');
+
+        apiRequest('/api/materials/list', 'GET', {page: 1, per_page: 1000}, function(data) {
+            hideLoading(loading);
+            var materials = (data && data.materials) ? data.materials : [];
+            var found = null;
+            for (var i = 0; i < materials.length; i++) {
+                if (String(materials[i].id) === String(materialId)) { found = materials[i]; break; }
+            }
+            if (found) {
+                // 适配字段：将 filename→name，relative_path→path/url，type 扩展名→类别
+                var extMap = { mp4:'video', avi:'video', mov:'video', mkv:'video', flv:'video', wmv:'video',
+                               mp3:'audio', wav:'audio', aac:'audio', m4a:'audio', ogg:'audio', flac:'audio',
+                               jpg:'image', jpeg:'image', png:'image', gif:'image', bmp:'image', webp:'image', svg:'image',
+                               srt:'text', ass:'text', vtt:'text' };
+                var norm = {
+                    id: found.id,
+                    name: found.filename || found.name || found.id,
+                    size: found.size || 0,
+                    type: extMap[(found.type || '').toLowerCase()] || found.category || 'video',
+                    url: found.url || (found.relative_path ? '/' + found.relative_path.replace(/^\/+/, '') : (found.path || '')),
+                    path: found.relative_path || found.path || '',
+                    created_at: found.modified_time ? new Date(found.modified_time * 1000).toISOString() : ''
+                };
+                // 文本素材：先获取文件内容再预览
+                if (norm.type === 'text' && norm.url) {
+                    fetch(norm.url).then(function(r) { return r.text(); }).then(function(content) {
+                        norm.content = content;
+                        showMaterialPreview(norm);
+                    }).catch(function() {
+                        norm.content = '无法加载文件内容';
+                        showMaterialPreview(norm);
+                    });
+                } else {
+                    showMaterialPreview(norm);
+                }
+            } else {
+                layer.msg('❌ 未找到该素材', {icon: 2});
+            }
+        }, function(error) {
+            hideLoading(loading);
+            console.error('❌ 预览素材失败:', error);
+            layer.msg('❌ 加载失败: ' + (error || '网络错误'), {icon: 2});
+        });
+    }
+
+    // 显示素材预览 - 完整实现版本，支持所有素材类型
+    function showMaterialPreview(material) {
+        console.log('🎬 显示素材预览:', material);
+
+        var previewHtml = '';
+        var typeIcon = '';
+        var typeColor = '';
+
+        switch(material.type) {
+            case 'video':
+                typeIcon = '🎬';
+                typeColor = '#667eea';
+                previewHtml = `
+                    <div style="background: #000; border-radius: 12px; overflow: hidden;">
+                        <video controls autoplay style="width: 100%; max-height: 450px; display: block;">
+                            <source src="${material.url || material.path}" type="video/mp4">
+                            您的浏览器不支持视频播放
+                        </video>
+                    </div>
+                `;
+                break;
+            case 'audio':
+                typeIcon = '🎵';
+                typeColor = '#43e97b';
+                previewHtml = `
+                    <div style="background: linear-gradient(135deg, rgba(67,233,123,0.1) 0%, rgba(56,239,125,0.1) 100%); padding: 60px 30px; border-radius: 12px; text-align: center;">
+                        <div style="font-size: 80px; margin-bottom: 20px;">🎵</div>
+                        <audio controls autoplay style="width: 100%; max-width: 500px; margin: 0 auto;">
+                            <source src="${material.url || material.path}" type="audio/mpeg">
+                            您的浏览器不支持音频播放
+                        </audio>
+                        <p style="margin-top: 15px; color: #666; font-size: 13px;">
+                            ${material.duration ? `时长: ${material.duration}秒` : ''}
+                        </p>
+                    </div>
+                `;
+                break;
+            case 'image':
+                typeIcon = '🖼️';
+                typeColor = '#4facfe';
+                previewHtml = `
+                    <div style="text-align: center; background: #f8f9fa; padding: 20px; border-radius: 12px;">
+                        <img src="${material.url || material.path}" alt="${material.name}"
+                             style="max-width: 100%; max-height: 450px; object-fit: contain; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                    </div>
+                `;
+                break;
+            case 'text':
+                typeIcon = '📝';
+                typeColor = '#ff6b6b';
+                previewHtml = `
+                    <div style="background: #f8f9fa; padding: 25px; border-radius: 12px; max-height: 450px; overflow-y: auto; border: 1px solid #e9ecef;">
+                        <pre style="white-space: pre-wrap; word-wrap: break-word; font-family: 'Courier New', monospace; font-size: 14px; line-height: 1.6; margin: 0; color: #333;">${material.content || '无内容'}</pre>
+                    </div>
+                `;
+                break;
+        }
+
+        var previewIndex = layer.open({
+            type: 1,
+            title: `<span style="display:inline-flex;align-items:center;gap:8px;"><i class="layui-icon layui-icon-return"></i>素材预览 · ${material.name}</span>`,
+            area: ['860px', '680px'],
+            shadeClose: false,
+            btn: ['返回素材列表'],
+            btnAlign: 'c',
+            btn1: function(index) { layer.close(index); return false; },
+            cancel: function(index) { layer.close(index); return false; },
+            end: function() {
+                $('.layui-layer-content video, .layui-layer-content audio').each(function() { this.pause(); });
+                window.__materialPreviewOpen = false;
+            },
+            success: function() { window.__materialPreviewOpen = true; },
+            content: `
+                <div class="layui-card">
+                    <div class="layui-card-body">
+                        ${previewHtml}
+                        <div class="layui-row layui-col-space10 mt-10">
+                            <div class="layui-col-md6">
+                                <p class="text-sm text-gray-600">
+                                    类型: ${getMaterialTypeText(material.type)}<br>
+                                    大小: ${formatFileSize(material.size)}<br>
+                                    上传时间: ${formatDate(material.created_at)}
+                                </p>
+                            </div>
+                            <div class="layui-col-md6 text-right">
+                                <button class="layui-btn layui-btn-primary operation-btn" onclick="addMaterialToProject('${material.id}')">
+                                    <i class="layui-icon layui-icon-plus"></i>添加到项目
+                                </button>
+                                <button class="layui-btn layui-btn-normal operation-btn" onclick="downloadMaterial('${material.id}')">
+                                    <i class="layui-icon layui-icon-download"></i>下载
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `
+        });
+    }
+
+    // 添加素材到项目
+    function addMaterialToProject(materialId) {
+        // 优先从 sessionStorage 读取当前项目 ID
+        var projectId = window.currentProjectId || sessionStorage.getItem('current_project_id');
+        if (!projectId) {
+            layer.msg('请先创建或打开一个项目', {icon: 2});
+            return;
+        }
+
+        // 通过 /api/materials/list 查找素材信息，再调用 POST /api/materials 关联到当前项目
+        apiRequest('/api/materials/list', 'GET', {page: 1, per_page: 1000}, function(data) {
+            var materials = (data && data.materials) ? data.materials : [];
+            var found = null;
+            for (var i = 0; i < materials.length; i++) {
+                if (String(materials[i].id) === String(materialId)) { found = materials[i]; break; }
+            }
+            if (!found) {
+                layer.msg('❌ 未找到该素材', {icon: 2});
+                return;
+            }
+            var extMap = { mp4:'video', avi:'video', mov:'video', mkv:'video', flv:'video', wmv:'video',
+                           mp3:'audio', wav:'audio', aac:'audio', m4a:'audio', ogg:'audio', flac:'audio',
+                           jpg:'image', jpeg:'image', png:'image', gif:'image', bmp:'image', webp:'image', svg:'image',
+                           srt:'text', ass:'text', vtt:'text' };
+            var cat = extMap[(found.type || '').toLowerCase()] || 'other';
+            var loading = showLoading('正在添加素材到项目...');
+            apiRequest('/api/materials', 'POST', {
+                project_id: projectId,
+                type: cat,
+                name: found.filename || found.id,
+                path: found.relative_path || String(found.url || '').replace(/^\/+/, ''),
+                size: found.size || 0,
+                duration: 0,
+                metadata: { source: 'materials_grid' }
+            }, function(resp) {
+                hideLoading(loading);
+                layer.msg('✅ 素材已添加到当前项目', {icon: 1});
+            }, function(error) {
+                hideLoading(loading);
+                layer.msg('❌ ' + (error || '添加失败'), {icon: 2});
+            });
+        }, function(error) {
+            layer.msg('❌ 加载素材列表失败: ' + (error || ''), {icon: 2});
+        });
+    }
+
+    // 切换收藏 - 收藏信息存储于 localStorage
+    function toggleFavorite(materialId, iconElement) {
+        var favIds = [];
+        try { favIds = JSON.parse(localStorage.getItem('material_favorites') || '[]'); } catch(_) {}
+        var idx = favIds.indexOf(materialId);
+        var isFavorite = idx >= 0;
+        if (isFavorite) {
+            favIds.splice(idx, 1);
+            $(iconElement).removeClass('layui-icon-star text-yellow-400');
+            $(iconElement).addClass('layui-icon-star-o text-gray-400');
+            layer.msg('已取消收藏', {icon: 1});
+        } else {
+            favIds.push(materialId);
+            $(iconElement).removeClass('layui-icon-star-o text-gray-400');
+            $(iconElement).addClass('layui-icon-star text-yellow-400');
+            layer.msg('已收藏', {icon: 1});
+        }
+        localStorage.setItem('material_favorites', JSON.stringify(favIds));
+        getFavoriteMaterials();
+    }
+
+    // 删除素材 - 完整实现版本，删除文件+数据库
+    function deleteMaterial(materialId, materialName, relativePath) {
+        console.log(`🗑️ 准备删除素材: ${materialId} - ${materialName}`);
+
+        layer.confirm(`
+            <div style="padding: 20px; text-align: center;">
+                <i class="layui-icon layui-icon-delete" style="font-size: 48px; color: #ff6b6b;"></i>
+                <h3 style="margin: 15px 0; color: #333;">⚠️ 确定要删除素材吗？</h3>
+                <p style="margin: 10px 0; color: #666; font-size: 14px;">
+                    素材名称：<strong>${materialName}</strong><br>
+                    此操作将永久删除文件和数据库记录，不可恢复！
+                </p>
+            </div>
+        `, {
+            title: '删除确认',
+            btn: ['确认删除', '取消'],
+            btn1: function(index) {
+                layer.close(index);
+
+                var loading = showLoading('正在删除素材...');
+
+                // The library can contain files with identical stems. Prefer the
+                // exact managed path returned by the list API to avoid deleting
+                // a different same-named material.
+                var deleteUrl = relativePath ? '/api/material/delete-by-path' : `/api/material/delete/${materialId}`;
+                var deleteData = relativePath ? {relative_path: relativePath} : {};
+                apiRequest(deleteUrl, relativePath ? 'POST' : 'DELETE', deleteData, function(data) {
+                    hideLoading(loading);
+                    // apiRequest 已校验 code===0，进入此回调即代表成功
+                    console.log('✅ 素材删除成功');
+
+                    // 删除后重新读取当前页，保证分页、统计和空状态一致
+                    getMaterialList(window.currentFilter, window.currentSortBy, $('#material-search').val() || '', 1);
+
+                    layer.msg('✅ 素材删除成功！', {icon: 1, time: 2000});
+
+                    // 刷新统计和列表
+                    getMaterialStats();
+                    getRecentMaterials();
+                    getFavoriteMaterials();
+                    loadStorageStats();
+                    loadStorageMaterialCount();
+                }, function(error) {
+                    hideLoading(loading);
+                    console.error('❌ 删除请求失败:', error);
+                    layer.msg('❌ 删除失败: ' + (error || '网络错误'), {icon: 2, time: 2000});
+                });
+            },
+            btn2: function(index) {
+                layer.close(index);
+                console.log('❌ 用户取消删除');
+            }
+        });
+    }
+
+    // 下载素材
+    function downloadMaterial(materialId) {
+        window.open(`/api/material/download/${materialId}`, '_blank');
+    }
+
+    // 搜索素材 - 完整实现版本，真实搜索
+    function searchMaterials() {
+        var search = $('#material-search').val();
+        console.log(`🔍 搜索素材: "${search}"`);
+        getMaterialList(window.currentFilter, window.currentSortBy, search, 1);
+    }
+
+    // 初始化搜索功能
+    function initSearch() {
+        // 绑定搜索输入框的回车事件
+        $('#material-search').on('keyup', function(e) {
+            if (e.keyCode === 13) {  // 回车键
+                searchMaterials();
+            }
+        });
+
+        // 实时搜索（输入后延迟搜索）
+        var searchTimer;
+        $('#material-search').on('input', function() {
+            clearTimeout(searchTimer);
+            var search = $(this).val();
+
+            // 延迟500ms搜索，避免频繁请求
+            searchTimer = setTimeout(function() {
+                if (search.length >= 2 || search.length === 0) {
+                    console.log(`🔍 实时搜索: "${search}"`);
+                    searchMaterials();
+                }
+            }, 500);
+        });
+
+        console.log('✅ 搜索功能已初始化');
+    }
+
+    // 获取素材类型文本
+    function getMaterialTypeText(type) {
+        switch(type) {
+            case 'video': return '视频';
+            case 'audio': return '音频';
+            case 'image': return '图片';
+            case 'text': return '文字';
+            default: return '未知';
+        }
+    }
+
+    // 格式化文件大小
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        var k = 1024;
+        var sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        var i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    // 格式化日期
+    function formatDate(dateString) {
+        var date = new Date(dateString);
+        return date.toLocaleString('zh-CN');
+    }
+</script>
+{% endblock %}

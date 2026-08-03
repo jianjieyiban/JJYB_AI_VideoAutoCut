@@ -1,0 +1,3010 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}JJYB_AI智剪{% endblock %}</title>
+
+    <!-- 网站图标 -->
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='favicon.svg') }}">
+    <meta name="theme-color" content="#667eea">
+
+    <!-- 外部资源 - 性能优化版 -->
+    <!-- 预连接到CDN以加速资源加载 -->
+    <link rel="preconnect" href="https://cdn.tailwindcss.com">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="dns-prefetch" href="https://cdn.socket.io">
+
+    <!-- 关键CSS优先加载 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/layui@2.9.21/dist/css/layui.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css">
+
+    <!-- 非关键JavaScript异步加载 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="{{ url_for('static', filename='lib/jquery/jquery.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='lib/layui/layui.js') }}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js" defer></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js" defer></script>
+    <script src="{{ url_for('static', filename='js/common.js') }}" defer></script>
+
+    <!-- Tailwind配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#165DFF',
+                        secondary: '#0FC6C2',
+                        accent: '#722ED1',
+                        success: '#36D399',
+                        warning: '#FBBD23',
+                        danger: '#F87272',
+                        dark: '#0F172A',
+                        'dark-light': '#1E293B',
+                        'dark-lighter': '#334155',
+                        'text-primary': '#F8FAFC',
+                        'text-secondary': '#CBD5E1',
+                        'border-color': '#334155',
+                        'glass-bg': 'rgba(15, 23, 42, 0.8)',
+                        'glass-border': 'rgba(51, 65, 85, 0.3)',
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'glass': '0 8px 32px rgba(0, 0, 0, 0.37)',
+                        'card': '0 4px 20px rgba(0, 0, 0, 0.15)',
+                        'button': '0 4px 15px rgba(22, 93, 255, 0.3)',
+                        'hover': '0 8px 25px rgba(0, 0, 0, 0.25)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- 自定义样式 -->
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .glass-effect {
+                background: rgba(15, 23, 42, 0.9);
+                border: 1px solid rgba(51, 65, 85, 0.3);
+                backdrop-filter: blur(12px);
+                -webkit-backdrop-filter: blur(12px);
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.37);
+            }
+
+            .glass-card {
+                background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(51, 65, 85, 0.6) 100%);
+                border: 1px solid rgba(51, 65, 85, 0.3);
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+
+            .glass-card:hover {
+                box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25);
+                transform: translateY(-2px);
+                border-color: rgba(22, 93, 255, 0.3);
+            }
+
+            .gradient-text {
+                background: linear-gradient(135deg, #165DFF, #0FC6C2);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
+            }
+
+            .gradient-bg {
+                background: linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #334155 100%);
+            }
+
+            .btn-gradient {
+                background: linear-gradient(135deg, #165DFF 0%, #0FC6C2 100%);
+                transition: all 0.3s ease;
+            }
+
+            .btn-gradient:hover {
+                background: linear-gradient(135deg, #0FC6C2 0%, #165DFF 100%);
+                transform: translateY(-1px);
+                box-shadow: 0 6px 20px rgba(22, 93, 255, 0.4);
+            }
+
+            .btn-gradient:active {
+                transform: translateY(0);
+                box-shadow: 0 4px 15px rgba(22, 93, 255, 0.3);
+            }
+
+            .feature-card {
+                background: linear-gradient(135deg, rgba(22, 93, 255, 0.1) 0%, rgba(15, 198, 194, 0.1) 100%);
+                border: 1px solid rgba(22, 93, 255, 0.2);
+                transition: all 0.3s ease;
+            }
+
+            .feature-card:hover {
+                background: linear-gradient(135deg, rgba(22, 93, 255, 0.15) 0%, rgba(15, 198, 194, 0.15) 100%);
+                border-color: rgba(22, 93, 255, 0.4);
+                transform: translateY(-3px);
+                box-shadow: 0 10px 30px rgba(22, 93, 255, 0.2);
+            }
+
+            .task-status {
+                padding: 3px 10px;
+                border-radius: 15px;
+            }
+
+            /* 底部状态栏样式 */
+            .bottom-status-bar {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                height: 50px;
+                background: rgba(15, 23, 42, 0.95);
+                backdrop-filter: blur(10px);
+                border-top: 1px solid rgba(255, 255, 255, 0.1);
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 0 20px;
+                z-index: 100;
+                box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.2);
+            }
+
+            /* 确保主内容区域有底部边距，避免被状态栏遮挡 */
+            body {
+                margin-bottom: 45px;
+            }
+
+            .layui-row {
+                margin-bottom: 0 !important;
+            }
+
+            .task-status {
+                font-size: 12px;
+                font-weight: 500;
+                border: 1px solid transparent;
+            }
+
+            .status-pending {
+                background: rgba(251, 189, 35, 0.1);
+                color: #FBBD23;
+                border-color: rgba(251, 189, 35, 0.3);
+            }
+
+            .status-processing {
+                background: rgba(22, 93, 255, 0.1);
+                color: #165DFF;
+                border-color: rgba(22, 93, 255, 0.3);
+            }
+
+            .status-completed {
+                background: rgba(54, 211, 153, 0.1);
+                color: #36D399;
+                border-color: rgba(54, 211, 153, 0.3);
+            }
+
+            .status-failed {
+                background: rgba(248, 114, 114, 0.1);
+                color: #F87272;
+                border-color: rgba(248, 114, 114, 0.3);
+            }
+
+            .material-item {
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                cursor: pointer;
+            }
+
+            .material-item:hover {
+                transform: translateY(-4px);
+                box-shadow: 0 12px 35px rgba(0, 0, 0, 0.25);
+                border-color: rgba(22, 93, 255, 0.4);
+            }
+
+            .nav-btn {
+                position: relative;
+                overflow: hidden;
+                transition: all 0.3s ease;
+            }
+
+            .nav-btn::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: -100%;
+                width: 100%;
+                height: 2px;
+                background: linear-gradient(90deg, transparent, #165DFF, transparent);
+                transition: left 0.5s ease;
+            }
+
+            .nav-btn:hover::before {
+                left: 100%;
+            }
+
+            .nav-btn.active {
+                background: linear-gradient(135deg, rgba(22, 93, 255, 0.2) 0%, rgba(15, 198, 194, 0.2) 100%);
+                color: #165DFF;
+                border-color: rgba(22, 93, 255, 0.3);
+            }
+
+            .progress-bar {
+                background: linear-gradient(90deg, #165DFF, #0FC6C2);
+                animation: shimmer 2s ease-in-out infinite;
+            }
+
+            @keyframes shimmer {
+                0% { background-position: -200% 0; }
+                100% { background-position: 200% 0; }
+            }
+
+            .animate-float {
+                animation: float 6s ease-in-out infinite;
+            }
+
+            @keyframes float {
+                0%, 100% { transform: translateY(0px); }
+                50% { transform: translateY(-10px); }
+            }
+
+            .animate-pulse-slow {
+                animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+            }
+
+            .glass-input {
+                background: rgba(51, 65, 85, 0.3);
+                border: 1px solid rgba(51, 65, 85, 0.5);
+                backdrop-filter: blur(10px);
+                transition: all 0.3s ease;
+            }
+
+            .glass-input:focus {
+                border-color: rgba(22, 93, 255, 0.5);
+                box-shadow: 0 0 0 3px rgba(22, 93, 255, 0.1);
+                background: rgba(51, 65, 85, 0.4);
+            }
+        }
+    </style>
+
+    <style>
+        :root { --primary-color: #165DFF; --theme-primary: #165DFF; --theme-opacity: .9; --theme-font-size: 16px; --theme-icon-size: 1; }
+        body { background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%); color: #F8FAFC; font-size: var(--theme-font-size); }
+        body.light-theme { background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); color: #0f172a; }
+        body.light-theme .glass-effect { background: rgba(255,255,255,var(--theme-opacity)); border-color: rgba(148,163,184,.35); box-shadow: 0 8px 32px rgba(15,23,42,.12); }
+        body.light-theme .glass-card { background: linear-gradient(135deg,rgba(255,255,255,var(--theme-opacity)),rgba(241,245,249,var(--theme-opacity))); border-color: rgba(148,163,184,.35); box-shadow: 0 4px 20px rgba(15,23,42,.08); }
+        body.light-theme .text-text-primary { color: #0f172a !important; }
+        body.light-theme .text-text-secondary { color: #475569 !important; }
+        body.light-theme .nav-hint { color: #475569 !important; }
+        body.light-theme .menu-badge { color: #1e293b !important; background: rgba(100,116,139,0.15) !important; }
+        body.light-theme .layui-card { background: rgba(255,255,255,0.95) !important; border: 1px solid rgba(148,163,184,.2) !important; }
+        body.light-theme .layui-card-header { border-bottom: 1px solid rgba(148,163,184,.2) !important; color: #1e293b !important; }
+        body.light-theme .layui-card-title, body.light-theme .layui-card-title * { color: #1e293b !important; }
+        body.light-theme .layui-card-body { color: #334155 !important; }
+        body.light-theme .layui-table { background: #fff !important; color: #334155 !important; }
+        body.light-theme .layui-table th, body.light-theme .layui-table td { color: #334155 !important; border-color: rgba(148,163,184,.2) !important; }
+        body.light-theme .layui-input { background: #fff !important; color: #334155 !important; }
+        body.light-theme .layui-form-label { color: #475569 !important; }
+        body.light-theme .ai-feature-card { background: linear-gradient(135deg, rgba(255,255,255,.96), rgba(248,250,252,.96)) !important; border-color: rgba(124,58,237,.22) !important; box-shadow: 0 8px 24px rgba(15,23,42,.08) !important; }
+        body.light-theme .ai-feature-card [style*="background: rgba(15,23,42"],
+        body.light-theme .ai-feature-card [style*="background: rgba(30,41,59"] { background: #ffffff !important; }
+        body.light-theme .ai-feature-card h3,
+        body.light-theme .ai-feature-card h4,
+        body.light-theme .ai-feature-card label,
+        body.light-theme .ai-feature-card p,
+        body.light-theme .ai-feature-card [style*="color: rgba(255,255,255"] { color: #334155 !important; }
+        body.light-theme .ai-feature-card .ai-feature-icon *,
+        body.light-theme .ai-feature-card button[style*="background: linear-gradient"],
+        body.light-theme .ai-feature-card button[style*="background:linear-gradient"] { color: #ffffff !important; }
+        body.light-theme .ai-feature-card .ai-feature-muted { color: #64748b !important; }
+        body.light-theme .ai-feature-card .ai-feature-secondary-action { color: #5b21b6 !important; background: rgba(124,58,237,.10) !important; border-color: rgba(124,58,237,.45) !important; }
+        body.light-theme .ai-content-section { background: linear-gradient(135deg, rgba(255,255,255,.96), rgba(248,250,252,.96)) !important; border-color: rgba(148,163,184,.26) !important; box-shadow: 0 8px 24px rgba(15,23,42,.08) !important; }
+        body.light-theme .ai-content-section [style*="background: rgba(15,23,42"],
+        body.light-theme .ai-content-section [style*="background: rgba(30,41,59"] { background: #ffffff !important; }
+        body.light-theme .ai-content-section h3,
+        body.light-theme .ai-content-section h4,
+        body.light-theme .ai-content-section p,
+        body.light-theme .ai-content-section label,
+        body.light-theme .ai-content-section th,
+        body.light-theme .ai-content-section td,
+        body.light-theme .ai-content-section [style*="color: rgba(255,255,255"] { color: #334155 !important; }
+        body.light-theme .ai-content-section [style*="color: #e9d5ff"] { color: #5b21b6 !important; }
+        body.light-theme .ai-content-section button[style*="background: linear-gradient"],
+        body.light-theme .ai-content-section button[style*="background: linear-gradient"] *,
+        body.light-theme .ai-content-section div[style*="background: linear-gradient"] > i { color: #ffffff !important; }
+        body.light-theme .subtitle-preview-content { color: #ffffff !important; text-shadow: 0 2px 4px rgba(0,0,0,.9) !important; }
+        html.no-animations *, html.no-animations *::before, html.no-animations *::after { animation: none !important; transition: none !important; }
+        html.no-glass .glass-card, html.no-glass .glass-effect { backdrop-filter: none; -webkit-backdrop-filter: none; }
+        .fa { font-size: calc(1em * var(--theme-icon-size)); }
+    </style>
+
+    <!-- 基础样式 -->
+    <style>
+        body {
+            background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            color: #F8FAFC;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* 自定义滚动条 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(51, 65, 85, 0.2);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #165DFF, #0FC6C2);
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #0FC6C2, #165DFF);
+        }
+
+        /* 动画效果 */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slideInLeft {
+            from { opacity: 0; transform: translateX(-30px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(30px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        @keyframes scaleIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .animate-fade-in {
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        .animate-slide-in-left {
+            animation: slideInLeft 0.5s ease-out;
+        }
+
+        .animate-slide-in-right {
+            animation: slideInRight 0.5s ease-out;
+        }
+
+        .animate-scale-in {
+            animation: scaleIn 0.4s ease-out;
+        }
+
+        /* 按钮悬停效果 */
+        .operation-btn {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .operation-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .operation-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+        }
+
+        #notification-wrapper, #notification-wrapper .operation-btn { overflow: visible; }
+        #notification-unread-badge {
+            min-width: 22px;
+            height: 22px;
+            padding: 0 5px;
+            white-space: nowrap;
+            pointer-events: none;
+            z-index: 3;
+        }
+        #notification-wrapper .operation-btn:focus-visible { outline: 2px solid #60a5fa; outline-offset: 3px; }
+        @media (max-width: 640px) {
+            #notification-wrapper { margin-right: 4px; }
+            #notification-unread-badge { right: -6px; top: -6px; }
+        }
+
+        /* 加载动画 */
+        .loading-spinner {
+            border: 3px solid rgba(22, 93, 255, 0.2);
+            border-top: 3px solid #165DFF;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            animation: spin 1.2s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* 进度条样式 */
+        .custom-progress {
+            background: rgba(51, 65, 85, 0.3);
+            border-radius: 12px;
+            overflow: hidden;
+            height: 8px;
+            border: 1px solid rgba(51, 65, 85, 0.5);
+        }
+
+        .custom-progress-bar {
+            background: linear-gradient(90deg, #165DFF, #0FC6C2);
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.3s ease;
+            background-size: 200% 100%;
+            animation: shimmer 2s ease-in-out infinite;
+        }
+
+        /* 视频播放器样式 */
+        video {
+            border-radius: 12px;
+            background: #000;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+
+        /* 工具提示 */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+
+        .tooltip .tooltip-text {
+            visibility: hidden;
+            width: 250px;
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.9) 100%);
+            color: #F8FAFC;
+            text-align: center;
+            border-radius: 8px;
+            padding: 10px 15px;
+            position: absolute;
+            z-index: 1000;
+            bottom: 130%;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.3s, transform 0.3s;
+            border: 1px solid rgba(51, 65, 85, 0.5);
+            backdrop-filter: blur(15px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .tooltip:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+            transform: translateX(-50%) translateY(-10px);
+        }
+
+        /* 统一轻提示：导航栏下方顶部居中，纯文字无图标无滚动条 */
+        .layui-layer.layui-layer-msg,
+        body .layui-layer.layui-layer-msg {
+            top: 76px !important;
+            left: 50% !important;
+            right: auto !important;
+            bottom: auto !important;
+            transform: translateX(-50%) !important;
+            min-width: 0 !important;
+            width: auto !important;
+            max-width: min(320px, calc(100vw - 24px)) !important;
+            height: auto !important;
+            padding: 0 !important;
+            border: 1px solid rgba(148, 163, 184, .28) !important;
+            border-radius: 9px !important;
+            background: rgba(15, 23, 42, .96) !important;
+            color: #f8fafc !important;
+            box-shadow: 0 10px 26px rgba(2, 6, 23, .3) !important;
+            backdrop-filter: blur(14px);
+            font-size: 12px !important;
+            line-height: 18px !important;
+            text-align: center !important;
+            z-index: 1200 !important;
+            overflow: hidden !important;
+        }
+        .layui-layer-msg .layui-layer-content,
+        body .layui-layer-msg .layui-layer-content {
+            min-height: 18px !important;
+            height: auto !important;
+            padding: 6px 12px !important;
+            background: transparent !important;
+            color: #f8fafc !important;
+            font-size: 12px !important;
+            line-height: 18px !important;
+            text-align: center !important;
+            overflow: hidden !important;
+            white-space: normal !important;
+            word-break: break-word !important;
+            text-indent: 0 !important;
+        }
+        /* 彻底移除 layui msg 的所有图标元素与伪元素 */
+        .layui-layer-msg .layui-layer-ico,
+        .layui-layer-msg .layui-layer-content[class*="layui-layer-ico"],
+        .layui-layer-msg .layui-icon,
+        .layui-layer-msg i,
+        .layui-layer-msg .layui-layer-setwin {
+            display: none !important;
+            width: 0 !important;
+            height: 0 !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            text-indent: -9999px !important;
+            visibility: hidden !important;
+        }
+        .layui-layer-msg .layui-layer-content::before,
+        .layui-layer-msg .layui-layer-content::after {
+            display: none !important;
+            content: none !important;
+        }
+        .jjyb-confirm-dialog {
+            border: 1px solid rgba(148, 163, 184, .28) !important;
+            border-radius: 14px !important;
+            overflow: hidden;
+            background: #172033 !important;
+            box-shadow: 0 20px 52px rgba(2, 6, 23, .44) !important;
+        }
+        .jjyb-confirm-dialog .layui-layer-title {
+            height: auto !important;
+            padding: 15px 18px !important;
+            border-bottom: 1px solid rgba(148, 163, 184, .16) !important;
+            background: rgba(30, 41, 59, .95) !important;
+            color: #f8fafc !important;
+            font-weight: 600;
+        }
+        .jjyb-confirm-dialog .layui-layer-content {
+            padding: 20px 18px !important;
+            color: #cbd5e1 !important;
+            line-height: 1.65 !important;
+        }
+        .jjyb-confirm-dialog .layui-layer-btn {
+            padding: 0 18px 16px !important;
+            border-top: 0 !important;
+            background: #172033 !important;
+        }
+        .jjyb-confirm-dialog .layui-layer-btn a {
+            display: inline-block !important;
+            box-sizing: border-box !important;
+            min-width: 72px;
+            height: 34px;
+            line-height: 34px;
+            padding: 0 16px;
+            border: 0 !important;
+            border-radius: 8px !important;
+            text-align: center;
+            white-space: nowrap !important;
+        }
+        .jjyb-confirm-dialog .layui-layer-btn0 { background: #2563eb !important; color: #fff !important; }
+        .jjyb-confirm-dialog .layui-layer-btn1 { background: rgba(148, 163, 184, .16) !important; color: #e2e8f0 !important; }
+
+        /* 通用 Layui 关闭控件：独立的可点击区域和伪元素叉号，避免依赖默认精灵图。 */
+        body .layui-layer:not(.layui-layer-msg) .layui-layer-setwin {
+            position: absolute !important;
+            top: 8px !important;
+            right: 10px !important;
+            z-index: 2 !important;
+            display: flex !important;
+            align-items: center !important;
+            min-width: 36px !important;
+            min-height: 36px !important;
+            margin: 0 !important;
+            pointer-events: auto !important;
+        }
+        body .layui-layer:not(.layui-layer-msg) .layui-layer-setwin .layui-layer-close {
+            position: relative !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            width: 36px !important;
+            height: 36px !important;
+            margin: 0 !important;
+            overflow: visible !important;
+            background: rgba(248, 250, 252, .12) !important;
+            background-image: none !important;
+            border: 1px solid rgba(248, 250, 252, .28) !important;
+            border-radius: 9px !important;
+            color: #f8fafc !important;
+            cursor: pointer !important;
+            opacity: 1 !important;
+            pointer-events: auto !important;
+            text-decoration: none !important;
+            text-indent: 0 !important;
+            transition: background .2s ease, border-color .2s ease, color .2s ease, transform .2s ease !important;
+        }
+        body .layui-layer:not(.layui-layer-msg) .layui-layer-setwin .layui-layer-close::before {
+            content: '×' !important;
+            display: block !important;
+            color: currentColor !important;
+            font-family: Arial, sans-serif !important;
+            font-size: 28px !important;
+            font-weight: 300 !important;
+            line-height: 1 !important;
+        }
+        body .layui-layer:not(.layui-layer-msg) .layui-layer-setwin .layui-layer-close:hover,
+        body .layui-layer:not(.layui-layer-msg) .layui-layer-setwin .layui-layer-close:focus {
+            background: #dc2626 !important;
+            border-color: #fca5a5 !important;
+            color: #fff !important;
+            outline: none !important;
+            transform: translateY(-1px) !important;
+        }
+        body .layui-layer:not(.layui-layer-msg) .layui-layer-setwin .layui-layer-close:focus-visible {
+            outline: 3px solid rgba(96, 165, 250, .9) !important;
+            outline-offset: 2px !important;
+        }
+
+        /* 编辑器工具层：与普通确认弹窗及轻提示隔离的深色玻璃风格。 */
+        .jjyb-editor-tool {
+            overflow: hidden !important;
+            border: 1px solid rgba(148, 163, 184, .28) !important;
+            border-radius: 14px !important;
+            background: linear-gradient(135deg, rgba(15, 23, 42, .98), rgba(30, 41, 59, .96)) !important;
+            box-shadow: 0 20px 52px rgba(2, 6, 23, .46) !important;
+            backdrop-filter: blur(14px) !important;
+            -webkit-backdrop-filter: blur(14px) !important;
+        }
+        .jjyb-editor-tool .layui-layer-title {
+            height: auto !important;
+            min-height: 52px;
+            box-sizing: border-box !important;
+            padding: 15px 64px 15px 20px !important;
+            border-bottom: 1px solid rgba(148, 163, 184, .16) !important;
+            background: rgba(15, 23, 42, .38) !important;
+            color: #f8fafc !important;
+            font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif !important;
+            font-size: 16px !important;
+            font-weight: 600 !important;
+            line-height: 22px !important;
+        }
+        .jjyb-editor-tool .layui-layer-content {
+            box-sizing: border-box !important;
+            padding: 18px 20px !important;
+            background: transparent !important;
+            color: #f8fafc !important;
+            overflow: auto !important;
+        }
+        .jjyb-editor-tool .layui-layer-btn {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-end !important;
+            gap: 10px !important;
+            min-height: 62px;
+            box-sizing: border-box !important;
+            padding: 12px 20px !important;
+            border-top: 1px solid rgba(148, 163, 184, .16) !important;
+            background: rgba(15, 23, 42, .34) !important;
+            text-align: right !important;
+        }
+        .jjyb-editor-tool .layui-layer-btn a {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            float: none !important;
+            flex: 0 0 auto !important;
+            min-width: 118px !important;
+            height: 38px !important;
+            box-sizing: border-box !important;
+            margin: 0 !important;
+            padding: 0 16px !important;
+            overflow: visible !important;
+            max-width: none !important;
+            border: 1px solid rgba(148, 163, 184, .3) !important;
+            border-radius: 8px !important;
+            background: rgba(148, 163, 184, .14) !important;
+            color: #e2e8f0 !important;
+            font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif !important;
+            font-size: 14px !important;
+            font-weight: 500 !important;
+            line-height: normal !important;
+            letter-spacing: 0 !important;
+            text-align: center !important;
+            text-indent: 0 !important;
+            text-transform: none !important;
+            white-space: nowrap !important;
+            -webkit-font-smoothing: antialiased;
+            transition: background .2s ease, border-color .2s ease, transform .2s ease !important;
+        }
+        .jjyb-editor-tool .layui-layer-btn a:hover {
+            background: rgba(148, 163, 184, .23) !important;
+            border-color: rgba(226, 232, 240, .42) !important;
+            box-shadow: none !important;
+            transform: translateY(-1px) !important;
+        }
+        .jjyb-editor-tool .layui-layer-btn a.layui-layer-btn0:not(:only-child) {
+            border-color: rgba(22, 93, 255, .5) !important;
+            background: linear-gradient(135deg, #165dff, #0fc6c2) !important;
+            color: #fff !important;
+        }
+        .jjyb-editor-tool .layui-layer-btn a.layui-layer-btn0:not(:only-child):hover {
+            border-color: rgba(125, 211, 252, .72) !important;
+            background: linear-gradient(135deg, #0fc6c2, #165dff) !important;
+            box-shadow: 0 5px 16px rgba(22, 93, 255, .3) !important;
+        }
+        .jjyb-editor-tool .layui-layer-btn a.layui-layer-btn1,
+        .jjyb-editor-tool .layui-layer-btn a.layui-layer-btn0:only-child {
+            border-color: rgba(148, 163, 184, .3) !important;
+            background: rgba(148, 163, 184, .14) !important;
+            color: #e2e8f0 !important;
+        }
+        @media (max-width: 640px) {
+            .jjyb-editor-tool .layui-layer-btn { padding-right: 14px !important; padding-left: 14px !important; }
+            .jjyb-editor-tool .layui-layer-btn a { min-width: 118px !important; }
+        }
+        @media (max-width: 640px) {
+            .layui-layer-msg { top: 72px !important; left: 50% !important; right: auto !important; max-width: calc(100vw - 24px); }
+        }
+
+        /* 紧凑状态通知：纯文字、无图标、无滚动条 */
+        #notification {
+            width: auto;
+            max-width: min(280px, calc(100vw - 24px));
+            pointer-events: none;
+            overflow: hidden !important;
+        }
+        #notification .notification-card {
+            padding: 6px 12px;
+            pointer-events: none;
+            border-left: 2px solid #60a5fa;
+            overflow: hidden !important;
+            background: rgba(15, 23, 42, .96);
+            backdrop-filter: blur(14px);
+            box-shadow: 0 10px 26px rgba(2, 6, 23, .3);
+        }
+        #notification[data-type="success"] .notification-card { border-left-color: #36d399; color: #bbf7d0; }
+        #notification[data-type="error"] .notification-card { border-left-color: #f87272; color: #fecaca; }
+        #notification[data-type="warning"] .notification-card { border-left-color: #fbbd23; color: #fde68a; }
+        #notification-title, #notification-message {
+            display: inline;
+            margin: 0;
+            font-size: 12px;
+            line-height: 18px;
+            white-space: normal;
+            word-break: break-word;
+        }
+        #notification-title:empty { display: none; }
+        #notification i,
+        #notification .fa,
+        #notification [class*="icon"] {
+            display: none !important;
+        }
+        .notification { animation: notificationEnter .28s ease-out forwards; }
+        .notification.hide { animation: notificationLeave .22s ease-in forwards; }
+        @keyframes notificationEnter { from { transform: translate(-50%, -12px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+        @keyframes notificationLeave { from { transform: translate(-50%, 0); opacity: 1; } to { transform: translate(-50%, -12px); opacity: 0; } }
+
+        /* 模态框动画 */
+        .modal-enter {
+            animation: modalFadeIn 0.3s ease-out;
+        }
+
+        .modal-exit {
+            animation: modalFadeOut 0.3s ease-in forwards;
+        }
+
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        @keyframes modalFadeOut {
+            from { opacity: 1; transform: scale(1); }
+            to { opacity: 0; transform: scale(0.95); }
+        }
+        /* Floating action utilities: avoid overlapping navbar */
+        :root {
+            --nav-height: 64px;           /* navbar height */
+            --floating-gap: 16px;         /* space below navbar */
+            --floating-z: 1000;           /* default z-index for floating UI */
+        }
+
+        /* Unified floating action containers */
+        .floating-actions {
+            position: fixed;
+            top: calc(var(--nav-height) + var(--floating-gap));
+            z-index: var(--floating-z);
+        }
+        .floating-actions.left {
+            left: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        .floating-actions.right {
+            right: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        /* Ensure page-specific floating buttons avoid navbar overlap */
+        .back-btn,
+        .nav-hint {
+            top: calc(var(--nav-height) + var(--floating-gap)) !important;
+            z-index: var(--floating-z) !important;
+        }
+
+    </style>
+
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="bg-dark text-text-primary">
+
+    <!-- 顶部导航栏 -->
+    <nav class="glass-effect border-b border-border-color sticky top-0 z-[1100]" style="z-index:1100;">
+        <div class="max-w-full px-4">
+            <div class="flex items-center justify-between h-16">
+
+                <!-- 左侧Logo和菜单 -->
+                <div class="flex items-center space-x-6">
+                    <!-- Logo -->
+                    <div class="flex items-center space-x-3 animate-float">
+                        <div class="w-10 h-10 bg-gradient-to-r from-primary to-secondary rounded-xl flex items-center justify-center shadow-button">
+                            <i class="fa fa-scissors text-white text-lg"></i>
+                        </div>
+                        <div>
+                            <h1 class="text-xl font-bold gradient-text">JJYB_AI智剪</h1>
+                            <p class="text-xs text-text-secondary">Professional Video Editor</p>
+                        </div>
+                    </div>
+
+                    <!-- 主导航 - 优化后 -->
+                    <div class="hidden md:flex items-center gap-3" style="background: rgba(255,255,255,0.03); padding: 6px; border-radius: 14px;">
+                        <button class="nav-btn px-6 py-2.5 rounded-xl text-sm font-medium bg-dark-lighter text-text-secondary hover:bg-dark-lighter/80" data-nav-path="/editor" onclick="loadPage('index')" style="transition: all 0.3s;">
+                            <i class="fa fa-home mr-2"></i>编辑
+                        </button>
+                        <button class="nav-btn px-6 py-2.5 rounded-xl text-sm font-medium bg-dark-lighter text-text-secondary hover:bg-dark-lighter/80" data-nav-path="/projects" onclick="loadPage('projects')" style="transition: all 0.3s;" onmouseover="this.style.background='rgba(102,126,234,0.2)'; this.style.transform='translateY(-2px)'" onmouseout="this.style.background=''; this.style.transform='translateY(0)'">
+                            <i class="fa fa-folder mr-2"></i>项目
+                        </button>
+                        <button class="nav-btn px-6 py-2.5 rounded-xl text-sm font-medium bg-dark-lighter text-text-secondary hover:bg-dark-lighter/80" data-nav-path="/materials" onclick="loadPage('materials')" style="transition: all 0.3s;" onmouseover="this.style.background='rgba(102,126,234,0.2)'; this.style.transform='translateY(-2px)'" onmouseout="this.style.background=''; this.style.transform='translateY(0)'">
+                            <i class="fa fa-cubes mr-2"></i>素材库
+                        </button>
+                        <button class="nav-btn px-6 py-2.5 rounded-xl text-sm font-medium bg-dark-lighter text-text-secondary hover:bg-dark-lighter/80" data-nav-path="/ai_features" onclick="loadPage('ai_features')" style="transition: all 0.3s;" onmouseover="this.style.background='rgba(102,126,234,0.2)'; this.style.transform='translateY(-2px)'" onmouseout="this.style.background=''; this.style.transform='translateY(0)'">
+                            <i class="fa fa-magic mr-2"></i>AI功能
+                        </button>
+                        <button class="nav-btn px-6 py-2.5 rounded-xl text-sm font-medium bg-dark-lighter text-text-secondary hover:bg-dark-lighter/80" data-nav-path="/settings" onclick="loadPage('settings')" style="transition: all 0.3s;" onmouseover="this.style.background='rgba(102,126,234,0.2)'; this.style.transform='translateY(-2px)'" onmouseout="this.style.background=''; this.style.transform='translateY(0)'">
+                            <i class="fa fa-cog mr-2"></i>设置
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 右侧工具栏 -->
+                <div class="flex items-center space-x-4">
+
+                    <!-- 快速操作按钮 -->
+                    <div class="flex items-center space-x-3">
+                        <button class="operation-btn px-4 py-2 bg-gradient-to-r from-primary/20 to-secondary/20 text-primary border border-primary/30 rounded-xl text-sm hover:bg-gradient-to-r from-primary/30 to-secondary/30" onclick="newProject()">
+                            <i class="fa fa-plus mr-2"></i>新建
+                        </button>
+                        <button class="operation-btn px-4 py-2 btn-gradient text-white rounded-xl text-sm" onclick="saveProject()">
+                            <i class="fa fa-save mr-2"></i>保存
+                        </button>
+                        <button class="operation-btn px-4 py-2 bg-gradient-to-r from-accent/20 to-primary/20 text-accent border border-accent/30 rounded-xl text-sm hover:bg-gradient-to-r from-accent/30 to-primary/30" onclick="exportVideo()">
+                            <i class="fa fa-export mr-2"></i>导出
+                        </button>
+                    </div>
+
+                    <!-- 用户头像 -->
+                    <div class="relative" id="user-menu-wrapper">
+                        <button class="operation-btn w-10 h-10 bg-gradient-to-r from-primary to-secondary rounded-full flex items-center justify-center text-white shadow-button" onclick="toggleUserMenu(event)" aria-label="用户菜单">
+                            <i class="fa fa-user-circle text-sm"></i>
+                        </button>
+                        <div id="user-menu-popover" class="glass-card rounded-xl border border-border-color shadow-lg p-2 absolute right-0 mt-2 w-48" style="display:none; z-index:1000;">
+                            <button class="operation-btn w-full text-left px-3 py-2 rounded-lg hover:bg-dark-lighter/80" onclick="openUserProfile()"><i class="fa fa-id-badge mr-2"></i>个人中心</button>
+                            <button class="operation-btn w-full text-left px-3 py-2 rounded-lg hover:bg-dark-lighter/80" onclick="loadPage('settings')"><i class="fa fa-cog mr-2"></i>设置</button>
+                            <button class="operation-btn w-full text-left px-3 py-2 rounded-lg hover:bg-dark-lighter/80" onclick="logout()"><i class="fa fa-sign-out mr-2"></i>退出登录</button>
+                        </div>
+                    </div>
+
+                    <div class="relative" id="notification-wrapper" style="isolation:isolate; z-index:1100;">
+                        <button class="operation-btn w-10 h-10 bg-dark-lighter rounded-full flex items-center justify-center text-text-secondary hover:bg-dark-lighter/80 relative" style="z-index:1; overflow:visible;" onclick="toggleNotifications(event)" aria-label="通知，未读 0 条">
+                            <i class="fa fa-bell text-sm"></i>
+                            <span id="notification-unread-badge" class="absolute -top-1 -right-1 bg-red-500 text-white rounded-full text-[10px]" style="display:inline-flex;align-items:center;justify-content:center;border:2px solid #1e293b;box-shadow:0 2px 6px rgba(0,0,0,.45);line-height:1;" hidden></span>
+                        </button>
+                        <div id="notification-popover" class="glass-card rounded-xl border border-border-color shadow-lg absolute w-80 p-3" style="display:none; top:calc(100% + 8px); right:0; margin-top:0; z-index:1500; max-height:calc(100vh - 88px);">
+                            <div class="flex flex-wrap items-center justify-between mb-2 gap-2">
+                                <span class="text-sm font-medium shrink-0">通知</span>
+                                <div class="flex flex-wrap items-center gap-1">
+                                    <button class="operation-btn text-xs px-2 py-1 rounded-md hover:bg-dark-lighter/80" onclick="markAllNotificationsRead()" title="全部标记为已读">全部已读</button>
+                                    <button class="operation-btn text-xs px-2 py-1 rounded-md hover:bg-dark-lighter/80" onclick="clearAllNotifications()" title="清空所有通知">清空</button>
+                                    <button class="operation-btn text-xs px-2 py-1 rounded-md hover:bg-dark-lighter/80" onclick="loadNotifications()" title="手动刷新最新任务数据">刷新</button>
+                                </div>
+                            </div>
+                            <div id="notification-list" class="space-y-2 max-h-64 overflow-y-auto" style="max-height:min(16rem, calc(100vh - 210px));"><div class="text-text-secondary text-xs">暂无通知</div></div>
+                            <div class="pt-2 mt-2 border-t border-border-color/60 text-[11px] text-text-secondary flex items-center justify-between">
+                                <span id="notification-summary">任务事件实时同步</span>
+                                <span>以项目数据为准</span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区域 -->
+    <style>
+        :root { --app-nav-h: 64px; --statusbar-h: 40px; --inspector-w: 320px; }
+        #app-workspace {
+            height: calc(100dvh - var(--app-nav-h) - var(--statusbar-h));
+            margin-top: var(--app-nav-h);
+            min-height: 0;
+            overflow: hidden;
+        }
+        #left-sidebar { width: 224px; flex: 0 0 224px; min-height: 0; overflow-y: auto; }
+        #app-main { min-width: 0; min-height: 0; overflow: auto; padding: 16px 16px calc(var(--statusbar-h) + 16px); }
+        #right-sidebar {
+            width: var(--inspector-w) !important;
+            min-width: var(--inspector-w) !important;
+            max-width: var(--inspector-w) !important;
+            min-height: 0;
+            display: flex !important;
+            flex-direction: column;
+            overflow: hidden;
+            background: linear-gradient(180deg, rgba(18, 27, 47, .98), rgba(13, 22, 40, .98));
+        }
+        #right-sidebar-scroll { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 14px; }
+        .inspector-head { display:flex; align-items:center; justify-content:space-between; gap:10px; padding: 2px 2px 14px; border-bottom:1px solid rgba(148,163,184,.16); margin-bottom:14px; }
+        .inspector-kicker { display:flex; align-items:center; gap:8px; color:#e2e8f0; font-size:13px; font-weight:700; }
+        .inspector-kicker i { width:28px; height:28px; display:grid; place-items:center; border-radius:8px; color:#93c5fd; background:rgba(59,130,246,.14); }
+        .inspector-status { color:#94a3b8; font-size:11px; }
+        .context-inspector-card, #editor-inspector-slot { margin-bottom:12px; border:1px solid rgba(148,163,184,.14); border-radius:12px; background:rgba(30,41,59,.48); }
+        .context-inspector-card { padding:13px; }
+        .context-inspector-card h4 { margin:0 0 6px; color:#f1f5f9; font-size:13px; font-weight:650; }
+        .context-inspector-card p { margin:0; color:#94a3b8; font-size:12px; line-height:1.55; }
+        #editor-inspector-slot { display:none; padding:12px; }
+        #right-sidebar #clip-properties, #right-sidebar #color-correction, #right-sidebar #export-settings {
+            margin:0 0 12px !important;
+            padding:14px !important;
+            border-radius:12px !important;
+            border-color:rgba(148,163,184,.16) !important;
+            background:rgba(30,41,59,.48) !important;
+            box-shadow:none !important;
+        }
+        #right-sidebar #clip-properties > div:first-child, #right-sidebar #color-correction > div:first-child, #right-sidebar #export-settings > div:first-child {
+            margin-bottom:12px !important;
+            padding-bottom:10px !important;
+            border-bottom-width:1px !important;
+        }
+        #right-sidebar #clip-properties > div:first-child > div, #right-sidebar #color-correction > div:first-child > div, #right-sidebar #export-settings > div:first-child > div { width:30px !important; height:30px !important; border-radius:8px !important; }
+        #right-sidebar #clip-properties > div:first-child > div i, #right-sidebar #color-correction > div:first-child > div i, #right-sidebar #export-settings > div:first-child > div i { font-size:14px !important; }
+        #right-sidebar #clip-properties > div:nth-child(2) { gap:10px !important; }
+        #right-sidebar #clip-properties > div:nth-child(2) > div, #right-sidebar #color-correction > div:nth-child(2) > div, #right-sidebar #export-settings > div:nth-child(2) > div { padding:10px !important; border-radius:9px !important; }
+        #right-sidebar #effects-panel { margin:0 0 12px !important; padding:0 2px; }
+        #right-sidebar #effects-panel h4 { margin:0 0 8px !important; font-size:12px !important; color:#94a3b8 !important; }
+        #right-sidebar #effects-panel .space-y-3 > * + * { margin-top:7px !important; }
+        #right-sidebar #effects-panel button { padding:9px 10px !important; border-radius:9px !important; }
+        @media (max-width: 1279px) { :root { --inspector-w: 292px; } #left-sidebar { width:200px; flex-basis:200px; } }
+        @media (max-width: 1023px) {
+            #app-workspace { height:calc(100dvh - var(--app-nav-h) - var(--statusbar-h)); overflow:auto; flex-wrap:wrap; align-content:flex-start; }
+            #left-sidebar { width:200px; flex-basis:200px; }
+            #app-main { flex:1 1 calc(100% - 200px); min-height:520px; }
+            #right-sidebar { display:flex !important; order:3; width:100% !important; min-width:100% !important; max-width:100% !important; max-height:340px; flex:0 0 100%; border-left:0; border-top:1px solid rgba(148,163,184,.16); }
+        }
+        @media (max-width: 767px) {
+            #app-main { flex-basis:100%; min-height:0; }
+            #right-sidebar { max-height:320px; }
+        }
+    </style>
+    <div id="app-workspace" class="flex">
+
+        <!-- 左侧边栏 -->
+        <aside id="left-sidebar" class="glass-effect border-r border-border-color hidden md:block animate-slide-in-left">
+            <div id="left-sidebar-content" class="p-4">
+
+                <!-- 项目信息 -->
+                <div class="mb-6">
+                    <h3 class="text-sm font-semibold text-text-secondary mb-3 uppercase tracking-wider">当前项目</h3>
+                    <div class="glass-card rounded-xl p-4">
+                        <div id="current-project-info">
+                            <p class="text-xs text-text-secondary mb-2">未选择项目</p>
+                            <button class="operation-btn w-full text-sm btn-gradient text-white rounded-lg hover:opacity-90" onclick="newProject()">
+                                <i class="fa fa-plus mr-2"></i>创建新项目
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 最近项目 -->
+                <div class="mb-6">
+                    <h3 class="text-sm font-semibold text-text-secondary mb-3 uppercase tracking-wider">最近项目</h3>
+                    <div id="recent-projects" class="space-y-3">
+                        <!-- 最近项目列表将通过JavaScript动态生成 -->
+                        <div class="text-center py-8">
+                            <i class="fa fa-folder-open text-3xl text-text-secondary mb-3"></i>
+                            <p class="text-xs text-text-secondary">暂无最近项目</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 快速工具 -->
+                <div>
+                    <h3 class="text-sm font-semibold text-text-secondary mb-3 uppercase tracking-wider">快速工具</h3>
+                    <div class="space-y-3">
+                        <button class="operation-btn w-full flex items-center justify-between px-4 py-3 glass-card rounded-xl hover:border-primary/30" onclick="openAIVoice()">
+                            <span class="text-sm flex items-center">
+                                <i class="fa fa-microphone mr-3 text-primary text-lg"></i>
+                                AI<br>配音
+                            </span>
+                            <i class="fa fa-chevron-right text-text-secondary"></i>
+                        </button>
+                        <button class="operation-btn w-full flex items-center justify-between px-4 py-3 glass-card rounded-xl hover:border-primary/30" onclick="openAISubtitle()">
+                            <span class="text-sm flex items-center">
+                                <i class="fa fa-font mr-3 text-secondary text-lg"></i>
+                                自动<br>字幕
+                            </span>
+                            <i class="fa fa-chevron-right text-text-secondary"></i>
+                        </button>
+                        <button class="operation-btn w-full flex items-center justify-between px-4 py-3 glass-card rounded-xl hover:border-primary/30" onclick="openAIClip()">
+                            <span class="text-sm flex items-center">
+                                <i class="fa fa-magic mr-3 text-accent text-lg"></i>
+                                智能<br>剪辑
+                            </span>
+                            <i class="fa fa-chevron-right text-text-secondary"></i>
+                        </button>
+                        <button class="operation-btn w-full flex items-center justify-between px-4 py-3 glass-card rounded-xl hover:border-primary/30" onclick="openAIEnhance()">
+                            <span class="text-sm flex items-center">
+                                <i class="fa fa-eye mr-3 text-warning text-lg"></i>
+                                画质<br>增强
+                            </span>
+                            <i class="fa fa-chevron-right text-text-secondary"></i>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </aside>
+
+        <!-- 主内容 -->
+        <main id="app-main" class="flex-1 animate-fade-in">
+            {% block content %}{% endblock %}
+        </main>
+
+        <!-- 右侧上下文检查器：仅在编辑器/解说/混剪/配音页渲染 -->
+        {% if request.path not in ['/materials', '/ai_features', '/settings'] %}
+        <aside id="right-sidebar" class="glass-effect border-l border-border-color hidden lg:block animate-slide-in-right">
+            <div id="right-sidebar-scroll">
+                <div class="inspector-head">
+                    <div class="inspector-kicker"><i class="fa fa-sliders"></i><span>上下文面板</span></div>
+                    <span class="inspector-status" id="inspector-status">就绪</span>
+                </div>
+                <div id="context-inspector" class="context-inspector-card">
+                    <h4 id="context-inspector-title">当前工作区</h4>
+                    <p id="context-inspector-description">选择素材后可在此调整剪辑属性、色彩与导出参数。</p>
+                </div>
+                <div id="editor-inspector-slot"></div>
+
+                <!-- 剪辑属性 - 现代化卡片式 -->
+                <div id="clip-properties" style="background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(51, 65, 85, 0.6) 100%); border-radius: 16px; padding: 18px; margin-bottom: 20px; border: 1px solid rgba(51, 65, 85, 0.3); box-sizing: border-box; width: 100%;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 18px; padding-bottom: 15px; border-bottom: 2px solid rgba(102,126,234,0.1);">
+                        <div style="width: 38px; height: 38px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fa fa-sliders" style="color: white; font-size: 17px;"></i>
+                        </div>
+                        <h4 style="font-size: 14px; font-weight: 700; color: rgba(255,255,255,0.95); margin: 0;">剪辑属性</h4>
+                    </div>
+
+                    <div style="display: grid; gap: 15px;">
+                        <!-- 位置控制 -->
+                        <div style="background: rgba(15,23,42,0.6); padding: 14px; border-radius: 12px; box-sizing: border-box;">
+                            <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.8); margin-bottom: 10px;">
+                                <i class="fa fa-arrows" style="color: #667eea;"></i> 位置
+                            </label>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                                <input type="number" placeholder="X" value="0" style="width: 100%; padding: 9px; background: rgba(30,41,59,0.8); border: 1px solid rgba(102,126,234,0.3); border-radius: 8px; color: rgba(255,255,255,0.9); font-size: 12px; box-sizing: border-box;">
+                                <input type="number" placeholder="Y" value="0" style="width: 100%; padding: 9px; background: rgba(30,41,59,0.8); border: 1px solid rgba(102,126,234,0.3); border-radius: 8px; color: rgba(255,255,255,0.9); font-size: 12px; box-sizing: border-box;">
+                            </div>
+                        </div>
+
+                        <!-- 缩放 -->
+                        <div style="background: rgba(15,23,42,0.6); padding: 14px; border-radius: 12px; box-sizing: border-box;">
+                            <label style="display: flex; align-items: center; justify-content: space-between; font-size: 12px; font-weight: 600; margin-bottom: 10px;">
+                                <span style="display: flex; align-items: center; gap: 8px; color: rgba(255,255,255,0.8);">
+                                    <i class="fa fa-search-plus" style="color: #4facfe;"></i> 缩放
+                                </span>
+                                <span id="scale-value" style="color: #4facfe; font-weight: 700; font-size: 13px;">100%</span>
+                            </label>
+                            <div style="width: 100%; box-sizing: border-box; padding: 0 4px;">
+                                <input type="range" min="0" max="200" value="100" onchange="updateScale(this.value)" style="width: 100%; height: 6px; background: linear-gradient(90deg, rgba(79,172,254,0.2) 0%, rgba(79,172,254,0.8) 50%, rgba(79,172,254,0.2) 100%); border-radius: 3px; outline: none; -webkit-appearance: none; box-sizing: border-box;">
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-top: 6px; font-size: 10px; color: rgba(255,255,255,0.5); padding: 0 4px;">
+                                <span>0%</span>
+                                <span>200%</span>
+                            </div>
+                        </div>
+
+                        <!-- 旋转 -->
+                        <div style="background: rgba(15,23,42,0.6); padding: 14px; border-radius: 12px; box-sizing: border-box;">
+                            <label style="display: flex; align-items: center; justify-content: space-between; font-size: 12px; font-weight: 600; margin-bottom: 10px;">
+                                <span style="display: flex; align-items: center; gap: 8px; color: rgba(255,255,255,0.8);">
+                                    <i class="fa fa-repeat" style="color: #f093fb;"></i> 旋转
+                                </span>
+                                <span id="rotation-value" style="color: #f093fb; font-weight: 700; font-size: 13px;">0°</span>
+                            </label>
+                            <div style="width: 100%; box-sizing: border-box; padding: 0 4px;">
+                                <input type="range" min="0" max="360" value="0" onchange="updateRotation(this.value)" style="width: 100%; height: 6px; background: linear-gradient(90deg, rgba(240,147,251,0.2) 0%, rgba(240,147,251,0.8) 50%, rgba(240,147,251,0.2) 100%); border-radius: 3px; outline: none; -webkit-appearance: none; box-sizing: border-box;">
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-top: 6px; font-size: 10px; color: rgba(255,255,255,0.5); padding: 0 4px;">
+                                <span>0°</span>
+                                <span>360°</span>
+                            </div>
+                        </div>
+
+                        <!-- 音量 -->
+                        <div style="background: rgba(15,23,42,0.6); padding: 14px; border-radius: 12px; box-sizing: border-box;">
+                            <label style="display: flex; align-items: center; justify-content: space-between; font-size: 12px; font-weight: 600; margin-bottom: 10px;">
+                                <span style="display: flex; align-items: center; gap: 8px; color: rgba(255,255,255,0.8);">
+                                    <i class="fa fa-volume-up" style="color: #43e97b;"></i> 音量
+                                </span>
+                                <span id="volume-value" style="color: #43e97b; font-weight: 700; font-size: 13px;">100%</span>
+                            </label>
+                            <div style="width: 100%; box-sizing: border-box; padding: 0 4px;">
+                                <input type="range" min="0" max="200" value="100" onchange="updateVolume(this.value)" style="width: 100%; height: 6px; background: linear-gradient(90deg, rgba(67,233,123,0.2) 0%, rgba(67,233,123,0.8) 50%, rgba(67,233,123,0.2) 100%); border-radius: 3px; outline: none; -webkit-appearance: none; box-sizing: border-box;">
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-top: 6px; font-size: 10px; color: rgba(255,255,255,0.5); padding: 0 4px;">
+                                <span>0%</span>
+                                <span>200%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 色彩校正 - 彩虹渐变风格 -->
+                <div id="color-correction" style="background: linear-gradient(135deg, rgba(255,165,0,0.06) 0%, rgba(255,192,203,0.06) 100%); border-radius: 16px; padding: 18px; margin-bottom: 20px; border: 1px solid rgba(255,165,0,0.15); box-sizing: border-box; width: 100%;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 18px; padding-bottom: 15px; border-bottom: 2px solid rgba(255,165,0,0.1);">
+                        <div style="width: 38px; height: 38px; background: linear-gradient(135deg, #ffa500 0%, #ffc0cb 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fa fa-adjust" style="color: white; font-size: 17px;"></i>
+                        </div>
+                        <h4 style="font-size: 14px; font-weight: 700; color: rgba(255,255,255,0.95); margin: 0;">色彩校正</h4>
+                    </div>
+
+                    <div style="display: grid; gap: 12px;">
+                        <!-- 亮度 -->
+                        <div style="background: rgba(15,23,42,0.6); padding: 12px; border-radius: 10px; box-sizing: border-box;">
+                            <label style="display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.7); margin-bottom: 8px;">
+                                <i class="fa fa-sun-o" style="color: #ffeb3b;"></i> 亮度
+                            </label>
+                            <div style="width: 100%; box-sizing: border-box; padding: 0 4px;">
+                                <input id="cc-brightness" type="range" min="-100" max="100" value="0" style="width: 100%; height: 4px; background: linear-gradient(90deg, #333 0%, #ffeb3b 50%, #fff 100%); border-radius: 2px; box-sizing: border-box;">
+                            </div>
+                        </div>
+
+                        <!-- 对比度 -->
+                        <div style="background: rgba(15,23,42,0.6); padding: 12px; border-radius: 10px; box-sizing: border-box;">
+                            <label style="display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.7); margin-bottom: 8px;">
+                                <i class="fa fa-adjust" style="color: #9c27b0;"></i> 对比度
+                            </label>
+                            <div style="width: 100%; box-sizing: border-box; padding: 0 4px;">
+                                <input id="cc-contrast" type="range" min="-100" max="100" value="0" style="width: 100%; height: 4px; background: linear-gradient(90deg, #666 0%, #fff 100%); border-radius: 2px; box-sizing: border-box;">
+                            </div>
+                        </div>
+
+                        <!-- 饱和度 -->
+                        <div style="background: rgba(15,23,42,0.6); padding: 12px; border-radius: 10px; box-sizing: border-box;">
+                            <label style="display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.7); margin-bottom: 8px;">
+                                <i class="fa fa-tint" style="color: #00bcd4;"></i> 饱和度
+                            </label>
+                            <div style="width: 100%; box-sizing: border-box; padding: 0 4px;">
+                                <input id="cc-saturation" type="range" min="-100" max="100" value="0" style="width: 100%; height: 4px; background: linear-gradient(90deg, #888 0%, #ff6b6b 25%, #ffeb3b 50%, #4ecdc4 75%, #9b59b6 100%); border-radius: 2px; box-sizing: border-box;">
+                            </div>
+                        </div>
+
+                        <!-- 色调 -->
+                        <div style="background: rgba(15,23,42,0.6); padding: 12px; border-radius: 10px; box-sizing: border-box;">
+                            <label style="display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.7); margin-bottom: 8px;">
+                                <i class="fa fa-paint-brush" style="color: #ff5722;"></i> 色调
+                            </label>
+                            <div style="width: 100%; box-sizing: border-box; padding: 0 4px;">
+                                <input id="cc-hue" type="range" min="-100" max="100" value="0" style="width: 100%; height: 4px; background: linear-gradient(90deg, #e91e63 0%, #ff5722 20%, #ff9800 40%, #4caf50 60%, #2196f3 80%, #9c27b0 100%); border-radius: 2px; box-sizing: border-box;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 特效面板 -->
+                <div id="effects-panel" class="mb-6">
+                    <h4 class="text-sm font-medium text-text-primary mb-4">特效</h4>
+                    <div class="space-y-3">
+                        <button class="operation-btn w-full flex items-center justify-between px-4 py-3 glass-card rounded-xl hover:border-primary/30" onclick="openEffects('color')">
+                            <span class="text-sm">
+                                <i class="fa fa-adjust mr-3 text-primary"></i>色彩校正
+                            </span>
+                            <i class="fa fa-chevron-right text-text-secondary"></i>
+                        </button>
+                        <button class="operation-btn w-full flex items-center justify-between px-4 py-3 glass-card rounded-xl hover:border-primary/30" onclick="openEffects('filters')">
+                            <span class="text-sm">
+                                <i class="fa fa-magic mr-3 text-secondary"></i>滤镜
+                            </span>
+                            <i class="fa fa-chevron-right text-text-secondary"></i>
+                        </button>
+                        <button class="operation-btn w-full flex items-center justify-between px-4 py-3 glass-card rounded-xl hover:border-primary/30" onclick="openEffects('transitions')">
+                            <span class="text-sm">
+                                <i class="fa fa-exchange mr-3 text-accent"></i>转场
+                            </span>
+                            <i class="fa fa-chevron-right text-text-secondary"></i>
+                        </button>
+                        <button class="operation-btn w-full flex items-center justify-between px-4 py-3 glass-card rounded-xl hover:border-primary/30" onclick="openEffects('visual')">
+                            <span class="text-sm">
+                                <i class="fa fa-eye mr-3 text-warning"></i>视觉效果
+                            </span>
+                            <i class="fa fa-chevron-right text-text-secondary"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 导出设置 - 绿色科技风 -->
+                <div id="export-settings" style="background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(51, 65, 85, 0.6) 100%); border-radius: 16px; padding: 18px; border: 1px solid rgba(51, 65, 85, 0.3); box-sizing: border-box; width: 100%;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 18px; padding-bottom: 15px; border-bottom: 2px solid rgba(16,185,129,0.1);">
+                        <div style="width: 38px; height: 38px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fa fa-download" style="color: white; font-size: 17px;"></i>
+                        </div>
+                        <h4 style="font-size: 14px; font-weight: 700; color: rgba(255,255,255,0.95); margin: 0;">导出设置</h4>
+                    </div>
+
+                    <div style="display: grid; gap: 12px;">
+                        <!-- 格式选择 -->
+                        <div style="background: rgba(15,23,42,0.6); padding: 14px; border-radius: 12px; box-sizing: border-box;">
+                            <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.8); margin-bottom: 10px;">
+                                <i class="fa fa-file-video-o" style="color: #10b981;"></i> 输出格式
+                            </label>
+                            <select style="width: 100%; padding: 11px; background: rgba(30,41,59,0.8); border: 1px solid rgba(16,185,129,0.3); border-radius: 10px; color: rgba(255,255,255,0.9); font-size: 12px; font-weight: 600; box-sizing: border-box;">
+                                <option>MP4 (推荐)</option>
+                                <option>MOV</option>
+                                <option>AVI</option>
+                                <option>WMV</option>
+                            </select>
+                        </div>
+
+                        <!-- 分辨率选择 -->
+                        <div style="background: rgba(15,23,42,0.6); padding: 14px; border-radius: 12px; box-sizing: border-box;">
+                            <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.8); margin-bottom: 10px;">
+                                <i class="fa fa-desktop" style="color: #10b981;"></i> 分辨率
+                            </label>
+                            <select style="width: 100%; padding: 11px; background: rgba(30,41,59,0.8); border: 1px solid rgba(16,185,129,0.3); border-radius: 10px; color: rgba(255,255,255,0.9); font-size: 12px; font-weight: 600; box-sizing: border-box;">
+                                <option>1080p (1920x1080)</option>
+                                <option>720p (1280x720)</option>
+                                <option>480p (854x480)</option>
+                                <option>360p (640x360)</option>
+                            </select>
+                        </div>
+
+                        <!-- 帧率选择 -->
+                        <div style="background: rgba(15,23,42,0.6); padding: 14px; border-radius: 12px; box-sizing: border-box;">
+                            <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.8); margin-bottom: 10px;">
+                                <i class="fa fa-film" style="color: #10b981;"></i> 帧率
+                            </label>
+                            <select style="width: 100%; padding: 11px; background: rgba(30,41,59,0.8); border: 1px solid rgba(16,185,129,0.3); border-radius: 10px; color: rgba(255,255,255,0.9); font-size: 12px; font-weight: 600; box-sizing: border-box;">
+                                <option>60fps</option>
+                                <option>30fps</option>
+                                <option>24fps</option>
+                            </select>
+                        </div>
+
+                        <!-- 导出按钮 -->
+                        <button onclick="exportVideo()" style="width: 100%; padding: 16px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; box-shadow: 0 6px 20px rgba(16,185,129,0.3); transition: all 0.3s; margin-top: 10px;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 25px rgba(16,185,129,0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 6px 20px rgba(16,185,129,0.3)'">
+                            <i class="fa fa-rocket" style="margin-right: 8px;"></i>导出视频
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </aside>
+        {% endif %}
+
+    </div>
+
+    <!-- 底部状态栏 - 固定在最底部 -->
+    <footer style="position: fixed; bottom: 0; left: 0; right: 0; z-index: 100; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px); border-top: 1px solid rgba(255,255,255,0.1); height: 40px; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; font-size: 12px; color: rgba(255,255,255,0.7); box-shadow: 0 -4px 20px rgba(0,0,0,0.2);">
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <span id="status-project-state" style="display: flex; align-items: center; gap: 5px;">
+            </span>
+            <span id="status-file-size">
+            </span>
+            <span id="status-duration">
+            </span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <span>版本: <strong style="color: rgba(255,255,255,0.8);">v3.1.0</strong></span>
+            <span>© 2025 JJYB_AI智剪</span>
+        </div>
+    </footer>
+
+    <!-- 加载遮罩 -->
+    <div id="loading-mask" class="fixed inset-0 bg-dark/80 backdrop-blur-sm z-50 hidden items-center justify-center">
+        <div class="glass-card rounded-xl p-6 flex items-center space-x-4 animate-scale-in">
+            <div class="loading-spinner"></div>
+            <div>
+                <p id="loading-title" class="text-text-primary font-medium">正在处理请求…</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 通知提示 -->
+    <div id="notification" class="fixed top-20 left-1/2 z-[1200] hidden" style="pointer-events:none;">
+        <div class="notification-card glass-card rounded-lg" style="pointer-events:none;">
+            <p id="notification-message" class="text-text-primary"></p>
+            <p id="notification-title" class="text-text-primary"></p>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script type="text/javascript">
+        // 全局变量
+        let currentProjectId = null;
+        let currentTaskId = null;
+        let socket = null;
+        let notificationTimeout = null;
+        let notificationHideTimeout = null;
+        let lastNotificationKey = '';
+        let lastNotificationAt = 0;
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+            initializeSocket();
+            updateNavigation();
+            loadRecentProjects();
+            initializeTooltips();
+            initializeSliders();
+        });
+
+        // 初始化应用
+        function initializeApp() {
+            console.log('JJYB_AI智剪 初始化完成');
+
+            // 初始化拖拽功能
+            initializeDragAndDrop();
+
+            // 初始化动画效果
+            initializeAnimations();
+
+            // 加载当前项目信息 - 从真实API
+            loadCurrentProject();
+
+            // 加载最近项目列表 - 从真实API
+            loadRecentProjects();
+
+            // 每30秒自动刷新一次项目列表，保持实时同步
+            setInterval(() => {
+                loadRecentProjects();
+            }, 30000);
+        }
+
+        // 初始化Socket.IO
+        function initializeSocket() {
+            try {
+                socket = io.connect('/');
+
+                socket.on('connect', function() {
+                    console.log('Socket.IO 连接成功');
+                });
+
+                socket.on('disconnect', function() {
+                    console.log('Socket.IO 断开连接');
+                    showNotification('连接断开', '与服务器的连接已断开', 'warning');
+                });
+
+                socket.on('connect_error', function(error) {
+                    console.error('Socket.IO 连接失败:', error);
+                    showNotification('连接失败', '无法连接到实时服务器', 'error');
+                });
+
+                socket.on('task_progress', function(data) {
+                    if (typeof updateTaskProgress === 'function') {
+                        updateTaskProgress(data.task_id, data.progress, data.status);
+                    }
+                    if (typeof loadNotifications === 'function') { loadNotifications(); }
+                });
+
+                socket.on('task_complete', function(data) {
+                    if (typeof completeTask === 'function') {
+                        completeTask(data.task_id, data.result);
+                    }
+                    if (typeof loadNotifications === 'function') { loadNotifications(); }
+                });
+
+                socket.on('task_status', function(data) {
+                    if (typeof loadNotifications === 'function') { loadNotifications(); }
+                });
+
+                socket.on('error', function(error) {
+                    console.error('Socket.IO 错误:', error);
+                    showNotification('错误', error.message, 'error');
+                });
+
+            } catch (error) {
+                console.error('Socket.IO 初始化失败:', error);
+                showNotification('连接失败', '无法连接到实时服务器', 'error');
+            }
+        }
+
+        // 更新导航状态
+        function updateNavigation() {
+            const currentPath = window.location.pathname.replace(/\/+$/, '') || '/';
+            const activePath = currentPath === '/' ? '/editor' : currentPath;
+
+            document.querySelectorAll('.nav-btn[data-nav-path]').forEach(function(button) {
+                const isActive = button.dataset.navPath === activePath;
+                button.classList.toggle('active', isActive);
+                button.classList.toggle('bg-dark-lighter', !isActive);
+                button.classList.toggle('text-text-secondary', !isActive);
+                button.classList.toggle('hover:bg-dark-lighter/80', !isActive);
+            });
+        }
+
+        // 页面导航
+        function loadPage(pageName) {
+            const pages = {
+                'index': '/editor',
+                'projects': '/projects',
+                'materials': '/materials',
+                'ai_features': '/ai_features',
+                'settings': '/settings'
+            };
+
+            const url = pages[pageName];
+            if (url) {
+                window.location.href = url;
+            }
+        }
+
+        // 用户菜单动作
+        function openUserProfile(){
+            layer.open({
+                type:1,
+                title:'个人中心',
+                area:['520px','320px'],
+                content:`<div class="p-5">
+                    <div class="flex items-center space-x-3 mb-4">
+                        <div class="w-12 h-12 rounded-full bg-gradient-to-r from-primary to-secondary flex items-center justify-center text-white"><i class="fa fa-user"></i></div>
+                        <div>
+                            <div class="text-sm font-medium">当前用户</div>
+                            <div class="text-xs text-text-secondary">欢迎使用 JJYB_AI智剪</div>
+                        </div>
+                    </div>
+                    <div class="space-y-2 text-sm text-text-secondary">
+                        <div>版本：<span class="text-text-primary">v3.1.0</span></div>
+                        <div>状态：<span class="text-success">在线</span></div>
+                    </div>
+                    <div class="mt-4"><button class="operation-btn px-4 py-2 glass-card rounded-lg hover:border-primary/40" onclick="loadPage('settings');layer.closeAll();"><i class="fa fa-cog mr-2"></i>打开设置</button></div>
+                </div>`
+            });
+        }
+
+        function logout(){
+            layer.confirm('确定要退出登录吗？', {icon:3, title:'确认退出'}, function(idx){
+                layer.close(idx);
+                window.location.href = '/';
+            });
+        }
+
+
+        // 加载当前项目信息 - 从真实后端API加载，实时同步
+        async function loadCurrentProject() {
+            console.log('📂 加载当前项目信息...');
+
+            const container = document.getElementById('current-project-info');
+            const projectId = sessionStorage.getItem('current_project_id');
+
+            if (!projectId) {
+                // 无当前项目，显示默认状态
+                container.innerHTML = `
+                    <p class="text-xs text-text-secondary mb-2">未选择项目</p>
+                    <button class="operation-btn w-full text-sm btn-gradient text-white rounded-lg hover:opacity-90" onclick="window.location.href='/projects'">
+                        <i class="fa fa-plus mr-2"></i>创建新项目
+                    </button>
+                `;
+                return;
+            }
+
+            // 显示加载状态
+            container.innerHTML = `
+                <div class="text-center py-2">
+                    <i class="fa fa-spinner fa-spin text-primary"></i>
+                    <p class="text-xs text-text-secondary mt-1">加载中...</p>
+                </div>
+            `;
+
+            try {
+                // 调用真实后端API获取项目详情
+                const response = await fetch(`/api/projects/${projectId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                }).then(res => res.json());
+
+                if (response.code === 0 && response.data) {
+                    const project = response.data;
+                    console.log('✅ 当前项目加载成功:', project.name);
+
+                    // 格式化时间
+                    const updatedTime = formatTimeAgo(project.updated_at);
+
+                    // 格式化大小
+                    const size = formatFileSize(project.size || 0);
+
+                    // 渲染项目信息
+                    container.innerHTML = `
+                        <p class="text-sm font-medium text-text-primary mb-1">${project.name || '未命名项目'}</p>
+                        <p class="text-xs text-text-secondary mb-3">${updatedTime} · ${size}</p>
+                        <div class="flex space-x-2">
+                            <button class="operation-btn flex-1 text-sm bg-primary/20 text-primary border border-primary/30 rounded-lg py-2 hover:bg-primary/30" onclick="openProjectById('${project.id}')">
+                                <i class="fa fa-edit mr-1"></i>编辑
+                            </button>
+                            <button class="operation-btn flex-1 text-sm bg-secondary/20 text-secondary border border-secondary/30 rounded-lg py-2 hover:bg-secondary/30" onclick="window.location.href='/projects'">
+                                <i class="fa fa-folder mr-1"></i>切换
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    throw new Error(response.msg || '加载项目失败');
+                }
+            } catch (error) {
+                console.error('❌ 加载当前项目失败:', error);
+
+                // 显示错误状态
+                container.innerHTML = `
+                    <p class="text-xs text-warning mb-2">
+                        <i class="fa fa-exclamation-triangle mr-1"></i>加载失败
+                    </p>
+                    <button class="operation-btn w-full text-sm bg-primary/20 text-primary border border-primary/30 rounded-lg py-2 hover:bg-primary/30" onclick="loadCurrentProject()">
+                        <i class="fa fa-refresh mr-1"></i>重试
+                    </button>
+                `;
+            }
+        }
+
+        // 加载最近项目 - 从真实后端API加载，实时同步
+        async function loadRecentProjects() {
+            console.log('📂 加载最近项目...');
+
+            const container = document.getElementById('recent-projects');
+
+            // 显示加载状态
+            container.innerHTML = `
+                <div class="text-center py-8">
+                    <i class="fa fa-spinner fa-spin text-3xl text-primary mb-3"></i>
+                    <p class="text-xs text-text-secondary">加载中...</p>
+                </div>
+            `;
+
+            try {
+                // 调用真实后端API获取最近项目
+                const response = await fetch('/api/projects?limit=5&sort=updated_at&order=desc', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                }).then(res => res.json());
+
+                if (response.code === 0 && response.data && response.data.projects) {
+                    const recentProjects = response.data.projects;
+                    console.log(`✅ 加载了 ${recentProjects.length} 个最近项目`);
+
+                    if (recentProjects.length === 0) {
+                        container.innerHTML = `
+                            <div class="text-center py-8">
+                                <i class="fa fa-folder-open text-3xl text-text-secondary mb-3"></i>
+                                <p class="text-xs text-text-secondary">暂无最近项目</p>
+                                <button onclick="window.location.href='/'" class="mt-3 px-4 py-2 bg-primary/20 text-primary rounded-lg text-xs hover:bg-primary/30">
+                                    <i class="fa fa-plus mr-1"></i>创建新项目
+                                </button>
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    // 渲染项目列表
+                    let html = '';
+                    recentProjects.forEach(project => {
+                        const statusClass = {
+                            'completed': 'status-completed',
+                            'processing': 'status-processing',
+                            'pending': 'status-pending',
+                            'failed': 'status-failed'
+                        };
+
+                        const statusText = {
+                            'completed': '已完成',
+                            'processing': '处理中',
+                            'pending': '待处理',
+                            'failed': '已失败'
+                        };
+
+                        // 格式化时间
+                        const timeAgo = formatTimeAgo(project.updated_at || project.created_at);
+
+                        // 格式化文件大小
+                        const size = formatFileSize(project.size || 0);
+
+                        html += `
+                            <div class="operation-btn flex items-center justify-between px-4 py-3 glass-card rounded-xl hover:border-primary/30 cursor-pointer transition-all" onclick="openProjectById('${project.id}')">
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm font-medium text-text-primary truncate">${project.name || '未命名项目'}</p>
+                                    <p class="text-xs text-text-secondary">${timeAgo} · ${size}</p>
+                                </div>
+                                <span class="task-status ${statusClass[project.status] || 'status-pending'}">${statusText[project.status] || '待处理'}</span>
+                            </div>
+                        `;
+                    });
+
+                    container.innerHTML = html;
+                } else {
+                    throw new Error(response.msg || '加载项目失败');
+                }
+            } catch (error) {
+                console.error('❌ 加载最近项目失败:', error);
+                container.innerHTML = `
+                    <div class="text-center py-8">
+                        <i class="fa fa-exclamation-triangle text-3xl text-warning mb-3"></i>
+                        <p class="text-xs text-text-secondary mb-3">加载失败</p>
+                        <button onclick="loadRecentProjects()" class="px-4 py-2 bg-primary/20 text-primary rounded-lg text-xs hover:bg-primary/30">
+                            <i class="fa fa-refresh mr-1"></i>重试
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        // 格式化时间为"X分钟前"、"X小时前"等
+        function formatTimeAgo(dateString) {
+            if (!dateString) return '未知时间';
+
+            const now = new Date();
+            const date = new Date(dateString);
+            const diff = Math.floor((now - date) / 1000); // 秒
+
+            if (diff < 60) return '刚刚';
+            if (diff < 3600) return Math.floor(diff / 60) + '分钟前';
+            if (diff < 86400) return Math.floor(diff / 3600) + '小时前';
+            if (diff < 2592000) return Math.floor(diff / 86400) + '天前';
+            if (diff < 31536000) return Math.floor(diff / 2592000) + '个月前';
+            return Math.floor(diff / 31536000) + '年前';
+        }
+
+        // 格式化文件大小
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return (bytes / Math.pow(k, i)).toFixed(1) + ' ' + sizes[i];
+        }
+
+        // 通过ID打开项目
+        window.openProjectById = function(projectId) {
+            console.log('📂 打开项目:', projectId);
+
+            // 保存项目ID到sessionStorage
+            sessionStorage.setItem('current_project_id', projectId);
+
+            // 跳转到编辑器页面
+            window.location.href = '/';
+        };
+
+        // API请求封装
+        // 全屏 loading 仅在 options.showLoading 为 true 时显示，避免普通读取干扰页面操作。
+        function apiRequest(url, method, data, successCallback, errorCallback, options = {}) {
+            const loading = options.showLoading ? showLoading(options.loadingText) : null;
+
+            // GET 请求：将 data 拼接到 URL 查询串
+            let requestUrl = url;
+            let requestBody = undefined;
+            if (method && method.toUpperCase() === 'GET' && data) {
+                const params = new URLSearchParams();
+                Object.keys(data).forEach(k => {
+                    if (data[k] !== undefined && data[k] !== null && data[k] !== '') {
+                        params.append(k, data[k]);
+                    }
+                });
+                const qs = params.toString();
+                if (qs) requestUrl = url + (url.indexOf('?') >= 0 ? '&' : '?') + qs;
+            } else if (method && method.toUpperCase() !== 'GET') {
+                requestBody = JSON.stringify(data || {});
+            }
+
+            fetch(requestUrl, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: requestBody
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                hideLoading(loading);
+                if (data.code === 0) {
+                    successCallback(data.data);
+                } else {
+                    throw new Error(data.msg || '操作失败');
+                }
+            })
+            .catch(error => {
+                hideLoading(loading);
+                console.error('API请求失败:', error);
+                if (errorCallback) {
+                    errorCallback(error.message);
+                } else {
+                    showNotification('错误', error.message, 'error');
+                }
+            });
+        }
+
+        // 显示加载状态
+        function showLoading(title = '正在处理请求…') {
+            const mask = document.getElementById('loading-mask');
+            const loadingTitle = document.getElementById('loading-title');
+
+            loadingTitle.textContent = title || '正在处理请求…';
+            mask.classList.remove('hidden');
+            mask.classList.add('flex');
+
+            return mask;
+        }
+
+        // 隐藏加载状态
+        function hideLoading(loadingElement) {
+            if (loadingElement) {
+                loadingElement.classList.add('hidden');
+                loadingElement.classList.remove('flex');
+            }
+        }
+
+        // 显示通知
+        function showNotification(title, message, type = 'info') {
+            const notification = document.getElementById('notification');
+            const titleElement = document.getElementById('notification-title');
+            const messageElement = document.getElementById('notification-message');
+            const notificationKey = `${title}\u0000${message}`;
+            const now = Date.now();
+
+            if (notificationKey === lastNotificationKey && now - lastNotificationAt < 4000) {
+                return;
+            }
+            lastNotificationKey = notificationKey;
+            lastNotificationAt = now;
+
+            if (notificationTimeout) {
+                clearTimeout(notificationTimeout);
+                notificationTimeout = null;
+            }
+            if (notificationHideTimeout) {
+                clearTimeout(notificationHideTimeout);
+                notificationHideTimeout = null;
+            }
+
+            const text = message || title || '';
+            messageElement.textContent = text;
+            titleElement.textContent = '';
+            notification.dataset.type = type || 'info';
+
+            notification.classList.remove('hidden', 'hide');
+            notification.classList.add('notification');
+
+            notificationTimeout = setTimeout(() => {
+                closeNotification();
+            }, 3000);
+        }
+
+        // 关闭通知
+        function closeNotification() {
+            const notification = document.getElementById('notification');
+            if (notificationTimeout) {
+                clearTimeout(notificationTimeout);
+                notificationTimeout = null;
+            }
+            if (notificationHideTimeout) {
+                clearTimeout(notificationHideTimeout);
+            }
+            notification.classList.add('hide');
+            notificationHideTimeout = setTimeout(() => {
+                notification.classList.add('hidden');
+                notification.classList.remove('hide', 'notification');
+                notificationHideTimeout = null;
+            }, 300);
+        }
+
+        // 确认操作
+        function confirmAction(title, message, confirmCallback) {
+            layer.confirm(message, {
+                title: title,
+                skin: 'layui-layer-molv jjyb-confirm-dialog',
+                btn: ['确认', '取消'],
+                area: ['min(420px, calc(100vw - 32px))', 'auto'],
+                offset: 't',
+                shade: 0.28,
+                success: function(layero) {
+                    layero.addClass('glass-effect');
+                }
+            }, function(index) {
+                layer.close(index);
+                confirmCallback();
+            });
+        }
+
+        // 初始化工具提示
+        function initializeTooltips() {
+            // 为所有带有tooltip类的元素添加工具提示
+            const tooltips = document.querySelectorAll('.tooltip');
+            tooltips.forEach(tooltip => {
+                // 这里可以添加工具提示的初始化代码
+            });
+        }
+
+        // 初始化滑块
+        function initializeSliders() {
+            // 缩放滑块
+            const scaleSlider = document.querySelector('input[type="range"][min="0"][max="200"]');
+            if (scaleSlider) {
+                const onScale = function(){
+                    const scaleValue = document.getElementById('scale-value');
+                    if (scaleValue) scaleValue.textContent = this.value + '%';
+                    if (typeof updateScale === 'function') updateScale(this.value);
+                };
+                scaleSlider.addEventListener('input', onScale);
+            }
+
+            // 旋转滑块
+            const rotationSlider = document.querySelector('input[type="range"][min="0"][max="360"]');
+            if (rotationSlider) {
+                const onRotate = function(){
+                    const rotationValue = document.getElementById('rotation-value');
+                    if (rotationValue) rotationValue.textContent = this.value + '°';
+                    if (typeof updateRotation === 'function') updateRotation(this.value);
+                };
+                rotationSlider.addEventListener('input', onRotate);
+            }
+
+            // 音量滑块（与缩放滑块同范围，需区分）
+            const range200 = document.querySelectorAll('input[type="range"][min="0"][max="200"]');
+            range200.forEach(r => {
+                if (r !== scaleSlider && (r.parentElement?.textContent||'').includes('音量')) {
+                    r.addEventListener('input', function(){
+                        const volumeValue = document.getElementById('volume-value');
+                        if (volumeValue) volumeValue.textContent = this.value + '%';
+                        if (typeof updateVolume === 'function') updateVolume(this.value);
+                    });
+                }
+            });
+
+            // 色彩校正滑块
+            const b = document.getElementById('cc-brightness'); if (b) b.addEventListener('input', function(){ window.currentFilters.brightness = parseInt(this.value||'0',10); applyPreviewFilters(); });
+            const c = document.getElementById('cc-contrast');   if (c) c.addEventListener('input', function(){ window.currentFilters.contrast   = parseInt(this.value||'0',10); applyPreviewFilters(); });
+            const s = document.getElementById('cc-saturation'); if (s) s.addEventListener('input', function(){ window.currentFilters.saturation = parseInt(this.value||'0',10); applyPreviewFilters(); });
+            const h = document.getElementById('cc-hue');        if (h) h.addEventListener('input', function(){ window.currentFilters.hue        = parseInt(this.value||'0',10); applyPreviewFilters(); });
+        }
+
+        // 初始化拖拽功能
+        function initializeDragAndDrop() {
+            // 这里可以添加拖拽功能的初始化代码
+            console.log('拖拽功能初始化完成');
+        }
+
+        // 初始化动画效果
+        function initializeAnimations() {
+            // 添加滚动动画
+            const observerOptions = {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            }, observerOptions);
+
+            // 观察所有需要动画的元素
+            const animatedElements = document.querySelectorAll('.glass-card, .feature-card');
+            animatedElements.forEach(el => {
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(20px)';
+                el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+                observer.observe(el);
+            });
+        }
+
+        // 创建任务进度条
+        function createProgressBar(containerSelector, taskId) {
+            const container = document.querySelector(containerSelector);
+            if (!container) return;
+
+            const progressHtml = `
+                <div id="progress-${taskId}" class="mt-4 animate-scale-in">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-sm text-text-secondary">处理进度</span>
+                        <span id="progress-text-${taskId}" class="text-sm text-text-secondary">0%</span>
+                    </div>
+                    <div class="custom-progress">
+                        <div id="progress-bar-${taskId}" class="custom-progress-bar progress-bar" style="width: 0%"></div>
+                    </div>
+                    <div id="progress-status-${taskId}" class="text-xs text-text-secondary mt-2">等待中...</div>
+                </div>
+            `;
+
+            container.innerHTML += progressHtml;
+        }
+
+        // 更新任务进度
+        function updateTaskProgress(taskId, progress, status) {
+            const progressBar = document.getElementById(`progress-bar-${taskId}`);
+            const progressText = document.getElementById(`progress-text-${taskId}`);
+            const progressStatus = document.getElementById(`progress-status-${taskId}`);
+
+            if (progressBar && progressText && progressStatus) {
+                progressBar.style.width = progress + '%';
+                progressText.textContent = progress + '%';
+
+                const statusTexts = {
+                    'pending': '等待中...',
+                    'processing': '处理中...',
+                    'completed': '处理完成',
+                    'failed': '处理失败'
+                };
+
+                const statusColors = {
+                    'pending': 'text-text-secondary',
+                    'processing': 'text-primary',
+                    'completed': 'text-success',
+                    'failed': 'text-danger'
+                };
+
+                progressStatus.textContent = statusTexts[status] || status;
+                progressStatus.className = `text-xs ${statusColors[status]} mt-2`;
+
+                // 更新状态样式
+                if (status === 'failed') {
+                    progressStatus.className = 'text-xs text-danger mt-2';
+                } else if (status === 'completed') {
+                    progressStatus.className = 'text-xs text-success mt-2';
+                } else if (status === 'processing') {
+                    progressStatus.className = 'text-xs text-primary mt-2';
+                } else {
+                    progressStatus.className = 'text-xs text-text-secondary mt-2';
+                }
+            }
+        }
+
+        // 完成任务
+        function completeTask(taskId, result) {
+            updateTaskProgress(taskId, 100, 'completed');
+            showNotification('任务完成', '操作已成功完成', 'success');
+        }
+
+        // 项目操作 - 完整实现
+        function newProject() {
+            layer.prompt({
+                title: '<i class="fa fa-plus mr-2"></i>新建项目',
+                formType: 0,
+                value: '未命名项目',
+                btn: ['创建', '取消'],
+                area: ['400px', '200px']
+            }, function(value, index) {
+                if (!value || value.trim() === '') {
+                    layer.msg('项目名称不能为空', {icon: 0});
+                    return;
+                }
+
+                layer.close(index);
+
+                // 发送创建请求
+                $.ajax({
+                    url: '/api/projects',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        name: value.trim(),
+                        type: 'video_edit',
+                        description: '新建项目',
+                        settings: {}
+                    }),
+                    success: function(res) {
+                        if (res.code === 0) {
+                            window.currentProjectId = res.data.id;
+                            sessionStorage.setItem('current_project_id', res.data.id);
+                            showNotification('成功', '项目创建成功', 'success');
+                            // 跳转到编辑器
+                            setTimeout(() => {
+                                window.location.href = '/editor?project=' + res.data.id;
+                            }, 500);
+                        } else {
+                            showNotification('错误', res.msg || '创建失败', 'error');
+                        }
+                    },
+                    error: function() {
+                        showNotification('错误', '创建项目失败', 'error');
+                    }
+                });
+            });
+        }
+
+        function saveProject() {
+            // 检查当前页面是否是编辑器
+            if (!window.location.pathname.includes('/editor')) {
+                showNotification('提示', '请在编辑器中保存项目', 'info');
+                return;
+            }
+
+            // 如果编辑器页面有自己的saveProject函数，调用它
+            if (typeof window.editorSaveProject === 'function') {
+                window.editorSaveProject();
+                return;
+            }
+
+            layer.prompt({
+                title: '<i class="fa fa-save mr-2"></i>保存项目',
+                formType: 0,
+                value: '当前项目',
+                btn: ['保存', '取消'],
+                area: ['400px', '200px']
+            }, function(value, index) {
+                if (!value || value.trim() === '') {
+                    layer.msg('项目名称不能为空', {icon: 0});
+                    return;
+                }
+
+                layer.close(index);
+
+                const projectData = {
+                    name: value.trim(),
+                    description: '',
+                    settings: {},
+                    tracks: []
+                };
+
+                $.ajax({
+                    url: '/api/projects',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(projectData),
+                    success: function(res) {
+                        if (res.code === 0) {
+                            showNotification('成功', '项目已保存', 'success');
+                        } else {
+                            showNotification('错误', res.msg || '保存失败', 'error');
+                        }
+                    },
+                    error: function() {
+                        showNotification('错误', '保存失败', 'error');
+                    }
+                });
+            });
+        }
+
+        function exportVideo() {
+            layer.open({
+                type: 1,
+                title: '<i class="fa fa-export mr-2"></i>导出视频',
+                area: ['600px', '680px'],
+                content: `
+                    <div class="p-6">
+                        <form class="layui-form" id="export-form">
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">导出名称</label>
+                                <div class="layui-input-block">
+                                    <input type="text" name="export_name" placeholder="我的视频" class="layui-input" required lay-verify="required">
+                                </div>
+                            </div>
+
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">分辨率</label>
+                                <div class="layui-input-block">
+                                    <select name="resolution" lay-verify="required">
+                                        <option value="1920x1080" selected>1920x1080 (1080P)</option>
+                                        <option value="1280x720">1280x720 (720P)</option>
+                                        <option value="3840x2160">3840x2160 (4K)</option>
+                                        <option value="custom">自定义</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">帧率</label>
+                                <div class="layui-input-block">
+                                    <select name="fps">
+                                        <option value="24">24 FPS</option>
+                                        <option value="30" selected>30 FPS</option>
+                                        <option value="60">60 FPS</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">码率</label>
+                                <div class="layui-input-block">
+                                    <select name="bitrate">
+                                        <option value="low">低质量 (5 Mbps)</option>
+                                        <option value="medium" selected>标准质量 (10 Mbps)</option>
+                                        <option value="high">高质量 (20 Mbps)</option>
+                                        <option value="ultra">超高质量 (40 Mbps)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">编码器</label>
+                                <div class="layui-input-block">
+                                    <select name="encoder">
+                                        <option value="h264" selected>H.264 (推荐)</option>
+                                        <option value="h265">H.265 (HEVC)</option>
+                                        <option value="vp9">VP9</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">格式</label>
+                                <div class="layui-input-block">
+                                    <select name="format">
+                                        <option value="mp4" selected>MP4</option>
+                                        <option value="mov">MOV</option>
+                                        <option value="avi">AVI</option>
+                                        <option value="mkv">MKV</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">导出范围</label>
+                                <div class="layui-input-block">
+                                    <select name="export_range">
+                                        <option value="all" selected>完整视频</option>
+                                        <option value="selection">选中片段</option>
+                                        <option value="custom">自定义时间</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="layui-form-item">
+                                <div class="layui-input-block">
+                                    <button type="button" class="layui-btn layui-btn-normal" onclick="startExport()">
+                                        <i class="fa fa-rocket mr-2"></i>开始导出
+                                    </button>
+                                    <button type="button" class="layui-btn layui-btn-primary" onclick="layer.closeAll()">取消</button>
+                                </div>
+                            </div>
+                        </form>
+
+                        <div class="mt-4 p-4 bg-blue-50 rounded-lg" style="background: #f0f4ff; border: 1px solid #d0d9ff;">
+                            <p class="text-sm text-gray-700" style="color: #666;">
+                                <i class="fa fa-info-circle mr-2" style="color: #667eea;"></i>
+                                <strong>提示：</strong>导出时间取决于视频长度和质量设置。导出过程中请勿关闭程序。
+                            </p>
+                        </div>
+                    </div>
+                `,
+                success: function() {
+                    layui.form.render();
+                }
+            });
+        }
+
+        // 开始导出
+        function startExport() {
+            const formData = {
+                name: document.querySelector('[name="export_name"]').value,
+                resolution: document.querySelector('[name="resolution"]').value,
+                fps: document.querySelector('[name="fps"]').value,
+                bitrate: document.querySelector('[name="bitrate"]').value,
+                encoder: document.querySelector('[name="encoder"]').value,
+                format: document.querySelector('[name="format"]').value,
+                export_range: document.querySelector('[name="export_range"]').value
+            };
+
+            if (!formData.name) {
+                layer.msg('请输入导出名称', {icon: 0});
+                return;
+            }
+
+            layer.closeAll();
+
+            const loadingIndex = layer.msg('正在导出视频，请稍候...', {
+                icon: 16,
+                time: 0,
+                shade: 0.3
+            });
+
+            $.ajax({
+                url: '/api/export/video',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(formData),
+                success: function(res) {
+                    layer.close(loadingIndex);
+                    if (res.code === 0) {
+                        // 如果后端返回 task_id，则按异步任务方式展示进度；否则视为已完成导出
+                        if (res.task_id) {
+                            showNotification('成功', '导出任务已创建', 'success');
+                            monitorExportProgress(res.task_id);
+                        } else {
+                            showNotification('成功', '视频导出完成', 'success');
+                        }
+                    } else {
+                        showNotification('错误', res.msg || '导出失败', 'error');
+                    }
+                },
+                error: function() {
+                    layer.close(loadingIndex);
+                    showNotification('错误', '导出请求失败', 'error');
+                }
+            });
+        }
+
+        // 监控导出进度
+        function monitorExportProgress(taskId) {
+            layer.open({
+                type: 1,
+                title: '导出进度',
+                area: ['500px', '300px'],
+                content: `
+                    <div class="p-6">
+                        <div class="mb-4">
+                            <div class="text-center mb-2">
+                                <span id="export-progress-text">正在导出: 0%</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-4">
+                                <div id="export-progress-bar" class="bg-gradient-to-r from-primary to-secondary h-4 rounded-full transition-all" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div class="text-sm text-gray-600 text-center" id="export-status">
+                            准备中...
+                        </div>
+                    </div>
+                `,
+                success: function() {
+                    // 轮询进度
+                    const progressInterval = setInterval(function() {
+                        $.ajax({
+                            url: `/api/export/progress/${taskId}`,
+                            type: 'GET',
+                            success: function(res) {
+                                if (res.code === 0) {
+                                    const progress = res.data.progress || 0;
+                                    $('#export-progress-bar').css('width', progress + '%');
+                                    $('#export-progress-text').text(`正在导出: ${progress}%`);
+                                    $('#export-status').text(res.data.status || '处理中...');
+
+                                    if (progress >= 100) {
+                                        clearInterval(progressInterval);
+                                        layer.closeAll();
+                                        showNotification('成功', '视频导出完成！', 'success');
+                                    }
+                                }
+                            }
+                        });
+                    }, 1000);
+                }
+            });
+        }
+
+        function openProject(projectId) {
+            currentProjectId = projectId;
+            window.currentProjectId = projectId;
+            sessionStorage.setItem('current_project_id', projectId);
+            updateProjectInfo();
+            showNotification('成功', '项目已打开', 'success');
+        }
+
+        function openProjectById(projectId) {
+            if (!projectId) { showNotification('提示', '项目ID无效', 'info'); return; }
+            currentProjectId = projectId;
+            window.currentProjectId = projectId;
+            sessionStorage.setItem('current_project_id', projectId);
+            window.location.href = '/editor?project=' + encodeURIComponent(projectId);
+        }
+        window.openProjectById = openProjectById;
+
+        function updateProjectInfo() {
+            const projectInfo = document.getElementById('current-project-info');
+            if (currentProjectId) {
+                projectInfo.innerHTML = `
+                    <p class="text-sm font-medium text-text-primary mb-1">我的项目</p>
+                    <p class="text-xs text-text-secondary mb-3">ID: ${currentProjectId}</p>
+                    <div class="flex space-x-2">
+                        <button class="operation-btn flex-1 text-sm bg-primary/20 text-primary border border-primary/30 rounded-lg py-2 hover:bg-primary/30" onclick="openProjectById('${currentProjectId}')">
+                            <i class="fa fa-edit mr-1"></i>编辑
+                        </button>
+                        <button class="operation-btn flex-1 text-sm bg-secondary/20 text-secondary border border-secondary/30 rounded-lg py-2 hover:bg-secondary/30" onclick="navigator.clipboard && navigator.clipboard.writeText('${currentProjectId}'); showNotification('提示','项目 ID 已复制','success')">
+                            <i class="fa fa-copy mr-1"></i>复制
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        // 工具层统一生命周期：每个入口只管理自身 layer index，避免误关通知或其他工具。
+        const editorToolLayers = new Set();
+        function openEditorTool(options) {
+            let index;
+            const originalCancel = options.cancel;
+            const originalEnd = options.end;
+            const originalSuccess = options.success;
+            const toolSkin = [options.skin, 'jjyb-editor-tool'].filter(Boolean).join(' ');
+            index = layer.open(Object.assign({}, options, {
+                skin: toolSkin,
+                shadeClose: false,
+                cancel: function(layerIndex) {
+                    if (typeof originalCancel === 'function' && originalCancel(layerIndex) === false) return false;
+                },
+                success: function(layero, layerIndex) {
+                    const layerElement = layero && layero[0] ? layero[0] : layero;
+                    if (layerElement && !layerElement.dataset.editorCloseFallbackBound) {
+                        layerElement.dataset.editorCloseFallbackBound = 'true';
+                        const closeButton = layerElement.querySelector('.layui-layer-close');
+                        if (closeButton) {
+                            closeButton.setAttribute('role', 'button');
+                            closeButton.setAttribute('tabindex', '0');
+                            closeButton.setAttribute('aria-label', '关闭弹窗');
+                            const closeTool = function(event) {
+                                event.preventDefault();
+                                event.stopImmediatePropagation();
+                                closeEditorTool(layerIndex);
+                            };
+                            closeButton.addEventListener('click', closeTool, true);
+                            closeButton.addEventListener('keydown', function(event) {
+                                if (event.key === 'Enter' || event.key === ' ') closeTool(event);
+                            });
+                        }
+                    }
+                    if (typeof originalSuccess === 'function') originalSuccess(layero, layerIndex);
+                },
+                end: function() {
+                    editorToolLayers.delete(index);
+                    if (typeof originalEnd === 'function') originalEnd();
+                }
+            }));
+            editorToolLayers.add(index);
+            return index;
+        }
+        function closeEditorTool(index) { if (index !== undefined && index !== null) layer.close(index); }
+        function closeTopEditorTool() {
+            const index = Array.from(editorToolLayers).pop();
+            if (index !== undefined) closeEditorTool(index);
+        }
+
+        // AI功能函数
+        function openAIVoice() {
+            const index = openEditorTool({
+                type: 2,
+                title: 'AI配音',
+                area: ['900px', '700px'],
+                content: '/voiceover',
+                skin: 'layui-layer-molv',
+                btn: ['返回'],
+                yes: function(layerIndex) { closeEditorTool(layerIndex); },
+                success: function(layero) { layero.addClass('glass-effect'); }
+            });
+            return index;
+        }
+
+        // ====== AI功能实现 ======
+        function openAISubtitle() {
+            const projectId = sessionStorage.getItem('current_project_id') || 'temp_project';
+            const contentHtml = `
+                <div style="min-width: 420px;">
+                    <div class="mb-3">
+                        <label class="text-sm text-text-secondary">语言</label>
+                        <select id="subtitle-lang" class="w-full" style="padding:10px;border-radius:10px;background:rgba(30,41,59,0.8);border:1px solid rgba(102,126,234,0.3);color:#fff;">
+                            <option value="zh-CN">中文(zh-CN)</option>
+                            <option value="en-US">英文(en-US)</option>
+                        </select>
+                    </div>
+                    <div class="mb-2 text-xs text-text-secondary">将调用后端 /api/subtitle/generate 生成字幕并返回列表</div>
+                </div>`;
+            const idx = openEditorTool({
+                type: 1,
+                title: '自动字幕',
+                area: ['520px','260px'],
+                content: contentHtml,
+                btn: ['开始生成','返回编辑器'],
+                yes: async function(layerIndex){
+                    const language = (document.getElementById('subtitle-lang')||{}).value || 'zh-CN';
+                    const loading = layer.load(1, {shade:[0.3,'#000']});
+                    try {
+                        const res = await fetch('/api/subtitle/generate', {
+                            method: 'POST',
+                            headers: {'Content-Type':'application/json'},
+                            body: JSON.stringify({ project_id: projectId, language, engine: 'whisper' })
+                        }).then(r=>r.json());
+                        layer.close(loading);
+                        if (res.code === 0 && res.data) {
+                            const count = (res.data.subtitles||[]).length;
+                            layer.close(layerIndex);
+                            showNotification('成功', `字幕生成成功，共 ${count} 条`, 'success');
+                            if (typeof window.onSubtitlesGenerated === 'function') {
+                                window.onSubtitlesGenerated(res.data);
+                            }
+                        } else {
+                            showNotification('错误', res.msg || '字幕生成失败', 'error');
+                        }
+                    } catch (e) {
+                        layer.close(loading);
+                        showNotification('错误', '请求失败，请检查网络', 'error');
+                    }
+                }
+            });
+        }
+
+        function openAIClip() {
+            const contentHtml = `
+                <div style="min-width: 520px;">
+                    <div class="mb-3">
+                        <label class="text-sm text-text-secondary">输入视频路径</label>
+                        <input id="auto-clip-video-path" placeholder="例如: uploads/video1.mp4" style="width:100%;padding:10px;border-radius:10px;background:rgba(30,41,59,0.8);border:1px solid rgba(102,126,234,0.3);color:#fff;" />
+                    </div>
+                    <div class="grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                        <div>
+                            <label class="text-sm text-text-secondary">帧间隔(秒)</label>
+                            <input id="auto-clip-frame-interval" type="number" value="3" min="1" step="0.5" style="width:100%;padding:10px;border-radius:10px;background:rgba(30,41,59,0.8);border:1px solid rgba(102,126,234,0.3);color:#fff;" />
+                        </div>
+                        <div>
+                            <label class="text-sm text-text-secondary">启用字幕</label>
+                            <select id="auto-clip-subtitle" style="width:100%;padding:10px;border-radius:10px;background:rgba(30,41,59,0.8);border:1px solid rgba(102,126,234,0.3);color:#fff;">
+                                <option value="true">是</option>
+                                <option value="false">否</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mt-2 text-xs text-text-secondary">将调用 /api/auto-clip/start 并轮询 /api/auto-clip/status/&lt;task_id&gt;</div>
+                </div>`;
+            const toolIndex = openEditorTool({
+                type: 1,
+                title: '智能剪辑',
+                area: ['560px','320px'],
+                content: contentHtml,
+                btn: ['开始处理','返回编辑器'],
+                yes: async function(layerIndex){
+                    const videoPath = (document.getElementById('auto-clip-video-path')||{}).value || '';
+                    const frameInterval = parseFloat((document.getElementById('auto-clip-frame-interval')||{}).value || '3');
+                    const subtitleEnabled = ((document.getElementById('auto-clip-subtitle')||{}).value || 'true') === 'true';
+                    if (!videoPath) { layer.msg('请填写视频路径',{icon:0}); return; }
+                    const loading = layer.load(1, {shade:[0.3,'#000']});
+                    try {
+                        const startRes = await fetch('/api/auto-clip/start', {
+                            method: 'POST', headers: {'Content-Type':'application/json'},
+                            body: JSON.stringify({
+                                video_path: videoPath,
+                                config: { frame_interval: frameInterval, subtitle_enabled: subtitleEnabled }
+                            })
+                        }).then(r=>r.json());
+                        if (startRes.code !== 0) { layer.close(loading); showNotification('错误', startRes.message||'创建任务失败', 'error'); return; }
+                        const taskId = startRes.task_id;
+                        let timer = setInterval(async ()=>{
+                            try {
+                                const st = await fetch(`/api/auto-clip/status/${taskId}`).then(r=>r.json());
+                                if (st.code === 0) {
+                                    document.getElementById('loading-title').innerText = st.message + ` (${st.progress||0}%)`;
+                                    if (st.status === 'completed') {
+                                        clearInterval(timer);
+                                        layer.close(loading);
+                                        layer.close(layerIndex);
+                                        showNotification('完成', '自动剪辑完成', 'success');
+                                    } else if (st.status === 'failed' || st.status === 'cancelled') {
+                                        clearInterval(timer);
+                                        layer.close(loading);
+                                        layer.close(layerIndex);
+                                        showNotification('错误', st.error||st.message||'任务失败', 'error');
+                                    }
+                                }
+                            } catch (e) { console.error(e); }
+                        }, 1200);
+                    } catch (e) {
+                        layer.close(loading);
+                        showNotification('错误', '请求失败，请检查网络', 'error');
+                    }
+                }
+            });
+        }
+
+        function openAIEnhance() {
+            const loading = layer.load(1, {shade:[0.3,'#000']});
+            fetch('/api/effects/list').then(r=>r.json()).then(res=>{
+                layer.close(loading);
+                if (res.code!==0) { showNotification('错误', res.msg||'获取增强项失败', 'error'); return; }
+                const filters = (res.data && res.data.filters) || [];
+                let html = '<div style="min-width:560px;max-height:390px;overflow:auto;padding:16px 16px 24px;box-sizing:border-box">';
+                html += '<div class="grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;">';
+                filters.forEach(f=>{
+                    html += `<button class="operation-btn glass-card rounded-xl px-4 py-3 text-left hover:border-primary/40" title="${f.name}" data-filter-id="${f.id}" style="display:flex;align-items:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;min-height:44px;" onclick=\"applyFilterPreset('${f.id}')\"><i class='fa fa-adjust mr-2 text-primary'></i><span style='overflow:hidden;text-overflow:ellipsis;white-space:nowrap'>${f.name}</span></button>`;
+                });
+                html += '</div></div>';
+                openEditorTool({ type:1, title:'画质增强 / 滤镜', area:['600px','500px'], content: html, btn:['返回编辑器'], yes: function(index){ closeEditorTool(index); } });
+            }).catch(()=>{
+                layer.close(loading);
+                showNotification('错误','获取增强项失败','error');
+            });
+        }
+
+        // ====== 预览控制实现 ======
+        function getPreviewVideo(){ return document.getElementById('preview-video'); }
+        window.previewTransform = window.previewTransform || { scale: 1, rotation: 0 };
+        function applyPreviewTransform(){
+            const v = getPreviewVideo(); if (!v) return;
+            v.style.transformOrigin = 'center center';
+            v.style.transform = `rotate(${window.previewTransform.rotation}deg) scale(${window.previewTransform.scale})`;
+        }
+        window.currentFilters = window.currentFilters || { brightness:0, contrast:0, saturation:0, hue:0 };
+        function applyPreviewFilters(){
+            const v = getPreviewVideo(); if (!v) return;
+            const b = 1 + (window.currentFilters.brightness||0)/100;
+            const c = 1 + (window.currentFilters.contrast||0)/100;
+            const s = 1 + (window.currentFilters.saturation||0)/100;
+            const h = (window.currentFilters.hue||0) * 1.8; // -100..100 -> -180..180deg
+            v.style.filter = `brightness(${b}) contrast(${c}) saturate(${s}) hue-rotate(${h}deg)`;
+        }
+
+        // 属性更新函数
+        function updateScale(value) {
+            const scaleValue = document.getElementById('scale-value');
+            if (scaleValue) scaleValue.textContent = value + '%';
+            window.previewTransform.scale = Math.max(0, parseInt(value||'100',10)/100);
+            applyPreviewTransform();
+        }
+
+        function updateRotation(value) {
+            const rotationValue = document.getElementById('rotation-value');
+            if (rotationValue) rotationValue.textContent = value + '°';
+            window.previewTransform.rotation = parseInt(value||'0',10);
+            applyPreviewTransform();
+        }
+
+        function updateVolume(value) {
+            const volumeValue = document.getElementById('volume-value');
+            if (volumeValue) volumeValue.textContent = value + '%';
+            const v = getPreviewVideo();
+            if (v) v.volume = Math.max(0, Math.min(1, (parseInt(value||'100',10))/100));
+        }
+
+        // ====== 顶部工具栏交互 ======
+        window.applyJJYBAppearance = function(appearance){
+            appearance = appearance || {};
+            const root = document.documentElement;
+            const requested = appearance.theme || 'dark';
+            const isLight = requested === 'light' || (requested === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches);
+            root.setAttribute('data-theme', isLight ? 'light' : 'dark');
+            document.body.classList.toggle('light-theme', isLight);
+            document.body.classList.toggle('dark-theme', !isLight);
+            const primary = appearance.themeColor || '#165DFF';
+            root.style.setProperty('--theme-primary', primary);
+            root.style.setProperty('--primary-color', primary);
+            root.style.setProperty('--theme-opacity', String(Math.max(.5, Math.min(1, Number(appearance.opacity || 90) / 100))));
+            root.style.setProperty('--theme-font-size', ({small:'14px',large:'18px'}[appearance.fontSize] || '16px'));
+            root.style.setProperty('--theme-icon-size', ({small:'.85',large:'1.15'}[appearance.iconSize] || '1'));
+            root.classList.toggle('no-animations', appearance.animation === false);
+            root.classList.toggle('no-glass', appearance.glassEffect === false);
+            try { localStorage.setItem('jjybAppearance', JSON.stringify(appearance)); } catch (_) {}
+        };
+        (function(){
+            try { window.applyJJYBAppearance(JSON.parse(localStorage.getItem('jjybAppearance') || '{}')); } catch (_) {}
+            const media = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)');
+            if (media) media.addEventListener('change', function(){
+                try { const saved = JSON.parse(localStorage.getItem('jjybAppearance') || '{}'); if (saved.theme === 'system') window.applyJJYBAppearance(saved); } catch (_) {}
+            });
+        })();
+        document.addEventListener('DOMContentLoaded',function(){
+            fetch('/api/settings').then(r=>r.json()).then(result=>{
+                if(result&&result.code===0){
+                    var serverAppearance = ((result.data||{}).appearance) || {};
+                    var localData = {};
+                    try { localData = JSON.parse(localStorage.getItem('jjybAppearance') || '{}') || {}; } catch(_) {}
+                    // 优先级：localStorage（用户本地偏好） > 后端（兜底默认值）
+                    // 仅当 localStorage 中缺少某字段时，才用后端值填充
+                    var merged = {};
+                    var keys = Object.keys(serverAppearance).concat(Object.keys(localData));
+                    for (var i=0; i<keys.length; i++){
+                        var k = keys[i];
+                        if (localData[k]!==undefined && localData[k]!==null && localData[k]!==''){
+                            merged[k] = localData[k];
+                        } else if (serverAppearance[k]!==undefined && serverAppearance[k]!==null){
+                            merged[k] = serverAppearance[k];
+                        }
+                    }
+                    window.applyJJYBAppearance(merged);
+                }
+            }).catch(()=>{});
+        });
+        let isClearingNotifications = false;
+        function toggleUserMenu(e){ e.stopPropagation(); closePopovers('notification'); const p=document.getElementById('user-menu-popover'); if(p){ p.style.display = (p.style.display==='none'||!p.style.display)?'block':'none'; } }
+        function toggleNotifications(e){ e.stopPropagation(); closePopovers('user'); const p=document.getElementById('notification-popover'); if(p){ p.style.display = (p.style.display==='none'||!p.style.display)?'block':'none'; if(p.style.display==='block'){ loadNotifications(); } } }
+        function closePopovers(except){
+            if(except!=='user'){ const u=document.getElementById('user-menu-popover'); if(u) u.style.display='none'; }
+            if(except!=='notification'){ const n=document.getElementById('notification-popover'); if(n) n.style.display='none'; }
+        }
+        document.addEventListener('click', function(){ closePopovers(); });
+
+        function escapeHtml(value){ const node=document.createElement('div'); node.textContent=value == null ? '' : String(value); return node.innerHTML; }
+        function formatNotificationTime(value){ const time=value ? new Date(value) : null; return time && !Number.isNaN(time.getTime()) ? time.toLocaleString() : '时间未知'; }
+        function updateNotificationUnreadBadge(count){
+            const badge=document.getElementById('notification-unread-badge');
+            const button=document.querySelector('#notification-wrapper button[onclick^="toggleNotifications"]');
+            const numeric=Number(count);
+            const unread=Number.isFinite(numeric) ? Math.max(0, Math.floor(numeric)) : 0;
+            if(badge){ badge.hidden=unread===0; badge.textContent=unread>99?'99+':String(unread); }
+            if(button) button.setAttribute('aria-label', unread ? `通知，未读 ${unread} 条` : '通知，未读 0 条');
+            document.title=unread>0 ? `(${unread>99?'99+':unread}) JYJB AI智剪` : 'JYJB AI智剪';
+        }
+        function updateNotificationBadge(count){ updateNotificationUnreadBadge(count); }
+        async function fetchNotificationSummary(){ if(isClearingNotifications) return {items:[],unread_count:0}; const response=await fetch('/api/notifications?source=task&_t='+Date.now(),{cache:'no-store'}); if(!response.ok) throw new Error('HTTP '+response.status); const result=await response.json(); if(!result||result.code!==0||!result.data||typeof result.data!=='object') throw new Error((result&&result.msg)||'加载通知失败'); if(isClearingNotifications) return {items:[],unread_count:0}; const items=Array.isArray(result.data.items)?result.data.items:[]; const unreadCount=result.data.unread_count; updateNotificationUnreadBadge(unreadCount); const summary=document.getElementById('notification-summary'); if(summary) summary.textContent=`共 ${items.length} 条，未读 ${Number.isFinite(Number(unreadCount)) ? Math.max(0, Math.floor(Number(unreadCount))) : 0} 条 · 实时同步数据库`; return {items:items,unread_count:unreadCount}; }
+        function mapNotificationTitle(title){
+            const t = String(title||'').trim().toLowerCase();
+            const map = {
+                'remix':'混剪任务','remix_process':'智能混剪',
+                'commentary_process':'原创解说任务','commentary_analyze':'视频画面分析',
+                'generate_script':'解说文案生成','smart_shot_segment':'智能镜头分割','smart_segment':'智能镜头分割',
+                'video_analysis':'视频内容分析','analyze':'视频分析',
+                'voiceover':'AI配音任务','ai_voice':'AI配音','tts':'语音合成',
+                'subtitle':'字幕生成','caption':'字幕识别',
+                'transcribe':'语音转写','asr':'自动语音识别',
+                'material':'素材处理','auto_clip':'智能剪辑','process':'后处理合成',
+                'commentary':'原创解说','mixed':'混合剪辑','audio':'音频剪辑',
+                'task':'任务事件','checkpoint':'处理断点'
+            };
+            if(map[t]) return map[t];
+            // 前缀匹配兜底
+            for(const k of Object.keys(map)){ if(t.startsWith(k)) return map[k]; }
+            return String(title||'任务通知');
+        }
+        function mapNotificationStatus(type){ const t=String(type||'').toLowerCase(); if(t==='completed') return '<span class="status-completed task-status">成功</span>'; if(t==='failed') return '<span class="status-failed task-status">失败</span>'; if(t==='cancelled') return '<span class="task-status" style="background:rgba(148,163,184,.18);color:#cbd5e1;">已取消</span>'; if(t==='running') return '<span class="task-status" style="background:rgba(59,130,246,.18);color:#93c5fd;">进行中</span>'; if(t==='pending') return '<span class="task-status" style="background:rgba(234,179,8,.18);color:#fde68a;">排队中</span>'; return escapeHtml(type||''); }
+        async function markOneNotificationRead(sourceId){
+            if(!sourceId) return;
+            try{ const r=await fetch('/api/notifications/read',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({source_id:sourceId})}); const d=await r.json(); if(r.ok&&d&&d.code===0){ updateNotificationBadge(d.data&&d.data.unread_count); } }catch(_){}
+        }
+        async function clearAllNotifications(){
+            if(isClearingNotifications) return;
+            isClearingNotifications=true;
+            try{
+                const response=await fetch('/api/notifications/clear',{method:'POST'}); const result=await response.json();
+                if(!response.ok||!result||result.code!==0) throw new Error((result&&result.msg)||'清空失败');
+                const list=document.getElementById('notification-list');
+                const summary=document.getElementById('notification-summary');
+                if(list) list.innerHTML='<div class="text-xs text-text-secondary">暂无通知</div>';
+                if(summary) summary.textContent='共 0 条，未读 0 条 · 实时同步数据库';
+                updateNotificationBadge(result.data&&result.data.unread_count);
+                if(typeof showNotification==='function') showNotification('操作成功','通知已清空','success');
+            }catch(error){ if(typeof showNotification==='function') showNotification('操作失败',error.message||'无法清空通知','error');
+            }finally{
+                isClearingNotifications=false;
+            }
+            await loadNotifications();
+        }
+        async function loadNotifications(){
+            if(isClearingNotifications) return;
+            const list=document.getElementById('notification-list'); if(!list) return;
+            const scrollTop = list.scrollTop;
+            list.innerHTML='<div class="text-xs text-text-secondary">加载中...</div>';
+            try{ const data=await fetchNotificationSummary(); const items=Array.isArray(data.items)?data.items:[];
+                list.innerHTML=items.length?items.map(item=>{
+                    const isUnread = !item.read_at;
+                    return `<div class="glass-card rounded-lg px-3 py-2 text-xs cursor-pointer hover:bg-dark-lighter/60 transition-colors ${isUnread?'ring-1 ring-red-500/30':''}" data-source-id="${escapeHtml(item.source_id||'')}" onclick="onNotificationItemClick(this, event)">
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="flex items-center gap-2 min-w-0">
+                                ${isUnread?'<span class="flex-shrink-0 w-2 h-2 rounded-full bg-red-500" title="未读"></span>':'<span class="flex-shrink-0 w-2 h-2 rounded-full bg-transparent"></span>'}
+                                <strong class="text-text-primary truncate">${escapeHtml(mapNotificationTitle(item.title||'任务通知'))}</strong>
+                                ${mapNotificationStatus(item.type)}
+                            </div>
+                            <span class="text-text-secondary whitespace-nowrap flex-shrink-0" title="${isUnread?'点击标记已读':'已读'}">${isUnread?'<span style="color:#f87171;">未读</span>':'已读'}</span>
+                        </div>
+                        ${item.content?`<p class="text-text-secondary mt-1 break-words pl-4">${escapeHtml(item.content||'')}</p>`:''}
+                        <div class="text-text-secondary mt-1 pl-4">${formatNotificationTime(item.created_at)}</div>
+                    </div>`;
+                }).join(''):'<div class="text-xs text-text-secondary">暂无通知 · 任务完成后会自动出现在这里</div>';
+                list.scrollTop = scrollTop;
+            }catch(_){ list.innerHTML='<div class="text-xs text-red-400">加载失败，点击右上角"刷新"重试</div>'; }
+        }
+        function onNotificationItemClick(el, evt){
+            if(!el) return;
+            const sid = el.getAttribute('data-source-id')||'';
+            // 先立刻从视觉上标记，避免网络延迟造成"点了没反应"，稍后再刷新服务端真实状态
+            const unreadDot = el.querySelector('.bg-red-500');
+            const unreadBadge = el.querySelector('span[style*="color:#f87171"]');
+            if(unreadDot){ unreadDot.classList.remove('bg-red-500'); unreadDot.classList.add('bg-transparent'); }
+            if(unreadBadge){ unreadBadge.textContent = '已读'; unreadBadge.style.color=''; }
+            el.classList.remove('ring-1','ring-red-500/30');
+            markOneNotificationRead(sid);
+        }
+        async function markAllNotificationsRead(){ try{ const response=await fetch('/api/notifications/read-all',{method:'POST'}); const result=await response.json(); if(!response.ok||!result||result.code!==0) throw new Error((result&&result.msg)||'标记失败'); updateNotificationBadge(result.data&&result.data.unread_count); await loadNotifications(); }catch(error){ if(typeof showNotification==='function') showNotification('操作失败',error.message||'无法标记通知','error'); } }
+        document.addEventListener('DOMContentLoaded',function(){ fetchNotificationSummary().catch(()=>{}); window.setInterval(()=>fetchNotificationSummary().catch(()=>{}),15000); });
+
+        function getUrlParam(name){ const params=new URLSearchParams(window.location.search); return params.get(name); }
+        async function updateStatusBar(){
+            const stateEl=document.getElementById('status-project-state');
+            const sizeEl=document.getElementById('status-file-size');
+            const durEl=document.getElementById('status-duration');
+            if(!stateEl||!sizeEl||!durEl) return;
+            const projectId=getUrlParam('project')||window.currentProjectId;
+            const url=projectId?`/api/status-bar?project_id=${encodeURIComponent(projectId)}`:'/api/status-bar';
+            try{ const response=await fetch(url,{cache:'no-cache'}); const result=await response.json(); if(!response.ok||!result||result.code!==0) throw new Error((result&&result.msg)||'获取失败');
+                const d=result.data||{}; const storage=d.storage||{};
+                if(d.project){
+                    stateEl.innerHTML=`<i class="fa fa-check-circle" style="color: #36D399;"></i>项目状态: <span style="color: #36D399;">${escapeHtml(d.project.status||'')}</span>`;
+                    sizeEl.innerHTML=`文件大小: <strong style="color: rgba(255,255,255,0.9);">${escapeHtml(storage.project_size_human||'0 B')}</strong>`;
+                    if(storage.project_duration_human){ durEl.innerHTML=`时长: <strong style="color: rgba(255,255,255,0.9);">${escapeHtml(storage.project_duration_human)}</strong>`; durEl.style.display=''; }
+                    else{ durEl.innerHTML=''; durEl.style.display='none'; }
+                }else{
+                    stateEl.innerHTML='<span class="text-text-secondary">未打开项目</span>';
+                    sizeEl.innerHTML=`应用占用: <strong style="color: rgba(255,255,255,0.9);">${escapeHtml(storage.app_used_human||'0 B')}</strong>`;
+                    durEl.innerHTML=''; durEl.style.display='none';
+                }
+            }catch(_){ stateEl.innerHTML='<span class="text-text-secondary">未打开项目</span>'; sizeEl.innerHTML=''; durEl.innerHTML=''; durEl.style.display='none'; }
+        }
+        document.addEventListener('DOMContentLoaded',function(){ updateStatusBar(); });
+
+        function toggleRightPanel(){
+            const aside = document.getElementById('right-sidebar');
+            if (aside) {
+                const scroll = document.getElementById('right-sidebar-scroll');
+                if (scroll) scroll.scrollTo({top: 0, behavior: 'smooth'});
+            }
+        }
+
+        function updateContextInspector(){
+            const path = window.location.pathname;
+            const title = document.getElementById('context-inspector-title');
+            const description = document.getElementById('context-inspector-description');
+            const status = document.getElementById('inspector-status');
+            const clip = document.getElementById('clip-properties');
+            const color = document.getElementById('color-correction');
+            const effects = document.getElementById('effects-panel');
+            const exportPanel = document.getElementById('export-settings');
+            const editorPage = path === '/' || path === '/editor';
+            const contexts = path.includes('/commentary')
+                ? ['原创解说', '当前项目、生成进度和草稿导出状态会在此工作区保持可见。']
+                : path.includes('/remix')
+                    ? ['智能混剪', '当前混剪模式、素材与导出流程在主工作区集中管理。']
+                    : path.includes('/voiceover')
+                        ? ['AI 配音', '当前音色、引擎和生成结果可在主工作区直接确认。']
+                        : ['编辑检查器', '选择时间线素材后，可在下方连续调整剪辑、色彩、特效与导出参数。'];
+            if (title) title.textContent = contexts[0];
+            if (description) description.textContent = contexts[1];
+            if (status) status.textContent = editorPage ? '编辑中' : '工作中';
+            if (editorPage) {
+                [clip, color, effects, exportPanel].forEach(function(panel){ if (panel) panel.style.display = ''; });
+            } else {
+                [clip, color, effects, exportPanel].forEach(function(panel){ if (panel) panel.style.display = 'none'; });
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function(){
+            updateContextInspector();
+            try{
+                const grid = document.querySelector('#editor-controls-grid-row > div > div[style*="grid-template-columns"]');
+                if (grid) grid.classList.add('controls-grid');
+            }catch(_){}
+            handleResponsiveControlsGrid();
+        });
+
+
+
+        // 响应式：在断点切换时，兜底同步内联grid列数，避免内联样式优先级导致布局不生效
+        function handleResponsiveControlsGrid(){
+            try{
+                const grid = document.querySelector('#editor-controls-grid-row .controls-grid');
+                if (!grid) return;
+                const w = window.innerWidth || document.documentElement.clientWidth;
+                if (w <= 1280) {
+                    grid.style.gridTemplateColumns = '1fr';
+                } else {
+                    grid.style.gridTemplateColumns = 'repeat(2, minmax(0,1fr))';
+                }
+            }catch(_){/* 忽略 */}
+        }
+        window.addEventListener('resize', function(){ handleResponsiveControlsGrid(); });
+
+        // 特效/滤镜/转场入口
+        function openEffects(type){
+            if(type==='color'){
+                const cc = document.getElementById('color-correction'); if(cc){ cc.scrollIntoView({behavior:'smooth', block:'start'}); layer.msg('已定位到色彩校正',{icon:1}); } return;
+            }
+            const loading = layer.load(1, {shade:[0.3,'#000']});
+            fetch('/api/effects/list').then(r=>r.json()).then(res=>{
+                layer.close(loading);
+                if (res.code!==0) { showNotification('错误', res.msg||'获取失败', 'error'); return; }
+                let items = [];
+                if(type==='filters') items = res.data.filters||[];
+                else if(type==='transitions') items = res.data.transitions||[];
+                else items = res.data.effects||[];
+                let html = '<div style="min-width:520px;max-height:380px;overflow:auto">';
+                html += items.map(i=>`<button class="operation-btn glass-card rounded-xl w-full text-left px-4 py-3 mb-2 hover:border-primary/40" onclick=\"${type==='filters'?`applyFilterPreset('${i.id}')`:`layer.msg('已选择: ${i.name}',{icon:1})`}\"><i class='fa fa-check-circle mr-2 text-primary'></i>${i.name}</button>`).join('');
+                html += '</div>';
+                layer.open({type:1, title: (type==='filters'?'滤镜': type==='transitions'?'转场':'视觉效果'), area:['560px','420px'], content: html});
+            }).catch(()=>{ layer.close(loading); showNotification('错误','获取失败','error'); });
+        }
+
+        // 预设滤镜应用
+        function applyFilterPreset(id){
+            const map = {
+                'grayscale': {saturation: -100},
+                'warm': {saturation: 10, hue: -10},
+                'cool': {saturation: 10, hue: 10},
+                'contrast': {contrast: 20},
+                'vivid': {saturation: 25, contrast:10},
+            };
+            window.currentFilters = Object.assign({}, window.currentFilters, map[id]||{});
+            // 同步滑块显示
+            const sync = (elId, val)=>{ const el=document.getElementById(elId); if(el){ el.value = parseInt(val,10); el.dispatchEvent(new Event('input')); }};
+            if(map[id]?.brightness!==undefined) sync('cc-brightness', window.currentFilters.brightness||0);
+            if(map[id]?.contrast!==undefined)   sync('cc-contrast',   window.currentFilters.contrast||0);
+            if(map[id]?.saturation!==undefined) sync('cc-saturation', window.currentFilters.saturation||0);
+            if(map[id]?.hue!==undefined)        sync('cc-hue',        window.currentFilters.hue||0);
+            applyPreviewFilters();
+            layer.msg('已应用滤镜', {icon:1});
+        }
+
+        // 键盘快捷键
+        document.addEventListener('keydown', function(e) {
+            // Ctrl+S 保存
+            if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                saveProject();
+            }
+
+            // Ctrl+N 新建
+            if (e.ctrlKey && e.key === 'n') {
+                e.preventDefault();
+                newProject();
+            }
+
+            // Ctrl+Z 撤销（仅在当前页面定义了 undoEdit 时生效）
+            if (e.ctrlKey && e.key === 'z') {
+                if (typeof window.undoEdit === 'function') {
+                    e.preventDefault();
+                    window.undoEdit();
+                }
+            }
+
+            // Ctrl+Y 重做（仅在当前页面定义了 redoEdit 时生效）
+            if (e.ctrlKey && e.key === 'y') {
+                if (typeof window.redoEdit === 'function') {
+                    e.preventDefault();
+                    window.redoEdit();
+                }
+            }
+
+            // ESC 关闭模态框或通知
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                if (editorToolLayers && editorToolLayers.size) {
+                    closeTopEditorTool();
+                } else {
+                    closeNotification();
+                }
+            }
+        });
+
+        // 响应式处理
+        function handleResize() {
+            // 这里可以添加响应式布局的处理代码
+        }
+
+        window.addEventListener('resize', handleResize);
+
+        // 左侧栏与底部状态栏衔接：为左栏内容容器增加与 footer 等高的底部留白，避免重叠
+        (function(){
+            function adjustLeftSidebarFooterGap(){
+                try{
+                    var wrap = document.getElementById('left-sidebar-content');
+                    if(!wrap) return;
+                    var footer = document.querySelector('footer');
+                    var h = 40;
+                    if (footer && footer.getBoundingClientRect){
+                        var fr = footer.getBoundingClientRect();
+                        h = Math.max(36, Math.ceil(fr.height || 40));
+                    }
+                    var gap = 6; // 轻微缓冲，视觉不相交
+                    wrap.style.paddingBottom = (h + gap) + 'px';
+                }catch(_){ /* 忽略 */ }
+            }
+            window.addEventListener('load', adjustLeftSidebarFooterGap);
+            window.addEventListener('resize', adjustLeftSidebarFooterGap);
+            document.addEventListener('DOMContentLoaded', function(){ setTimeout(adjustLeftSidebarFooterGap, 200); });
+        })();
+
+
+        // 自定义Layui组件样式
+        document.addEventListener('DOMContentLoaded', function() {
+            // 为Layui弹窗添加玻璃态效果
+            const style = document.createElement('style');
+            style.textContent = `
+                .layui-layer {
+                    background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.9) 100%) !important;
+                    border: 1px solid rgba(51, 65, 85, 0.3) !important;
+                    backdrop-filter: blur(12px) !important;
+                    -webkit-backdrop-filter: blur(12px) !important;
+                    border-radius: 12px !important;
+                }
+
+                .layui-layer-title {
+                    background: transparent !important;
+                    color: #F8FAFC !important;
+                    border-bottom: 1px solid rgba(51, 65, 85, 0.3) !important;
+                    padding: 15px 20px !important;
+                    font-size: 16px !important;
+                    font-weight: 600 !important;
+                }
+
+                .layui-layer-content {
+                    background: transparent !important;
+                    color: #F8FAFC !important;
+                    padding: 20px !important;
+                }
+
+                .layui-layer-btn {
+                    background: transparent !important;
+                    padding: 10px 20px !important;
+                    border-top: 1px solid rgba(51, 65, 85, 0.3) !important;
+                }
+
+                .layui-layer-btn a {
+                    display: inline-block !important;
+                    box-sizing: border-box !important;
+                    min-width: 60px;
+                    height: 32px !important;
+                    line-height: 30px !important;
+                    background: linear-gradient(135deg, rgba(22, 93, 255, 0.2) 0%, rgba(15, 198, 194, 0.2) 100%) !important;
+                    color: #165DFF !important;
+                    border: 1px solid rgba(22, 93, 255, 0.3) !important;
+                    border-radius: 8px !important;
+                    padding: 0 16px !important;
+                    margin: 0 5px !important;
+                    white-space: nowrap !important;
+                    text-align: center !important;
+                    transition: all 0.3s ease !important;
+                }
+
+                .layui-layer-btn a:hover {
+                    background: linear-gradient(135deg, rgba(22, 93, 255, 0.3) 0%, rgba(15, 198, 194, 0.3) 100%) !important;
+                    transform: translateY(-1px) !important;
+                    box-shadow: 0 4px 15px rgba(22, 93, 255, 0.3) !important;
+                }
+
+                .layui-layer-btn .layui-layer-btn1 {
+                    background: linear-gradient(135deg, #165DFF 0%, #0FC6C2 100%) !important;
+                    color: #FFFFFF !important;
+                    border: none !important;
+                }
+
+                .layui-layer-btn .layui-layer-btn1:hover {
+                    background: linear-gradient(135deg, #0FC6C2 0%, #165DFF 100%) !important;
+                    transform: translateY(-1px) !important;
+                    box-shadow: 0 6px 20px rgba(22, 93, 255, 0.4) !important;
+                }
+            `;
+            document.head.appendChild(style);
+        });
+
+        // 页面离开提示
+        window.addEventListener('beforeunload', function(e) {
+            if (currentProjectId) {
+                e.preventDefault();
+                e.returnValue = '您的项目可能尚未保存，确定要离开吗？';
+                return e.returnValue;
+            }
+        });
+
+    </script>
+
+    <!-- 快速页面切换系统 -->
+    <script src="{{ url_for('static', filename='js/page-transition.js') }}"></script>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

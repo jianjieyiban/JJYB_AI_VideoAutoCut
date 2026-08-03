@@ -54,19 +54,13 @@ def create_notification_blueprint(db_manager):
 
     @blueprint.post('/api/notifications/clear')
     def clear_notifications():
-        """清空所有通知（保留空列表）。"""
+        """清空任务通知并阻止当前终态任务事件被同步回弹。"""
         try:
-            conn = db_manager.get_connection()
-            cursor = conn.cursor()
-            try:
-                cursor.execute("DELETE FROM notifications WHERE source_id LIKE 'task:%'")
-                conn.commit()
-            finally:
-                conn.close()
+            unread_count = db_manager.clear_task_notifications()
             return jsonify({
                 'code': 0,
                 'msg': '通知已清空',
-                'data': {'unread_count': 0}
+                'data': {'unread_count': unread_count}
             })
         except Exception as exc:
             return jsonify({'code': 1, 'msg': f'清空失败: {exc}', 'data': None}), 500

@@ -1,0 +1,115 @@
+{
+  "license": "JJYB-generated",
+  "effects": [
+    {
+      "id": "pop",
+      "name": "Pop",
+      "category": "bubble",
+      "templates": [
+        "pop",
+        "bubble"
+      ],
+      "keyword_types": [
+        "number",
+        "keyword"
+      ],
+      "default_volume": 0.18,
+      "duration": 0.12
+    },
+    {
+      "id": "bounce",
+      "name": "Bounce",
+      "category": "motion",
+      "templates": [
+        "pop",
+        "bubble"
+      ],
+      "keyword_types": [
+        "number"
+      ],
+      "default_volume": 0.18,
+      "duration": 0.16
+    },
+    {
+      "id": "whoosh",
+      "name": "Sweep",
+      "category": "motion",
+      "templates": [],
+      "keyword_types": [
+        "proper"
+      ],
+      "default_volume": 0.16,
+      "duration": 0.24
+    },
+    {
+      "id": "sparkle",
+      "name": "Glow",
+      "category": "light",
+      "templates": [
+        "gradient",
+        "glow"
+      ],
+      "keyword_types": [
+        "keyword"
+      ],
+      "default_volume": 0.16,
+      "duration": 0.32
+    },
+    {
+      "id": "neon",
+      "name": "Neon Tech",
+      "category": "tech",
+      "templates": [
+        "neon",
+        "tech"
+      ],
+      "keyword_types": [
+        "proper"
+      ],
+      "default_volume": 0.16,
+      "duration": 0.2
+    },
+    {
+      "id": "hit",
+      "name": "Impact",
+      "category": "impact",
+      "templates": [
+        "simple",
+        "hot"
+      ],
+      "keyword_types": [
+        "emotion"
+      ],
+      "default_volume": 0.18,
+      "duration": 0.18
+    },
+    {
+      "id": "paper",
+      "name": "Ink Paper",
+      "category": "paper",
+      "templates": [
+        "ink",
+        "guochao",
+        "vintage"
+      ],
+      "keyword_types": [
+        "keyword"
+      ],
+      "default_volume": 0.15,
+      "duration": 0.11
+    },
+    {
+      "id": "chime",
+      "name": "Gold Chime",
+      "category": "chime",
+      "templates": [
+        "gold"
+      ],
+      "keyword_types": [
+        "gold"
+      ],
+      "default_volume": 0.16,
+      "duration": 0.28
+    }
+  ]
+}

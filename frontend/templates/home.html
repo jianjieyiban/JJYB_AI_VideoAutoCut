@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JJYB_AI智剪 - 智能视频剪辑工具</title>
+    <!-- 主题同步：必须在其他样式之前加载，以避免主题闪烁 -->
+    <script src="{{ url_for('static', filename='js/theme-sync.js') }}"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 60px;
+            animation: fadeInDown 0.8s ease;
+        }
+
+        .logo {
+            font-size: 72px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #fff 0%, #f0f0f0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 20px;
+            text-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+
+        .tagline {
+            font-size: 24px;
+            color: rgba(255,255,255,0.9);
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            font-size: 16px;
+            color: rgba(255,255,255,0.7);
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            max-width: 1200px;
+            width: 100%;
+            margin-bottom: 40px;
+        }
+
+        .feature-card {
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            animation: fadeInUp 0.8s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .feature-card:nth-child(1)::before {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .feature-card:nth-child(2)::before {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .feature-card:nth-child(3)::before {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .feature-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .feature-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+
+        .feature-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .feature-desc {
+            font-size: 16px;
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .feature-list {
+            text-align: left;
+            margin-bottom: 25px;
+        }
+
+        .feature-list li {
+            list-style: none;
+            padding: 8px 0;
+            color: #555;
+            font-size: 14px;
+        }
+
+        .feature-list li::before {
+            content: '✓';
+            color: #667eea;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 15px 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(102,126,234,0.4);
+        }
+
+        .feature-card:nth-child(2) .btn {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .feature-card:nth-child(3) .btn {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .quick-links {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+            animation: fadeIn 1s ease;
+        }
+
+        .quick-link {
+            padding: 12px 30px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            text-decoration: none;
+            border-radius: 30px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .quick-link:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        .feature-card:nth-child(1) {
+            animation-delay: 0.1s;
+        }
+
+        .feature-card:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .feature-card:nth-child(3) {
+            animation-delay: 0.3s;
+        }
+
+        .nav-hint {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.3);
+            animation: fadeIn 1s ease;
+        }
+
+
+        /* 首页：快捷三个按钮整体上移一些，位置适中且不被遮挡 */
+        .floating-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: -24px;     /* 往上提一点 */
+            margin-bottom: 16px;   /* 与下方卡片保持间距 */
+            position: relative;    /* 保证层级控制生效，避免被覆盖 */
+            z-index: 1;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .floating-actions button { white-space: nowrap; }
+        @media (max-height: 700px) {
+            .floating-actions { margin-top: -16px; }
+        }
+
+        @media (max-width: 768px) {
+            .logo {
+                font-size: 48px;
+            }
+
+            .tagline {
+                font-size: 20px;
+            }
+
+            .features {
+                grid-template-columns: 1fr;
+            }
+
+            .feature-card {
+                padding: 30px;
+            }
+
+            .nav-hint {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="nav-hint">💡 提示：每个功能页面都有"返回首页"按钮</div>
+
+    <div class="header">
+        <div class="logo">JJYB</div>
+        <div class="tagline">AI智剪 - 智能视频剪辑工具</div>
+        <div class="subtitle">让视频创作更简单，让AI为你服务</div>
+    </div>
+
+    <!-- 快捷导航 -->
+    <div class="floating-actions left">
+        <button onclick="window.location.href='/editor'" style="padding: 10px 20px; background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3); border-radius: 20px; cursor: pointer; backdrop-filter: blur(10px); font-size: 14px;">
+            🎬 视频编辑器
+        </button>
+        <button onclick="window.location.href='/projects'" style="padding: 10px 20px; background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3); border-radius: 20px; cursor: pointer; backdrop-filter: blur(10px); font-size: 14px;">
+            📁 项目管理
+        </button>
+        <button onclick="window.location.href='/settings'" style="padding: 10px 20px; background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3); border-radius: 20px; cursor: pointer; backdrop-filter: blur(10px); font-size: 14px;">
+            ⚙️ 系统设置
+        </button>
+    </div>
+
+    <div class="features">
+        <!-- 原创解说剪辑 -->
+        <div class="feature-card" onclick="window.location.href='/commentary'">
+            <div class="feature-icon">🎙️</div>
+            <div class="feature-title">原创解说剪辑</div>
+            <div class="feature-desc">AI自动剪辑+智能配音配乐，一键生成专业解说视频</div>
+            <ul class="feature-list">
+                <li>AI自动剪辑</li>
+                <li>智能配音配乐</li>
+                <li>文稿自动生成</li>
+                <li>5种音色可选</li>
+            </ul>
+            <button class="btn">开始创作</button>
+        </div>
+
+        <!-- 混剪模式 -->
+        <div class="feature-card" onclick="window.location.href='/remix'">
+            <div class="feature-icon">✂️</div>
+            <div class="feature-title">混剪模式</div>
+            <div class="feature-desc">批量处理多个视频，智能识别精彩片段，多种风格混剪</div>
+            <ul class="feature-list">
+                <li>批量视频处理</li>
+                <li>智能识别精彩片段</li>
+                <li>3种风格可选</li>
+                <li>自动添加转场</li>
+            </ul>
+            <button class="btn">开始混剪</button>
+        </div>
+
+        <!-- AI配音 -->
+        <div class="feature-card" onclick="window.location.href='/voiceover'">
+            <div class="feature-icon">🔊</div>
+            <div class="feature-title">AI配音</div>
+            <div class="feature-desc">多种AI音色，文字转语音生成，语速语调自由调整</div>
+            <ul class="feature-list">
+                <li>5种AI音色</li>
+                <li>文字转语音</li>
+                <li>参数精细调节</li>
+                <li>实时预览试听</li>
+            </ul>
+            <button class="btn">开始配音</button>
+        </div>
+    </div>
+
+    <div class="quick-links">
+        <a href="/projects" class="quick-link">📁 项目管理</a>
+        <a href="/materials" class="quick-link">🎬 素材库</a>
+        <a href="/settings" class="quick-link">⚙️ 系统设置</a>
+        <a href="/mode_select" class="quick-link">🎯 模式选择</a>
+    </div>
+
+    <script>
+        // 添加点击音效（可选）
+        document.querySelectorAll('.feature-card').forEach(card => {
+            card.addEventListener('click', function(e) {
+                // 如果点击的是按钮，不阻止默认行为
+                if (e.target.tagName === 'BUTTON') {
+                    return;
+                }
+            });
+        });
+
+        // 添加键盘快捷键
+        document.addEventListener('keydown', function(e) {
+            if (e.key === '1') window.location.href = '/commentary';
+            if (e.key === '2') window.location.href = '/remix';
+            if (e.key === '3') window.location.href = '/voiceover';
+        });
+
+        console.log('🎉 JJYB_AI智剪 v3.0 已加载');
+        console.log('快捷键: 按 1/2/3 快速进入对应功能');
+    </script>
+</body>
+</html>

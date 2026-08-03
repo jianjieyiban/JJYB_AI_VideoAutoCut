@@ -1,0 +1,1492 @@
+{% extends "base.html" %}
+
+{% block title %}JJYB_AI智剪 - AI功能{% endblock %}
+
+{% block content %}
+<!-- 返回首页按钮 -->
+<div class="floating-actions left">
+    <button onclick="window.location.href='/'" style="padding: 10px 20px; background: rgba(255,255,255,0.9); color: #667eea; border: 2px solid #667eea; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+        <span>←</span>
+        <span>返回首页</span>
+    </button>
+</div>
+
+<!-- 快捷导航 -->
+<div class="floating-actions right">
+    <button onclick="window.location.href='/commentary'" style="padding: 8px 16px; background: rgba(255,255,255,0.9); color: #667eea; border: 2px solid #667eea; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600;">
+        🎙️ 原创解说
+    </button>
+    <button onclick="window.location.href='/remix'" style="padding: 8px 16px; background: rgba(255,255,255,0.9); color: #667eea; border: 2px solid #667eea; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600;">
+        ✂️ 混剪模式
+    </button>
+    <button onclick="window.location.href='/voiceover'" style="padding: 8px 16px; background: rgba(255,255,255,0.9); color: #667eea; border: 2px solid #667eea; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600;">
+        🔊 AI配音
+    </button>
+    <button onclick="window.location.href='/editor'" style="padding: 8px 16px; background: rgba(255,255,255,0.9); color: #667eea; border: 2px solid #667eea; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600;">
+        🎬 编辑器
+    </button>
+</div>
+
+<!-- 主内容容器 - 填满视口高度，消除底部空白 -->
+<div style="padding: 0 0 16px; display: flex; flex-direction: column;">
+
+<!-- AI功能页面顶部横幅 -->
+<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 25px; padding: 50px; margin-bottom: 30px; position: relative; overflow: hidden; box-shadow: 0 15px 50px rgba(102,126,234,0.3);">
+    <div style="position: absolute; top: -50px; right: -50px; width: 250px; height: 250px; background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%); border-radius: 50%;"></div>
+    <div style="display: flex; align-items: center; gap: 30px; position: relative; z-index: 1;">
+        <div style="width: 100px; height: 100px; background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); border-radius: 25px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 25px rgba(0,0,0,0.1);">
+            <span style="font-size: 55px;">🤖</span>
+        </div>
+        <div style="flex: 1;">
+            <h1 style="margin: 0 0 15px 0; font-size: 36px; color: white; font-weight: 900;">AI智能功能中心</h1>
+            <p style="margin: 0; font-size: 16px; color: rgba(255,255,255,0.9); line-height: 1.6;">集成先进的AI技术 · 智能配音 · 自动字幕 · 智能剪辑 · 让创作更轻松</p>
+        </div>
+        <div style="display: flex; gap: 15px;">
+            <button onclick="showAIFunctionHelp()" style="padding: 15px 30px; background: rgba(255,255,255,0.25); color: white; border: 2px solid rgba(255,255,255,0.5); border-radius: 15px; cursor: pointer; font-weight: 700; font-size: 15px; backdrop-filter: blur(10px); transition: all 0.3s;" onmouseover="this.style.background='rgba(255,255,255,0.35)'" onmouseout="this.style.background='rgba(255,255,255,0.25)'">
+                <i class="fa fa-question-circle" style="margin-right: 8px;"></i>使用帮助
+            </button>
+            <button onclick="showAITips()" style="padding: 15px 30px; background: rgba(255,255,255,0.95); color: #667eea; border: none; border-radius: 15px; cursor: pointer; font-weight: 700; font-size: 15px; transition: all 0.3s; box-shadow: 0 6px 20px rgba(0,0,0,0.1);" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 25px rgba(0,0,0,0.15)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 6px 20px rgba(0,0,0,0.1)'">
+                <i class="fa fa-lightbulb-o" style="margin-right: 8px;"></i>AI小贴士
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- AI功能卡片网格 -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 25px; margin-bottom: 30px;">
+            <!-- AI配音 - 蓝色科技风 -->
+            <div class="ai-feature-card" style="background: linear-gradient(135deg, rgba(79,172,254,0.05) 0%, rgba(0,242,254,0.05) 100%); border-radius: 20px; padding: 30px; border: 2px solid rgba(79,172,254,0.15); box-shadow: 0 8px 30px rgba(79,172,254,0.1); transition: all 0.3s;" onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 12px 40px rgba(79,172,254,0.2)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 8px 30px rgba(79,172,254,0.1)'">
+                <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 25px; padding-bottom: 20px; border-bottom: 2px solid rgba(79,172,254,0.1);">
+                    <div class="ai-feature-icon" style="width: 60px; height: 60px; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); border-radius: 18px; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 20px rgba(79,172,254,0.3);">
+                        <i class="fa fa-microphone" style="color: white; font-size: 28px;"></i>
+                    </div>
+                    <div>
+                        <h3 style="margin: 0 0 5px 0; font-size: 20px; font-weight: 800; color: rgba(255,255,255,0.95);">AI智能配音</h3>
+                        <p style="margin: 0; font-size: 13px; color: rgba(255,255,255,0.6);">多种音色 · 自然情感 · 秒级生成</p>
+                    </div>
+                </div>
+                <div>
+                        <form style="display: grid; gap: 20px;">
+                            <!-- 配音文本输入 - 全宽 -->
+                            <div style="background: rgba(15,23,42,0.4); padding: 18px; border-radius: 15px;">
+                                <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.8); margin-bottom: 12px;">
+                                    <i class="fa fa-pencil" style="color: #4facfe;"></i> 配音文本
+                                </label>
+                                <textarea name="voice-text" placeholder="请输入要配音的文本内容..." rows="3" style="width: 100%; padding: 15px; background: rgba(30,41,59,0.6); border: 1px solid rgba(79,172,254,0.3); border-radius: 12px; color: rgba(255,255,255,0.9); font-size: 14px; resize: vertical;"></textarea>
+                            </div>
+
+                            <!-- 双列网格布局 -->
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                <!-- 声音类型选择 -->
+                                <div style="background: rgba(15,23,42,0.4); padding: 18px; border-radius: 15px;">
+                                    <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.8); margin-bottom: 12px;">
+                                        <i class="fa fa-user" style="color: #4facfe;"></i> 声音类型
+                                    </label>
+                                    <select name="voice-type" style="width: 100%; padding: 14px; background: rgba(30,41,59,0.6); border: 1px solid rgba(79,172,254,0.3); border-radius: 12px; color: rgba(255,255,255,0.9); font-size: 14px; font-weight: 600;">
+                                        <option value="female">🎀 甜美女声</option>
+                                        <option value="male">🎙️ 成熟男声</option>
+                                        <option value="child">👶 可爱童声</option>
+                                        <option value="professional">📢 专业解说</option>
+                                        <option value="emotional">💖 情感丰富</option>
+                                    </select>
+                                </div>
+
+                                <!-- 语速控制 -->
+                                <div style="background: rgba(15,23,42,0.4); padding: 18px; border-radius: 15px;">
+                                    <label style="display: flex; align-items: center; justify-content: space-between; font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.8); margin-bottom: 12px;">
+                                        <span style="display: flex; align-items: center; gap: 8px;">
+                                            <i class="fa fa-tachometer" style="color: #4facfe;"></i> 语速
+                                        </span>
+                                        <span style="color: #4facfe; font-size: 14px;">1.0x</span>
+                                    </label>
+                                    <input type="range" name="voice-speed" min="0.5" max="2" step="0.1" value="1" style="width: 100%; height: 6px; background: linear-gradient(90deg, rgba(79,172,254,0.3) 0%, rgba(79,172,254,0.8) 50%, rgba(79,172,254,0.3) 100%); border-radius: 3px; outline: none; -webkit-appearance: none;">
+                                    <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 11px; color: rgba(255,255,255,0.5);">
+                                        <span>🐢 0.5x</span>
+                                        <span>😊 1.0x</span>
+                                        <span>🚀 2.0x</span>
+                                    </div>
+                                </div>
+
+                                <!-- 音量控制（占满两列） -->
+                                <div style="background: rgba(15,23,42,0.4); padding: 18px; border-radius: 15px; grid-column: span 2;">
+                                    <label style="display: flex; align-items: center; justify-content: space-between; font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.8); margin-bottom: 12px;">
+                                        <span style="display: flex; align-items: center; gap: 8px;">
+                                            <i class="fa fa-volume-up" style="color: #4facfe;"></i> 音量
+                                        </span>
+                                        <span style="color: #4facfe; font-size: 14px;">100%</span>
+                                    </label>
+                                    <input type="range" name="voice-volume" min="0" max="2" step="0.1" value="1" style="width: 100%; height: 6px; background: linear-gradient(90deg, rgba(79,172,254,0.3) 0%, rgba(79,172,254,0.8) 50%, rgba(79,172,254,0.3) 100%); border-radius: 3px; outline: none; -webkit-appearance: none;">
+                                    <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 11px; color: rgba(255,255,255,0.5);">
+                                        <span>🔇 0%</span>
+                                        <span>🔊 100%</span>
+                                        <span>🚀 200%</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 生成按钮 -->
+                            <button type="button" onclick="generateAIVoice()" style="width: 100%; padding: 18px; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; border: none; border-radius: 15px; font-size: 16px; font-weight: 800; cursor: pointer; box-shadow: 0 6px 20px rgba(79,172,254,0.4); transition: all 0.3s; margin-top: 10px;" onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 25px rgba(79,172,254,0.5)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 6px 20px rgba(79,172,254,0.4)'">
+                                <i class="fa fa-magic" style="margin-right: 8px;"></i>生成AI配音
+                            </button>
+                        </form>
+
+                        <!-- 配音结果 -->
+                        <div id="voice-result" class="mt-10" style="display: none;">
+                            <div class="layui-card">
+                                <div class="layui-card-header">
+                                    <h4 class="layui-card-title">配音结果</h4>
+                                </div>
+                                <div class="layui-card-body">
+                                    <audio controls id="voice-audio" style="width: 100%;"></audio>
+                                    <div class="layui-btn-group mt-5">
+                                        <button class="layui-btn layui-btn-primary layui-btn-sm operation-btn" onclick="downloadVoice()">
+                                            <i class="layui-icon layui-icon-download"></i>下载
+                                        </button>
+                                        <button class="layui-btn layui-btn-normal layui-btn-sm operation-btn" onclick="addVoiceToProject()">
+                                            <i class="layui-icon layui-icon-plus"></i>添加到项目
+                                        </button>
+                                        <button class="layui-btn layui-btn-danger layui-btn-sm operation-btn" onclick="deleteVoice()">
+                                            <i class="layui-icon layui-icon-delete"></i>删除
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 自动字幕 - 紫色智能风 -->
+            <div class="ai-feature-card" style="background: linear-gradient(135deg, rgba(124,58,237,0.05) 0%, rgba(91,33,182,0.05) 100%); border-radius: 20px; padding: 30px; border: 2px solid rgba(124,58,237,0.15); box-shadow: 0 8px 30px rgba(124,58,237,0.1); transition: all 0.3s;" onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 12px 40px rgba(124,58,237,0.2)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 8px 30px rgba(124,58,237,0.1)'">
+                <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 25px; padding-bottom: 20px; border-bottom: 2px solid rgba(124,58,237,0.1);">
+                    <div class="ai-feature-icon" style="width: 60px; height: 60px; background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%); border-radius: 18px; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 20px rgba(124,58,237,0.3);">
+                        <i class="fa fa-font" style="color: white; font-size: 28px;"></i>
+                    </div>
+                    <div>
+                        <h3 style="margin: 0 0 5px 0; font-size: 20px; font-weight: 800; color: rgba(255,255,255,0.95);">自动字幕生成</h3>
+                        <p style="margin: 0; font-size: 13px; color: rgba(255,255,255,0.6);">语音识别 · 多语言支持 · 精准时间轴</p>
+                    </div>
+                </div>
+
+                <form style="display: grid; gap: 20px;">
+                    <!-- 视频上传区域 - 全宽 -->
+                    <div id="subtitle-upload-area" onclick="document.getElementById('subtitle-upload').click()" style="background: rgba(15,23,42,0.4); padding: 35px; border-radius: 15px; border: 2px dashed rgba(124,58,237,0.4); text-align: center; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.background='rgba(124,58,237,0.1)'; this.style.borderColor='rgba(124,58,237,0.6)'" onmouseout="this.style.background='rgba(15,23,42,0.4)'; this.style.borderColor='rgba(124,58,237,0.4)'">
+                        <div style="font-size: 40px; margin-bottom: 10px;">☁️</div>
+                        <h4 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 700; color: rgba(255,255,255,0.9);">点击或拖拽上传视频</h4>
+                        <p style="margin: 0; font-size: 12px; color: rgba(255,255,255,0.5);">支持 MP4, AVI, MOV 等格式</p>
+                        <input type="file" id="subtitle-upload" style="display: none;" accept="video/*">
+                    </div>
+
+                    <!-- 双列网格布局 -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <!-- 识别语言 -->
+                        <div style="background: rgba(15,23,42,0.4); padding: 18px; border-radius: 15px;">
+                            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.8); margin-bottom: 12px;">
+                                <i class="fa fa-language" style="color: #7c3aed;"></i> 识别语言
+                            </label>
+                            <select name="subtitle-language" style="width: 100%; padding: 14px; background: rgba(30,41,59,0.6); border: 1px solid rgba(124,58,237,0.3); border-radius: 12px; color: rgba(255,255,255,0.9); font-size: 14px; font-weight: 600;">
+                                <option value="auto">🌐 自动识别（推荐）</option>
+                                <option value="zh">🇨🇳 中文</option>
+                                <option value="en">🇺🇸 英文</option>
+                                <option value="ja">🇯🇵 日文</option>
+                                <option value="ko">🇰🇷 韩文</option>
+                            </select>
+                        </div>
+
+                        <!-- 字幕样式 -->
+                        <div style="background: rgba(15,23,42,0.4); padding: 18px; border-radius: 15px;">
+                            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.8); margin-bottom: 12px;">
+                                <i class="fa fa-paint-brush" style="color: #7c3aed;"></i> 字幕样式
+                            </label>
+                            <select name="subtitle-style" style="width: 100%; padding: 14px; background: rgba(30,41,59,0.6); border: 1px solid rgba(124,58,237,0.3); border-radius: 12px; color: rgba(255,255,255,0.9); font-size: 14px; font-weight: 600;">
+                                <option value="standard">📝 标准样式</option>
+                                <option value="movie">🎬 电影风格</option>
+                                <option value="modern">✨ 简约现代</option>
+                                <option value="cartoon">🎨 可爱卡通</option>
+                                <option value="custom">⚙️ 自定义</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- 生成按钮 -->
+                    <button type="button" onclick="generateAutoSubtitle()" style="width: 100%; padding: 18px; background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%); color: white; border: none; border-radius: 15px; font-size: 16px; font-weight: 800; cursor: pointer; box-shadow: 0 6px 20px rgba(124,58,237,0.4); transition: all 0.3s; margin-top: 10px;" onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 25px rgba(124,58,237,0.5)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 6px 20px rgba(124,58,237,0.4)'">
+                        <i class="fa fa-magic" style="margin-right: 8px;"></i>基于项目素材生成字幕
+                    </button>
+                    <button type="button" class="ai-feature-secondary-action" onclick="batchTranscribeLocalFiles()" style="width: 100%; padding: 14px; margin-top: 10px; background: rgba(124,58,237,0.15); color: #e9d5ff; border: 1px dashed rgba(196,181,253,0.8); border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 14px rgba(124,58,237,0.35);" onmouseover="this.style.background='rgba(124,58,237,0.25)'" onmouseout="this.style.background='rgba(124,58,237,0.15)'">
+                        <i class="fa fa-exchange" style="margin-right: 6px;"></i>本地文件批量转写（实验功能）
+                    </button>
+                </form>
+
+                        <!-- 字幕结果 -->
+                        <div id="subtitle-result" class="mt-10" style="display: none;">
+                            <div class="layui-card">
+                                <div class="layui-card-header">
+                                    <h4 class="layui-card-title">字幕结果</h4>
+                                </div>
+                                <div class="layui-card-body">
+                                    <div id="subtitle-preview" style="max-height: 200px; overflow-y: auto; background: #f8f8f8; padding: 10px; border-radius: 4px;">
+                                        <!-- 字幕预览将在这里显示 -->
+                                    </div>
+                                    <div class="layui-btn-group mt-5">
+                                        <button class="layui-btn layui-btn-primary layui-btn-sm operation-btn" onclick="downloadSubtitle()">
+                                            <i class="layui-icon layui-icon-download"></i>下载SRT
+                                        </button>
+                                        <button class="layui-btn layui-btn-normal layui-btn-sm operation-btn" onclick="addSubtitleToProject()">
+                                            <i class="layui-icon layui-icon-plus"></i>添加到项目
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI智能剪辑 - 绿色创意风 -->
+            <div class="ai-feature-card" style="background: linear-gradient(135deg, rgba(16,185,129,0.05) 0%, rgba(5,150,105,0.05) 100%); border-radius: 20px; padding: 30px; border: 2px solid rgba(16,185,129,0.15); box-shadow: 0 8px 30px rgba(16,185,129,0.1); transition: all 0.3s;" onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 12px 40px rgba(16,185,129,0.2)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 8px 30px rgba(16,185,129,0.1)'">
+                <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 25px; padding-bottom: 20px; border-bottom: 2px solid rgba(16,185,129,0.1);">
+                    <div class="ai-feature-icon" style="width: 60px; height: 60px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 18px; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 20px rgba(16,185,129,0.3);">
+                        <i class="fa fa-scissors" style="color: white; font-size: 28px;"></i>
+                    </div>
+                    <div>
+                        <h3 style="margin: 0 0 5px 0; font-size: 20px; font-weight: 800; color: rgba(255,255,255,0.95);">AI智能剪辑</h3>
+                        <p style="margin: 0; font-size: 13px; color: rgba(255,255,255,0.6);">场景识别 · 智能剪辑 · 一键成片</p>
+                    </div>
+                </div>
+
+                <form style="display: grid; gap: 20px;">
+                    <!-- 视频上传区域 - 全宽 -->
+                    <div id="edit-upload-area" onclick="document.getElementById('edit-upload').click()" style="background: rgba(15,23,42,0.4); padding: 35px; border-radius: 15px; border: 2px dashed rgba(16,185,129,0.4); text-align: center; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.background='rgba(16,185,129,0.1)'; this.style.borderColor='rgba(16,185,129,0.6)'" onmouseout="this.style.background='rgba(15,23,42,0.4)'; this.style.borderColor='rgba(16,185,129,0.4)'">
+                        <div style="font-size: 40px; margin-bottom: 10px;">🎬</div>
+                        <h4 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 700; color: rgba(255,255,255,0.9);">上传视频素材</h4>
+                        <p style="margin: 0; font-size: 12px; color: rgba(255,255,255,0.5);">支持多个视频文件批量上传</p>
+                        <input type="file" id="edit-upload" style="display: none;" accept="video/*" multiple>
+                    </div>
+
+                    <!-- 双列网格布局 -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <!-- 剪辑风格 -->
+                        <div style="background: rgba(15,23,42,0.4); padding: 18px; border-radius: 15px;">
+                            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.8); margin-bottom: 12px;">
+                                <i class="fa fa-film" style="color: #10b981;"></i> 剪辑风格
+                            </label>
+                            <select name="edit-style" style="width: 100%; padding: 14px; background: rgba(30,41,59,0.6); border: 1px solid rgba(16,185,129,0.3); border-radius: 12px; color: rgba(255,255,255,0.9); font-size: 14px; font-weight: 600;">
+                                <option value="fast">⚡ 快节奏</option>
+                                <option value="slow">🌊 慢节奏</option>
+                                <option value="cinematic">🎥 电影感</option>
+                                <option value="vlog">📹 Vlog风格</option>
+                                <option value="music">🎵 音乐配合</option>
+                            </select>
+                        </div>
+
+                        <!-- 目标时长 -->
+                        <div style="background: rgba(15,23,42,0.4); padding: 18px; border-radius: 15px;">
+                            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.8); margin-bottom: 12px;">
+                                <i class="fa fa-clock-o" style="color: #10b981;"></i> 目标时长
+                            </label>
+                            <select name="edit-duration" style="width: 100%; padding: 14px; background: rgba(30,41,59,0.6); border: 1px solid rgba(16,185,129,0.3); border-radius: 12px; color: rgba(255,255,255,0.9); font-size: 14px; font-weight: 600;">
+                                <option value="15">⏱️ 15秒</option>
+                                <option value="30">⏱️ 30秒</option>
+                                <option value="60">⏱️ 1分钟</option>
+                                <option value="120">⏱️ 2分钟</option>
+                                <option value="300">⏱️ 5分钟</option>
+                                <option value="custom">⚙️ 自定义</option>
+                            </select>
+                        </div>
+
+                        <!-- 背景音乐 -->
+                        <div style="background: rgba(15,23,42,0.4); padding: 18px; border-radius: 15px;">
+                            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.8); margin-bottom: 12px;">
+                                <i class="fa fa-music" style="color: #10b981;"></i> 背景音乐
+                            </label>
+                            <select name="edit-music" style="width: 100%; padding: 14px; background: rgba(30,41,59,0.6); border: 1px solid rgba(16,185,129,0.3); border-radius: 12px; color: rgba(255,255,255,0.9); font-size: 14px; font-weight: 600;">
+                                <option value="none">🔇 无背景音乐</option>
+                                <option value="upbeat">🎉 欢快</option>
+                                <option value="relaxing">🎹 舒缓</option>
+                                <option value="epic">⚔️ 史诗</option>
+                                <option value="cinematic">🎬 电影</option>
+                                <option value="upload">📂 上传音乐</option>
+                            </select>
+                        </div>
+
+                        <!-- 输出质量 -->
+                        <div style="background: rgba(15,23,42,0.4); padding: 18px; border-radius: 15px;">
+                            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.8); margin-bottom: 12px;">
+                                <i class="fa fa-video-camera" style="color: #10b981;"></i> 输出质量
+                            </label>
+                            <select name="edit-quality" style="width: 100%; padding: 14px; background: rgba(30,41,59,0.6); border: 1px solid rgba(16,185,129,0.3); border-radius: 12px; color: rgba(255,255,255,0.9); font-size: 14px; font-weight: 600;">
+                                <option value="high">💎 高清 1080p</option>
+                                <option value="medium" selected>📺 标清 720p</option>
+                                <option value="low">📱 流畅 480p</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- 开始剪辑按钮 -->
+                    <button type="button" onclick="startAICut()" style="width: 100%; padding: 18px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; border-radius: 15px; font-size: 16px; font-weight: 800; cursor: pointer; box-shadow: 0 6px 20px rgba(16,185,129,0.4); transition: all 0.3s; margin-top: 10px;" onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 25px rgba(16,185,129,0.5)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 6px 20px rgba(16,185,129,0.4)'">
+                        <i class="fa fa-rocket" style="margin-right: 8px;"></i>开始AI剪辑
+                    </button>
+                </form>
+
+                        <!-- 剪辑结果 -->
+                        <div id="edit-result" class="mt-10" style="display: none;">
+                            <div class="layui-card">
+                                <div class="layui-card-header">
+                                    <h4 class="layui-card-title">剪辑结果</h4>
+                                </div>
+                                <div class="layui-card-body">
+                                    <video controls id="edit-video" style="width: 100%; height: 150px; object-fit: cover;"></video>
+                                    <div class="layui-btn-group mt-5">
+                                        <button class="layui-btn layui-btn-primary layui-btn-sm operation-btn" onclick="downloadEditedVideo()">
+                                            <i class="layui-icon layui-icon-download"></i>下载
+                                        </button>
+                                        <button class="layui-btn layui-btn-normal layui-btn-sm operation-btn" onclick="openEditedProject()">
+                                            <i class="layui-icon layui-icon-edit"></i>继续编辑
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+            </div>
+</div>
+
+<!-- 关闭网格布局 -->
+
+<!-- AI项目管理 - 现代化表格 -->
+<div class="ai-content-section" style="background: linear-gradient(135deg, rgba(59,130,246,0.05) 0%, rgba(37,99,235,0.05) 100%); border-radius: 20px; padding: 30px; margin-bottom: 30px; border: 2px solid rgba(59,130,246,0.15);">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 25px; padding-bottom: 20px; border-bottom: 2px solid rgba(59,130,246,0.1);">
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border-radius: 15px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(59,130,246,0.3);">
+                <i class="fa fa-folder-open" style="color: white; font-size: 22px;"></i>
+            </div>
+            <div>
+                <h3 style="margin: 0 0 5px 0; font-size: 22px; font-weight: 800; color: rgba(255,255,255,0.95);">AI项目管理</h3>
+                <p style="margin: 0; font-size: 13px; color: rgba(255,255,255,0.6);">查看和管理所有AI生成的项目</p>
+            </div>
+        </div>
+        <button onclick="window.location.href='/projects'" style="padding: 12px 24px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 15px rgba(59,130,246,0.3); transition: all 0.3s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(59,130,246,0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(59,130,246,0.3)'">
+            <i class="fa fa-plus" style="margin-right: 6px;"></i>新建项目
+        </button>
+    </div>
+
+    <div style="background: rgba(15,23,42,0.4); border-radius: 15px; overflow: hidden;">
+        <table id="ai-project-list" style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: rgba(59,130,246,0.1);">
+                    <th style="padding: 18px; text-align: left; font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.7); border-bottom: 1px solid rgba(59,130,246,0.2);">#</th>
+                    <th style="padding: 18px; text-align: left; font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.7); border-bottom: 1px solid rgba(59,130,246,0.2);">项目名称</th>
+                    <th style="padding: 18px; text-align: left; font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.7); border-bottom: 1px solid rgba(59,130,246,0.2);">AI功能</th>
+                    <th style="padding: 18px; text-align: left; font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.7); border-bottom: 1px solid rgba(59,130,246,0.2);">状态</th>
+                    <th style="padding: 18px; text-align: left; font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.7); border-bottom: 1px solid rgba(59,130,246,0.2);">创建时间</th>
+                    <th style="padding: 18px; text-align: left; font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.7); border-bottom: 1px solid rgba(59,130,246,0.2);">操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- 空状态提示 -->
+                <tr>
+                    <td colspan="6" style="padding: 60px; text-align: center;">
+                        <div style="font-size: 60px; margin-bottom: 15px; opacity: 0.3;">📁</div>
+                        <p style="margin: 0; font-size: 16px; font-weight: 600; color: rgba(255,255,255,0.5);">暂无AI项目数据</p>
+                        <p style="margin: 8px 0 0 0; font-size: 13px; color: rgba(255,255,255,0.3);">开始使用AI功能创建您的第一个项目</p>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- AI核心技术展示 -->
+<div class="ai-content-section" style="background: linear-gradient(135deg, rgba(139,92,246,0.05) 0%, rgba(109,40,217,0.05) 100%); border-radius: 20px; padding: 30px; border: 2px solid rgba(139,92,246,0.15);">
+    <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid rgba(139,92,246,0.1);">
+        <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); border-radius: 15px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(139,92,246,0.3);">
+            <i class="fa fa-rocket" style="color: white; font-size: 22px;"></i>
+        </div>
+        <div>
+            <h3 style="margin: 0 0 5px 0; font-size: 22px; font-weight: 800; color: rgba(255,255,255,0.95);">AI核心技术</h3>
+            <p style="margin: 0; font-size: 13px; color: rgba(255,255,255,0.6);">由先进的人工智能算法驱动</p>
+        </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;">
+        <!-- 语音合成 -->
+        <div style="background: linear-gradient(135deg, rgba(59,130,246,0.1) 0%, rgba(37,99,235,0.1) 100%); border-radius: 18px; padding: 30px; text-align: center; border: 2px solid rgba(59,130,246,0.2); transition: all 0.3s;" onmouseover="this.style.transform='translateY(-8px)'; this.style.boxShadow='0 12px 30px rgba(59,130,246,0.2)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+            <div style="width: 80px; height: 80px; margin: 0 auto 20px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border-radius: 20px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 20px rgba(59,130,246,0.3);">
+                <i class="fa fa-microphone" style="color: white; font-size: 36px;"></i>
+            </div>
+            <h4 style="margin: 0 0 10px 0; font-size: 18px; font-weight: 800; color: rgba(255,255,255,0.95);">语音合成</h4>
+            <p style="margin: 0; font-size: 13px; color: rgba(255,255,255,0.6); line-height: 1.6;">基于深度学习的TTS技术</p>
+        </div>
+
+        <!-- 语音识别 -->
+        <div style="background: linear-gradient(135deg, rgba(236,72,153,0.1) 0%, rgba(219,39,119,0.1) 100%); border-radius: 18px; padding: 30px; text-align: center; border: 2px solid rgba(236,72,153,0.2); transition: all 0.3s;" onmouseover="this.style.transform='translateY(-8px)'; this.style.boxShadow='0 12px 30px rgba(236,72,153,0.2)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+            <div style="width: 80px; height: 80px; margin: 0 auto 20px; background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); border-radius: 20px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 20px rgba(236,72,153,0.3);">
+                <i class="fa fa-headphones" style="color: white; font-size: 36px;"></i>
+            </div>
+            <h4 style="margin: 0 0 10px 0; font-size: 18px; font-weight: 800; color: rgba(255,255,255,0.95);">语音识别</h4>
+            <p style="margin: 0; font-size: 13px; color: rgba(255,255,255,0.6); line-height: 1.6;">多语言语音转文字</p>
+        </div>
+
+        <!-- 计算机视觉 -->
+        <div style="background: linear-gradient(135deg, rgba(16,185,129,0.1) 0%, rgba(5,150,105,0.1) 100%); border-radius: 18px; padding: 30px; text-align: center; border: 2px solid rgba(16,185,129,0.2); transition: all 0.3s;" onmouseover="this.style.transform='translateY(-8px)'; this.style.boxShadow='0 12px 30px rgba(16,185,129,0.2)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+            <div style="width: 80px; height: 80px; margin: 0 auto 20px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 20px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 20px rgba(16,185,129,0.3);">
+                <i class="fa fa-eye" style="color: white; font-size: 36px;"></i>
+            </div>
+            <h4 style="margin: 0 0 10px 0; font-size: 18px; font-weight: 800; color: rgba(255,255,255,0.95);">计算机视觉</h4>
+            <p style="margin: 0; font-size: 13px; color: rgba(255,255,255,0.6); line-height: 1.6;">场景检测与内容分析</p>
+        </div>
+
+        <!-- 智能剪辑 -->
+        <div style="background: linear-gradient(135deg, rgba(245,158,11,0.1) 0%, rgba(217,119,6,0.1) 100%); border-radius: 18px; padding: 30px; text-align: center; border: 2px solid rgba(245,158,11,0.2); transition: all 0.3s;" onmouseover="this.style.transform='translateY(-8px)'; this.style.boxShadow='0 12px 30px rgba(245,158,11,0.2)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+            <div style="width: 80px; height: 80px; margin: 0 auto 20px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-radius: 20px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 20px rgba(245,158,11,0.3);">
+                <i class="fa fa-magic" style="color: white; font-size: 36px;"></i>
+            </div>
+            <h4 style="margin: 0 0 10px 0; font-size: 18px; font-weight: 800; color: rgba(255,255,255,0.95);">智能剪辑</h4>
+            <p style="margin: 0; font-size: 13px; color: rgba(255,255,255,0.6); line-height: 1.6;">AI自动视频剪辑</p>
+        </div>
+    </div>
+</div>
+
+<!-- 底部：横向快捷操作面板 - 填充空白区域 -->
+<div style="margin-top: 30px; padding: 0 20px 20px 20px;">
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+
+        <!-- AI配音卡片 -->
+        <div style="background: linear-gradient(135deg, rgba(79,172,254,0.08) 0%, rgba(0,242,254,0.08) 100%); border-radius: 16px; padding: 20px; border: 1px solid rgba(79,172,254,0.15);">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px; padding-bottom: 12px; border-bottom: 2px solid rgba(79,172,254,0.1);">
+                <div style="width: 38px; height: 38px; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                    <i class="fa fa-microphone" style="color: white; font-size: 16px;"></i>
+                </div>
+                <h4 style="margin: 0; font-size: 14px; font-weight: 700; color: rgba(255,255,255,0.95);">快速配音</h4>
+            </div>
+            <div style="display: grid; gap: 10px;">
+                <select style="width: 100%; padding: 9px; background: rgba(30,41,59,0.8); border: 1px solid rgba(79,172,254,0.3); border-radius: 8px; color: rgba(255,255,255,0.9); font-size: 12px; box-sizing: border-box;">
+                    <option>甜美女声</option>
+                    <option>成熟男声</option>
+                    <option>可爱童声</option>
+                    <option>专业解说</option>
+                </select>
+                <button onclick="window.location.href='/voiceover'" style="width: 100%; padding: 10px; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; border: none; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 15px rgba(79,172,254,0.3);">
+                    <i class="fa fa-play" style="margin-right: 6px;"></i>开始配音
+                </button>
+            </div>
+        </div>
+
+        <!-- 自动字幕卡片 -->
+        <div style="background: linear-gradient(135deg, rgba(240,147,251,0.06) 0%, rgba(245,87,108,0.06) 100%); border-radius: 16px; padding: 20px; border: 1px solid rgba(240,147,251,0.15);">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px; padding-bottom: 12px; border-bottom: 2px solid rgba(240,147,251,0.1);">
+                <div style="width: 38px; height: 38px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                    <i class="fa fa-font" style="color: white; font-size: 16px;"></i>
+                </div>
+                <h4 style="margin: 0; font-size: 14px; font-weight: 700; color: rgba(255,255,255,0.95);">自动字幕</h4>
+            </div>
+            <div style="display: grid; gap: 10px;">
+                <select style="width: 100%; padding: 9px; background: rgba(30,41,59,0.8); border: 1px solid rgba(240,147,251,0.3); border-radius: 8px; color: rgba(255,255,255,0.9); font-size: 12px; box-sizing: border-box;">
+                    <option>中文识别</option>
+                    <option>英文识别</option>
+                    <option>双语识别</option>
+                </select>
+                <button onclick="generateAutoSubtitle()" style="width: 100%; padding: 10px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; border: none; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 15px rgba(240,147,251,0.3);">
+                    <i class="fa fa-magic" style="margin-right: 6px;"></i>生成字幕
+                </button>
+            </div>
+        </div>
+
+        <!-- 智能剪辑卡片 -->
+        <div style="background: linear-gradient(135deg, rgba(67,233,123,0.08) 0%, rgba(56,249,215,0.08) 100%); border-radius: 16px; padding: 20px; border: 1px solid rgba(67,233,123,0.15);">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px; padding-bottom: 12px; border-bottom: 2px solid rgba(67,233,123,0.1);">
+                <div style="width: 38px; height: 38px; background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                    <i class="fa fa-scissors" style="color: white; font-size: 16px;"></i>
+                </div>
+                <h4 style="margin: 0; font-size: 14px; font-weight: 700; color: rgba(255,255,255,0.95);">智能剪辑</h4>
+            </div>
+            <div style="display: grid; gap: 10px;">
+                <select style="width: 100%; padding: 9px; background: rgba(30,41,59,0.8); border: 1px solid rgba(67,233,123,0.3); border-radius: 8px; color: rgba(255,255,255,0.9); font-size: 12px; box-sizing: border-box;">
+                    <option>精彩片段</option>
+                    <option>静音去除</option>
+                    <option>场景识别</option>
+                </select>
+                <button onclick="startAICut()" style="width: 100%; padding: 10px; background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white; border: none; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 15px rgba(67,233,123,0.3);">
+                    <i class="fa fa-cut" style="margin-right: 6px;"></i>智能剪辑
+                </button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+</div><!-- 闭合主内容容器 -->
+{% endblock %}
+
+{% block extra_js %}
+<script type="text/javascript">
+    layui.use(['element', 'layer', 'form', 'slider', 'upload'], function() {
+        var element = layui.element;
+        var layer = layui.layer;
+        var form = layui.form;
+        var slider = layui.slider;
+        var upload = layui.upload;
+        var batchSubtitleResults = [];
+
+        // 页面加载完成后初始化
+        $(function() {
+            getAIProjectList();
+            initSliders();
+            initUploads();
+            initDragAndDrop();
+        });
+
+        // 初始化滑块
+        function initSliders() {
+            slider.render({
+                elem: '[name="voice-speed"]',
+                range: false,
+                step: 0.1,
+                min: 0.5,
+                max: 2,
+                value: 1
+            });
+
+            slider.render({
+                elem: '[name="voice-volume"]',
+                range: false,
+                step: 0.1,
+                min: 0,
+                max: 2,
+                value: 1
+            });
+        }
+
+        function attachUploadedVideoToCurrentProject(asset, source) {
+            var projectId = window.currentProjectId || sessionStorage.getItem('current_project_id');
+            if (!projectId) return Promise.reject(new Error('请先创建或打开项目'));
+            if (!asset || !asset.path) return Promise.reject(new Error('上传接口没有返回素材路径'));
+            return new Promise(function(resolve, reject) {
+                apiRequest('/api/materials', 'POST', {
+                    project_id: projectId, type: 'video', name: asset.original_filename || asset.filename || '视频素材',
+                    path: asset.path, size: asset.size || 0, duration: 0, metadata: {source: source || 'ai_features_upload'}
+                }, resolve, reject);
+            });
+        }
+
+        // 初始化上传
+        function initUploads() {
+            function requireProjectBeforeUpload() {
+                var projectId = window.currentProjectId || sessionStorage.getItem('current_project_id');
+                if (projectId) return true;
+                layer.msg('请先创建或打开项目，再上传用于 AI 处理的素材', {icon: 0});
+                return false;
+            }
+            // 字幕视频上传
+            upload.render({
+                elem: '#subtitle-upload',
+                url: '/api/upload/video',
+                field: 'video',
+                accept: 'video',
+                choose: function() { return requireProjectBeforeUpload(); },
+                done: function(res) {
+                    if (res.code === 0) {
+                        attachUploadedVideoToCurrentProject(res.data, 'ai_subtitle_upload').then(function() {
+                            window.subtitleVideo = res.data;
+                            layer.msg('视频上传成功，已关联到当前项目', {icon: 1});
+                        }).catch(function(error) { layer.msg('视频已上传，但关联项目失败: ' + error, {icon: 2}); });
+                    }
+                }
+            });
+
+            // 剪辑视频上传
+            upload.render({
+                elem: '#edit-upload',
+                url: '/api/upload/video',
+                field: 'video',
+                accept: 'video',
+                multiple: true,
+                choose: function() { return requireProjectBeforeUpload(); },
+                done: function(res) {
+                    if (res.code === 0) {
+                        attachUploadedVideoToCurrentProject(res.data, 'ai_cut_upload').then(function() {
+                            if (!window.editVideos) window.editVideos = [];
+                            window.editVideos.push(res.data);
+                            layer.msg('视频上传成功，已关联到当前项目', {icon: 1});
+                        }).catch(function(error) { layer.msg('视频已上传，但关联项目失败: ' + error, {icon: 2}); });
+                    }
+                }
+            });
+        }
+
+        // 初始化拖拽上传
+        function initDragAndDrop() {
+            // 字幕上传区域
+            initDragArea('#subtitle-upload-area', '#subtitle-upload', 'video');
+
+            // 剪辑上传区域
+            initDragArea('#edit-upload-area', '#edit-upload', 'video');
+        }
+
+        function initDragArea(areaSelector, inputSelector, type) {
+            var area = $(areaSelector);
+            var input = $(inputSelector);
+
+            area.on('dragover', function(e) {
+                e.preventDefault();
+                $(this).css('border-color', '#009688');
+                $(this).css('background', '#f8f8f8');
+            });
+
+            area.on('dragleave', function() {
+                $(this).css('border-color', '#e6e6e6');
+                $(this).css('background', 'transparent');
+            });
+
+            area.on('drop', function(e) {
+                e.preventDefault();
+                $(this).css('border-color', '#e6e6e6');
+                $(this).css('background', 'transparent');
+
+                var files = e.originalEvent.dataTransfer.files;
+                if (files.length > 0) {
+                    var file = files[0];
+                    if (file.type.indexOf(type + '/') === 0) {
+                        // 模拟文件选择
+                        var dataTransfer = new DataTransfer();
+                        dataTransfer.items.add(file);
+                        input[0].files = dataTransfer.files;
+                        input.trigger('change');
+                    }
+                }
+            });
+
+            area.on('click', function() {
+                input.click();
+            });
+        }
+
+        // AI配音生成 - 直接调用后端 /api/voiceover/generate 并播放返回的音频
+        function mapVoiceTypeToVoiceId(voiceType) {
+            switch(voiceType){
+                case 'male':
+                    return 'zh-CN-YunxiNeural';
+                case 'child':
+                    return 'zh-CN-XiaoyiNeural';
+                case 'professional':
+                    return 'zh-CN-YunjianNeural';
+                case 'emotional':
+                    return 'zh-CN-XiaoxiaoNeural';
+                case 'female':
+                default:
+                    return 'zh-CN-XiaoxiaoNeural';
+            }
+        }
+
+        function generateAIVoice() {
+            var text = ($('textarea[name="voice-text"]').val() || '').trim();
+            var projectId = window.currentProjectId || sessionStorage.getItem('current_project_id');
+            var voiceType = $('select[name="voice-type"]').val();
+            var speed = parseFloat($('input[name="voice-speed"]').val() || '1');
+            var volume = parseFloat($('input[name="voice-volume"]').val() || '1');
+
+            if (!text) {
+                layer.msg('请输入配音文本', {icon: 2});
+                return;
+            }
+
+            // 映射到实际 TTS 音色 ID
+            var voiceId = mapVoiceTypeToVoiceId(voiceType);
+
+            // 将 0.5-2.0 的语速映射为 -50%~+100% 的 rate 百分比
+            var ratePct = Math.max(-100, Math.min(100, Math.round((speed - 1) * 100)));
+            var volPct = Math.max(-100, Math.min(100, Math.round((volume - 1) * 100)));
+
+            var voiceConfig = {
+                voice_id: voiceId,
+                rate: (ratePct >= 0 ? '+' : '') + ratePct + '%',
+                volume: (volPct >= 0 ? '+' : '') + volPct + '%'
+            };
+
+            var loading = showLoading();
+            apiRequest('/api/voiceover/generate', 'POST', {
+                text: text,
+                project_id: projectId || null,
+                voice_config: voiceConfig
+            }, function(data) {
+                hideLoading(loading);
+                if (!data || (!data.audio_url && !data.audio_path)) {
+                    layer.msg('生成失败：服务未返回音频地址', {icon: 2});
+                    return;
+                }
+
+                var audioUrl = data.audio_url || ('/' + String(data.audio_path || '').replace(/^\/+/, ''));
+                window.currentVoiceAudioUrl = audioUrl;
+                window.currentVoiceAudioPath = data.audio_path || audioUrl.replace(/^\//, '');
+
+                var audioEl = document.getElementById('voice-audio');
+                if (audioEl) {
+                    audioEl.src = audioUrl;
+                    try { audioEl.play(); } catch (e) {}
+                }
+
+                $('#voice-result').show();
+                layer.msg('AI配音生成完成', {icon: 1});
+            }, function(error) {
+                hideLoading(loading);
+                layer.msg(error || '生成失败', {icon: 2});
+            });
+        }
+
+        // 自动字幕生成
+        // 说明：真实的自动字幕流程已集成到项目/编辑器中，基于项目素材调用 /api/subtitle/generate。
+        // 本入口仍主要用于引导到编辑器；下方 batchTranscribeLocalFiles 提供本地文件批量转写（实验功能）。
+        function generateAutoSubtitle() {
+            var projectId = window.currentProjectId || sessionStorage.getItem('current_project_id');
+
+            if (!projectId) {
+                layer.msg('自动字幕需要基于项目素材运行，请先在顶部导航中创建或打开一个项目。', {icon: 0});
+                return;
+            }
+
+            layer.open({
+                type: 1,
+                area: ['520px', '260px'],
+                title: '使用提示：自动字幕',
+                content: '<div style="padding:20px 24px; font-size:13px; line-height:1.7;">'
+                    + '<p>自动字幕的完整流程已集成到 <strong>编辑器</strong> 中：</p>'
+                    + '<ol style="padding-left:18px; margin:8px 0 12px 0;">'
+                    + '<li>在顶部导航中进入 <strong>编辑器</strong>；</li>'
+                    + '<li>为当前项目添加需要识别的音/视频素材；</li>'
+                    + '<li>在编辑器界面中使用“自动字幕”入口，系统将调用真实的 /api/subtitle/generate 服务。</li>'
+                    + '</ol>'
+                    + '<p>本页“自动字幕生成”卡片暂作为功能说明入口，不再单独创建任务或调用旧的 /ai/subtitle 接口。</p>'
+                    + '</div>',
+                btn: ['前往编辑器', '知道了'],
+                yes: function(idx) {
+                    layer.close(idx);
+                    window.location.href = '/editor';
+                }
+            });
+        }
+
+        // 本地文件批量转写（实验功能）
+        function batchTranscribeLocalFiles() {
+            var input = document.createElement('input');
+            input.type = 'file';
+            input.multiple = true;
+            input.accept = 'audio/*,video/*';
+
+            input.onchange = function(e) {
+                var files = Array.from(e.target.files || []);
+                if (!files.length) {
+                    layer.msg('请选择需要转写的音频或视频文件', {icon: 0});
+                    return;
+                }
+
+                var lang = $('select[name="subtitle-language"]').val() || 'zh';
+                var formData = new FormData();
+                files.forEach(function(f) {
+                    formData.append('files', f);
+                });
+                if (lang && lang !== 'auto') {
+                    formData.append('language', lang);
+                }
+                formData.append('model_size', 'tiny');
+                formData.append('device', 'cpu');
+
+                var loading;
+                if (typeof showLoading === 'function') {
+                    loading = showLoading();
+                }
+
+                fetch('/api/asr/batch-upload-transcribe', {
+                    method: 'POST',
+                    body: formData
+                }).then(function(res) {
+                    return res.json();
+                }).then(function(res) {
+                    if (loading && typeof hideLoading === 'function') {
+                        hideLoading(loading);
+                    }
+                    if (!res || res.code !== 0) {
+                        layer.msg((res && res.msg) || '批量转写失败', {icon: 2});
+                        return;
+                    }
+
+                    var results = (res.data && res.data.results) || [];
+                    batchSubtitleResults = results;
+                    if (!results.length) {
+                        layer.msg('未获得任何转写结果', {icon: 0});
+                        return;
+                    }
+
+                    var html = '';
+                    results.forEach(function(r, idx) {
+                        var fullText = r.text || '';
+                        var preview = fullText.substring(0, 120);
+                        if (fullText.length > 120) preview += '...';
+                        html += '<div style="padding:8px 10px; border-bottom:1px solid #eee;">'
+                            + '<div style="font-weight:600; font-size:13px; margin-bottom:4px;">'
+                            + (idx + 1) + '. ' + (r.file_name || '文件') + '</div>'
+                            + '<div style="font-size:12px; color:#555; white-space:pre-wrap;">' + (preview || '（空文本）') + '</div>'
+                            + '<button type="button" class="layui-btn layui-btn-primary layui-btn-xs" style="margin-top:6px;" onclick="downloadBatchSrt(' + idx + ')">'
+                            + '<i class="layui-icon layui-icon-download"></i> 下载SRT</button>'
+                            + '</div>';
+                    });
+
+                    $('#subtitle-preview').html(html);
+                    $('#subtitle-result').show();
+                    layer.msg('批量转写完成', {icon: 1});
+                }).catch(function(err) {
+                    if (loading && typeof hideLoading === 'function') {
+                        hideLoading(loading);
+                    }
+                    layer.msg('批量转写失败：' + err, {icon: 2});
+                });
+            };
+
+            input.click();
+        }
+
+        // AI智能剪辑
+        // 说明：智能剪辑已经在编辑器时间线中集成真实的 /api/ai/smart-clip 及相关流程，本入口不再调用 /ai/cut。
+        function startAICut() {
+            var projectId = window.currentProjectId || sessionStorage.getItem('current_project_id');
+
+            if (!projectId) {
+                layer.msg('AI智能剪辑需要基于项目素材运行，请先在顶部导航中创建或打开一个项目。', {icon: 0});
+                return;
+            }
+
+            layer.open({
+                type: 1,
+                area: ['520px', '260px'],
+                title: '使用提示：AI智能剪辑',
+                content: '<div style="padding:20px 24px; font-size:13px; line-height:1.7;">'
+                    + '<p>AI智能剪辑功能已整合到 <strong>编辑器</strong> 时间线中：</p>'
+                    + '<ol style="padding-left:18px; margin:8px 0 12px 0;">'
+                    + '<li>在顶部导航中进入 <strong>编辑器</strong>；</li>'
+                    + '<li>将需要剪辑的素材添加到当前项目并放入时间线；</li>'
+                    + '<li>在时间线工具中使用“场景检测 / 智能剪辑”等入口，系统将调用真实的 /api/ai/smart-clip 等服务。</li>'
+                    + '</ol>'
+                    + '<p>本页“AI智能剪辑”卡片仅作为说明入口，不再调用已废弃的 /ai/cut 接口或创建模拟任务。</p>'
+                    + '</div>',
+                btn: ['前往编辑器', '知道了'],
+                yes: function(idx) {
+                    layer.close(idx);
+                    window.location.href = '/editor';
+                }
+            });
+        }
+
+        // 获取AI项目列表 - 从 /api/projects 加载真实项目数据
+        function getAIProjectList() {
+            var projectList = $('#ai-project-list');
+            if (!projectList || projectList.length === 0) return;
+
+            projectList.html(`
+                    <tr>
+                        <td colspan="6" class="text-center">
+                            <i class="layui-icon layui-icon-loading layui-anim layui-anim-rotate layui-anim-loop" style="font-size: 24px; color: #667eea;"></i>
+                            <p style="color: #999; margin-top: 8px;">正在加载项目列表...</p>
+                        </td>
+                    </tr>
+                `);
+
+            apiRequest('/api/projects', 'GET', {}, function(data) {
+                var projects = [];
+                if (Array.isArray(data)) {
+                    projects = data;
+                } else if (data && Array.isArray(data.projects)) {
+                    projects = data.projects;
+                } else if (data && Array.isArray(data.data)) {
+                    projects = data.data;
+                }
+                renderAIProjectList(projects);
+            }, function(error) {
+                projectList.html(`
+                        <tr>
+                            <td colspan="6" class="text-center">
+                                <i class="layui-icon layui-icon-face-cry" style="font-size: 30px; color: #ff5722;"></i>
+                                <p style="color: #999; margin-top: 8px;">加载失败: ${error || '网络错误'}</p>
+                            </td>
+                        </tr>
+                    `);
+            });
+        }
+
+        // 渲染AI项目列表
+        function renderAIProjectList(projects) {
+            var projectList = $('#ai-project-list');
+            if (!projects || projects.length === 0) {
+                projectList.html(`
+                    <tr>
+                        <td colspan="6" class="text-center">
+                            <i class="layui-icon layui-icon-folder-open" style="font-size: 30px; color: #ccc;"></i>
+                            <p style="color: #ccc; margin-top: 10px;">暂无AI项目数据</p>
+                        </td>
+                    </tr>
+                `);
+                return;
+            }
+
+            var html = '';
+            projects.forEach((project, index) => {
+                var statusClass = '';
+                var statusText = '';
+
+                var status = (project.status || 'draft').toLowerCase();
+                switch(status) {
+                    case 'pending':
+                        statusClass = 'status-pending';
+                        statusText = '等待中';
+                        break;
+                    case 'processing':
+                    case 'running':
+                        statusClass = 'status-processing';
+                        statusText = '处理中';
+                        break;
+                    case 'completed':
+                    case 'done':
+                        statusClass = 'status-completed';
+                        statusText = '已完成';
+                        break;
+                    case 'failed':
+                    case 'error':
+                        statusClass = 'status-failed';
+                        statusText = '失败';
+                        break;
+                    case 'draft':
+                        statusClass = 'status-pending';
+                        statusText = '草稿';
+                        break;
+                    default:
+                        statusClass = 'status-pending';
+                        statusText = status;
+                }
+
+                // 兼容 function / type 两种字段
+                var projType = project.function || project.type || '';
+                var functionText = '';
+                switch(projType) {
+                    case 'voice':
+                    case 'audio':
+                    case 'voiceover':
+                        functionText = 'AI配音';
+                        break;
+                    case 'subtitle':
+                        functionText = '自动字幕';
+                        break;
+                    case 'cut':
+                    case 'mixed':
+                    case 'remix':
+                        functionText = '智能剪辑';
+                        break;
+                    case 'enhance':
+                        functionText = '画质增强';
+                        break;
+                    case 'commentary':
+                        functionText = '原创解说';
+                        break;
+                    default:
+                        functionText = projType || '其他';
+                }
+
+                html += `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td>${project.name || '未命名'}</td>
+                        <td>${functionText}</td>
+                        <td><span class="task-status ${statusClass}" id="project-status-${project.id}">${statusText}</span></td>
+                        <td>${formatDate(project.created_at)}</td>
+                        <td>
+                            <div class="layui-btn-group">
+                                <button class="layui-btn layui-btn-primary layui-btn-sm operation-btn" onclick="viewAIProject('${project.id}')">
+                                    <i class="layui-icon layui-icon-eye"></i>查看
+                                </button>
+                                <button class="layui-btn layui-btn-normal layui-btn-sm operation-btn" onclick="downloadAIResult('${project.id}')">
+                                    <i class="layui-icon layui-icon-download"></i>下载
+                                </button>
+                                <button class="layui-btn layui-btn-danger layui-btn-sm operation-btn" onclick="deleteAIProject('${project.id}')">
+                                    <i class="layui-icon layui-icon-delete"></i>删除
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            projectList.html(html);
+        }
+
+        // 配音相关操作
+        function downloadVoice() {
+            if (!window.currentVoiceAudioUrl) {
+                layer.msg('当前还没有可下载的配音，请先生成配音', {icon: 2});
+                return;
+            }
+            var url = window.currentVoiceAudioUrl;
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = (url.split('/').pop() || 'voiceover_result.mp3');
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        function addVoiceToProject() {
+            if (!window.currentVoiceAudioUrl) {
+                layer.msg('请先生成配音再尝试添加到项目', {icon: 0});
+                return;
+            }
+            var projectId = window.currentProjectId || sessionStorage.getItem('current_project_id');
+            if (!projectId) {
+                layer.open({
+                    type: 1,
+                    area: ['460px', '200px'],
+                    title: '需要先打开项目',
+                    content: '<div style="padding:18px 22px; font-size:13px; line-height:1.7;">添加素材到项目需要先在<strong>项目管理</strong>或<strong>编辑器</strong>中打开一个项目。</div>',
+                    btn: ['前往项目中心', '关闭'],
+                    yes: function(idx) { layer.close(idx); window.location.href = '/projects'; }
+                });
+                return;
+            }
+            var url = window.currentVoiceAudioUrl;
+            var fileName = (url.split('/').pop() || 'voiceover_result.mp3');
+            apiRequest('/api/materials', 'POST', {
+                project_id: projectId,
+                type: 'audio',
+                name: fileName,
+                path: window.currentVoiceAudioPath || url.replace(/^\//, ''),
+                size: 0,
+                duration: 0,
+                metadata: { source: 'ai_voiceover' }
+            }, function() {
+                layer.msg('✅ 配音已添加到当前项目', {icon: 1});
+            }, function(error) {
+                layer.msg('❌ 添加失败: ' + (error || '未知错误'), {icon: 2});
+            });
+        }
+
+        function deleteVoice() {
+            if (!window.currentVoiceAudioUrl) {
+                layer.msg('当前没有可删除的配音', {icon: 2});
+                return;
+            }
+            var url = window.currentVoiceAudioUrl;
+            var fileName = (url.split('/').pop() || 'voiceover_result.mp3');
+            layer.confirm('确定要删除配音文件「' + fileName + '」吗？删除后无法恢复。', {
+                icon: 3,
+                title: '删除配音',
+                btn: ['确定删除', '取消']
+            }, function(index) {
+                layer.close(index);
+                var loading = showLoading('正在删除...');
+                apiRequest('/api/voiceover/delete', 'POST', {
+                    audio_path: window.currentVoiceAudioPath || url.replace(/^\//, '')
+                }, function() {
+                    hideLoading(loading);
+                    window.currentVoiceAudioUrl = null;
+                    window.currentVoiceAudioPath = null;
+                    var audioEl = document.getElementById('voice-audio');
+                    if (audioEl) {
+                        audioEl.pause();
+                        audioEl.removeAttribute('src');
+                        audioEl.load();
+                    }
+                    $('#voice-result').hide();
+                    layer.msg('✅ 配音已删除', {icon: 1});
+                }, function(error) {
+                    hideLoading(loading);
+                    layer.msg('❌ 删除失败: ' + (error || '未知错误'), {icon: 2});
+                });
+            });
+        }
+
+        // 字幕相关操作
+        function downloadSubtitle() {
+            if (batchSubtitleResults && batchSubtitleResults.length > 0) {
+                downloadBatchSrt(0);
+                return;
+            }
+            layer.msg('当前没有批量转写结果，请在“编辑器”或“项目详情”页面导出字幕，或先使用“本地文件批量转写（实验功能）”。', {icon: 0});
+        }
+
+        function downloadBatchSrt(index) {
+            if (!batchSubtitleResults || !batchSubtitleResults.length || !batchSubtitleResults[index]) {
+                layer.msg('暂无可导出的字幕结果', {icon: 0});
+                return;
+            }
+
+            var item = batchSubtitleResults[index];
+            var content = item.srt_content || '';
+            var blob = new Blob([content], {type: 'text/plain;charset=utf-8'});
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            var base = (item.file_name || 'subtitle').replace(/\.[^\.]+$/, '');
+            a.href = url;
+            a.download = (base || 'subtitle') + '.srt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(function() { URL.revokeObjectURL(url); }, 0);
+        }
+
+        function addSubtitleToProject() {
+            if (!batchSubtitleResults || !batchSubtitleResults.length) {
+                layer.msg('请先进行批量转写生成字幕结果', {icon: 0});
+                return;
+            }
+            var projectId = window.currentProjectId || sessionStorage.getItem('current_project_id');
+            if (!projectId) {
+                layer.open({
+                    type: 1,
+                    area: ['460px', '200px'],
+                    title: '需要先打开项目',
+                    content: '<div style="padding:18px 22px; font-size:13px; line-height:1.7;">添加字幕到项目需要先在<strong>项目管理</strong>或<strong>编辑器</strong>中打开一个项目。</div>',
+                    btn: ['前往项目中心', '关闭'],
+                    yes: function(idx) { layer.close(idx); window.location.href = '/projects'; }
+                });
+                return;
+            }
+            // 将第一个转写结果作为字幕素材添加到项目
+            var item = batchSubtitleResults[0];
+            var fileName = (item.file_name || 'subtitle').replace(/\.[^\.]+$/, '') + '.srt';
+            apiRequest('/api/materials', 'POST', {
+                project_id: projectId,
+                type: 'subtitle',
+                name: fileName,
+                path: '',
+                size: (item.srt_content || '').length,
+                duration: 0,
+                metadata: { source: 'ai_subtitle', text: (item.text || '').substring(0, 500) }
+            }, function() {
+                layer.msg('✅ 字幕已添加到当前项目', {icon: 1});
+            }, function(error) {
+                layer.msg('❌ 添加失败: ' + (error || '未知错误'), {icon: 2});
+            });
+        }
+
+        // 剪辑相关操作
+        function downloadEditedVideo() {
+            layer.msg('请在“编辑器”或“混剪模式”页面中导出成片，目前 AI 功能中心不直接提供下载。', {icon: 0});
+        }
+
+        function openEditedProject(projectId) {
+            if (projectId) {
+                // 带项目ID时直接跳转到编辑器
+                window.location.href = '/editor?project=' + projectId;
+                return;
+            }
+            layer.open({
+                type: 1,
+                area: ['480px', '220px'],
+                title: '打开编辑项目',
+                content: '<div style="padding:18px 22px; font-size:13px; line-height:1.7;">当前的剪辑工作流已整合到 <strong>编辑器</strong> 与 <strong>混剪模式</strong> 页面，请前往对应页面继续编辑或预览。</div>',
+                btn: ['前往编辑器', '前往混剪模式', '关闭'],
+                yes: function(idx) { layer.close(idx); window.location.href = '/editor'; },
+                btn2: function(idx) { layer.close(idx); window.location.href = '/remix'; return false; }
+            });
+        }
+
+        // AI项目操作
+        function viewAIProject(projectId) {
+            // 跳转到编辑器并带上项目ID
+            window.location.href = '/editor?project=' + projectId;
+        }
+
+        function downloadAIResult(projectId) {
+            // 先获取项目详情，查找输出文件
+            apiRequest('/api/projects/' + projectId, 'GET', {}, function(data) {
+                if (!data) {
+                    layer.msg('未找到项目信息', {icon: 2});
+                    return;
+                }
+                var outputPath = data.output_path || data.output_file || (data.metadata && data.metadata.output_path) || '';
+                if (outputPath) {
+                    var fileName = outputPath.split('/').pop() || 'result.mp4';
+                    window.open('/api/export/download/' + projectId + '/' + fileName, '_blank');
+                } else {
+                    layer.open({
+                        type: 1,
+                        area: ['460px', '200px'],
+                        title: '暂无可下载的结果',
+                        content: '<div style="padding:18px 22px; font-size:13px; line-height:1.7;">该项目还没有生成输出文件。请前往<strong>编辑器</strong>或<strong>混剪模式</strong>页面导出成片。</div>',
+                        btn: ['前往编辑器', '关闭'],
+                        yes: function(idx) { layer.close(idx); window.location.href = '/editor?project=' + projectId; }
+                    });
+                }
+            }, function(error) {
+                layer.msg('获取项目信息失败: ' + (error || ''), {icon: 2});
+            });
+        }
+
+        function deleteAIProject(projectId) {
+            layer.confirm('确定要删除这个AI项目吗？此操作不可恢复。', {
+                title: '删除确认',
+                btn: ['确认删除', '取消']
+            }, function(index) {
+                layer.close(index);
+                apiRequest('/api/projects/' + projectId, 'DELETE', {}, function() {
+                    layer.msg('✅ 项目已删除', {icon: 1});
+                    // 刷新AI项目列表
+                    if (typeof getAIProjectList === 'function') {
+                        getAIProjectList();
+                    }
+                }, function(error) {
+                    layer.msg('❌ 删除失败: ' + (error || '未知错误'), {icon: 2});
+                });
+            });
+        }
+
+        // 显示AI项目详情
+        function showAIProjectDetail(project) {
+            var content = '';
+
+            switch(project.function) {
+                case 'voice':
+                    content = `
+                        <div class="layui-card">
+                            <div class="layui-card-body">
+                                <h4 class="layui-card-title">配音文本</h4>
+                                <p style="background: #f8f8f8; padding: 10px; border-radius: 4px; white-space: pre-wrap;">${project.input.text}</p>
+                                <h4 class="layui-card-title mt-10">配音结果</h4>
+                                <audio controls style="width: 100%;">
+                                    <source src="${project.output.audio_url}" type="audio/wav">
+                                </audio>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                case 'subtitle':
+                    content = `
+                        <div class="layui-card">
+                            <div class="layui-card-body">
+                                <h4 class="layui-card-title">视频预览</h4>
+                                <video controls style="width: 100%; height: 200px; object-fit: cover;">
+                                    <source src="${project.input.video_url}" type="video/mp4">
+                                </video>
+                                <h4 class="layui-card-title mt-10">字幕预览</h4>
+                                <div style="background: #f8f8f8; padding: 10px; border-radius: 4px; max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 12px;">
+                                    ${project.output.subtitle_content}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                case 'cut':
+                    content = `
+                        <div class="layui-card">
+                            <div class="layui-card-body">
+                                <h4 class="layui-card-title">剪辑结果</h4>
+                                <video controls style="width: 100%; height: 300px; object-fit: cover;">
+                                    <source src="${project.output.video_url}" type="video/mp4">
+                                </video>
+                                <div class="layui-row layui-col-space10 mt-10">
+                                    <div class="layui-col-md6">
+                                        <p class="text-sm">
+                                            剪辑风格: ${getCutStyleText(project.input.style)}<br>
+                                            目标时长: ${project.input.duration}秒<br>
+                                            输出质量: ${getQualityText(project.input.quality)}
+                                        </p>
+                                    </div>
+                                    <div class="layui-col-md6 text-right">
+                                        <button class="layui-btn layui-btn-primary operation-btn" onclick="openEditedProject('${project.id}')">
+                                            <i class="layui-icon layui-icon-edit"></i>继续编辑
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    break;
+            }
+
+            layer.open({
+                type: 1,
+                title: project.name,
+                area: ['800px', '600px'],
+                content: content
+            });
+        }
+
+        // 帮助和提示
+        function showAIFunctionHelp() {
+            layer.open({
+                type: 1,
+                title: 'AI功能使用帮助',
+                area: ['600px', '400px'],
+                content: `
+                    <div class="layui-card">
+                        <div class="layui-card-body">
+                            <div class="layui-elem-quote">
+                                <h4>AI配音使用说明</h4>
+                                <p>1. 输入要配音的文本内容</p>
+                                <p>2. 选择合适的声音类型</p>
+                                <p>3. 调整语速和音量参数</p>
+                                <p>4. 点击生成配音按钮</p>
+                            </div>
+                            <div class="layui-elem-quote mt-10">
+                                <h4>自动字幕使用说明</h4>
+                                <p>1. 上传需要生成字幕的视频</p>
+                                <p>2. 选择识别语言</p>
+                                <p>3. 选择字幕样式</p>
+                                <p>4. 点击生成字幕按钮</p>
+                            </div>
+                            <div class="layui-elem-quote mt-10">
+                                <h4>AI剪辑使用说明</h4>
+                                <p>1. 上传一个或多个视频素材</p>
+                                <p>2. 选择剪辑风格和目标时长</p>
+                                <p>3. 选择背景音乐（可选）</p>
+                                <p>4. 点击开始剪辑按钮</p>
+                            </div>
+                        </div>
+                    </div>
+                `
+            });
+        }
+
+        function showAITips() {
+            layer.open({
+                type: 1,
+                title: 'AI创作小贴士',
+                area: ['600px', '300px'],
+                content: `
+                    <div class="layui-card">
+                        <div class="layui-card-body">
+                            <div class="layui-elem-quote">
+                                <h4>🎯 创作建议</h4>
+                                <p>• 配音文本建议控制在500字以内，效果更佳</p>
+                                <p>• 视频分辨率建议不低于720p，字幕识别更准确</p>
+                                <p>• AI剪辑时建议提供多个不同角度的视频素材</p>
+                                <p>• 背景音乐选择与视频内容风格保持一致</p>
+                            </div>
+                            <div class="layui-elem-quote mt-10">
+                                <h4>⚡ 性能优化</h4>
+                                <p>• AI处理需要一定时间，请耐心等待</p>
+                                <p>• 建议在网络良好的环境下使用AI功能</p>
+                                <p>• 大文件处理前请确保设备有足够的存储空间</p>
+                            </div>
+                        </div>
+                    </div>
+                `
+            });
+        }
+
+        // 工具函数
+        function getCutStyleText(style) {
+            switch(style) {
+                case 'fast': return '快节奏';
+                case 'slow': return '慢节奏';
+                case 'cinematic': return '电影感';
+                case 'vlog': return 'vlog风格';
+                case 'music': return '音乐配合';
+                default: return '默认';
+            }
+        }
+
+        function getQualityText(quality) {
+            switch(quality) {
+                case 'high': return '高清1080p';
+                case 'medium': return '标清720p';
+                case 'low': return '流畅480p';
+                default: return '默认';
+            }
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return '-';
+            var date = new Date(dateString);
+            if (isNaN(date.getTime())) return '-';
+            return date.toLocaleString('zh-CN');
+        }
+
+        // 重写父类的completeTask方法以处理AI任务
+        window.completeTask = function(taskId, result) {
+            updateTaskProgress(taskId, 100, '已完成');
+
+            if (result.task_type === 'voice') {
+                // AI配音完成
+                $('#voice-audio').attr('src', result.audio_url);
+                layer.msg('AI配音完成', {icon: 1});
+            } else if (result.task_type === 'subtitle') {
+                // 自动字幕完成
+                $('#subtitle-preview').html(result.subtitle_preview);
+                layer.msg('自动字幕完成', {icon: 1});
+            } else if (result.task_type === 'cut') {
+                // AI剪辑完成
+                $('#edit-video').attr('src', result.video_url);
+                layer.msg('AI剪辑完成', {icon: 1});
+            }
+
+            // 更新项目列表
+            getAIProjectList();
+        };
+
+        // 显式挂载所有 inline onclick 需要的函数到 window
+        // Replace the legacy guide-only actions with executable project-aware
+        // flows.  The upload callbacks above populate subtitleVideo/editVideos.
+        function aiEscapeHtml(value) {
+            return String(value || '').replace(/[&<>"']/g, function(ch) {
+                return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];
+            });
+        }
+        function aiSrt(segments) {
+            function stamp(value) {
+                var ms = Math.round(Math.max(0, Number(value) || 0) * 1000), h = Math.floor(ms / 3600000);
+                ms %= 3600000; var m = Math.floor(ms / 60000); ms %= 60000; var s = Math.floor(ms / 1000);
+                return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0') + ',' + String(ms % 1000).padStart(3, '0');
+            }
+            return (segments || []).map(function(item, index) { return (index + 1) + '\n' + stamp(item.start) + ' --> ' + stamp(item.end) + '\n' + (item.text || '') + '\n'; }).join('\n');
+        }
+        generateAutoSubtitle = function() {
+            var projectId = window.currentProjectId || sessionStorage.getItem('current_project_id');
+            if (!projectId) { layer.msg('请先创建或打开项目；上传的视频会自动关联到当前项目。', {icon: 0}); return; }
+            if (!window.subtitleVideo || !window.subtitleVideo.path) { layer.msg('请先上传需要识别的视频素材。', {icon: 0}); return; }
+            var loading = showLoading('正在识别语音并生成逐句时间轴字幕...');
+            apiRequest('/api/subtitle/generate', 'POST', {project_id: projectId, language: $('select[name="subtitle-language"]').val() || 'zh', model_size: 'tiny', device: 'auto'}, function(data) {
+                hideLoading(loading);
+                var subtitles = (data && data.subtitles) || [];
+                if (!subtitles.length) { layer.msg('未识别到可用字幕，请检查音轨或语言设置。', {icon: 0}); return; }
+                batchSubtitleResults = [{file_name: window.subtitleVideo.original_filename || window.subtitleVideo.filename || 'subtitle.mp4', text: subtitles.map(function(s) { return s.text; }).join(''), segments: subtitles, srt_content: aiSrt(subtitles)}];
+                $('#subtitle-preview').html(subtitles.map(function(s, index) { return '<div style="padding:7px 0;border-bottom:1px solid #eee"><b>' + (index + 1) + '</b> [' + Number(s.start || 0).toFixed(1) + ' - ' + Number(s.end || 0).toFixed(1) + '] ' + aiEscapeHtml(s.text) + '</div>'; }).join(''));
+                $('#subtitle-result').show();
+                layer.msg('已生成 ' + subtitles.length + ' 条逐句字幕，可下载或加入当前项目。', {icon: 1});
+            }, function(error) { hideLoading(loading); layer.msg('字幕生成失败: ' + (error || '未知错误'), {icon: 2}); });
+        };
+        startAICut = function() {
+            var projectId = window.currentProjectId || sessionStorage.getItem('current_project_id');
+            var videos = window.editVideos || [];
+            if (!projectId) { layer.msg('请先创建或打开项目；上传的视频会自动关联到当前项目。', {icon: 0}); return; }
+            if (!videos.length) { layer.msg('请先上传至少一个待剪辑的视频素材。', {icon: 0}); return; }
+            var target = $('select[name="edit-duration"]').val() || '60';
+            if (target === 'custom') { target = window.prompt('请输入目标时长（秒）', '60') || ''; }
+            target = Number(target);
+            if (!Number.isFinite(target) || target <= 0) { layer.msg('请输入有效的目标时长。', {icon: 2}); return; }
+            var loading = showLoading('正在进行真实场景检测，生成可编辑镜头计划...');
+            apiRequest('/api/ai/smart-clip', 'POST', {project_id: projectId, target_duration: target, style: $('select[name="edit-style"]').val() || 'fast'}, function(data) {
+                hideLoading(loading);
+                var clips = (data && data.clips) || [];
+                if (!clips.length) { layer.msg('未检测到可用镜头，请调整素材或场景检测参数。', {icon: 0}); return; }
+                sessionStorage.setItem('editor_smart_clip_plan', JSON.stringify({project_id: projectId, clips: clips}));
+                $('#edit-result').show();
+                $('#edit-video').removeAttr('src');
+                layer.open({type: 1, title: '智能剪辑镜头计划', area: ['620px', '500px'], content: '<div style="padding:18px;line-height:1.8"><p>已检测到 <b>' + clips.length + '</b> 个真实场景镜头。计划已经保存，可直接进入编辑器应用到时间线。</p><div style="max-height:270px;overflow:auto;border-top:1px solid #eee">' + clips.map(function(clip, index) { return '<div style="padding:8px 0;border-bottom:1px solid #eee">镜头 ' + (index + 1) + ': ' + Number(clip.start || 0).toFixed(2) + 's - ' + (Number(clip.start || 0) + Number(clip.duration || 0)).toFixed(2) + 's</div>'; }).join('') + '</div></div>', btn: ['应用到编辑器', '关闭'], yes: function(index) { layer.close(index); window.location.href = '/editor?project=' + encodeURIComponent(projectId) + '&smart_clip=1'; }});
+            }, function(error) { hideLoading(loading); layer.msg('智能剪辑失败: ' + (error || '未知错误'), {icon: 2}); });
+        };
+        window.generateAIVoice = generateAIVoice;
+        window.downloadVoice = downloadVoice;
+        window.addVoiceToProject = addVoiceToProject;
+        window.deleteVoice = deleteVoice;
+        window.generateAutoSubtitle = generateAutoSubtitle;
+        window.batchTranscribeLocalFiles = batchTranscribeLocalFiles;
+        window.downloadSubtitle = downloadSubtitle;
+        window.downloadBatchSrt = downloadBatchSrt;
+        window.addSubtitleToProject = addSubtitleToProject;
+        window.startAICut = startAICut;
+        window.downloadEditedVideo = downloadEditedVideo;
+        window.openEditedProject = openEditedProject;
+        window.viewAIProject = viewAIProject;
+        window.downloadAIResult = downloadAIResult;
+        window.deleteAIProject = deleteAIProject;
+        window.showAIFunctionHelp = showAIFunctionHelp;
+        window.showAITips = showAITips;
+        window.getAIProjectList = getAIProjectList;
+    });
+</script>
+{% endblock %}

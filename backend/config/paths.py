@@ -8,6 +8,67 @@ from pathlib import Path
 # 项目根目录
 BASE_DIR = Path(__file__).resolve().parent.parent
 PROJECT_ROOT = BASE_DIR.parent
+OUTPUT_DIR = PROJECT_ROOT / 'output'
+
+
+def _is_within(path: Path, parent: Path) -> bool:
+    try:
+        path.resolve().relative_to(parent.resolve())
+        return True
+    except ValueError:
+        return False
+
+
+def ensure_project_path(path: str | Path, *, allow_output_relative: bool = True) -> Path:
+    """将用户给出的路径限制在项目根内；相对路径仅可解析到项目根。"""
+    raw = Path(path).expanduser()
+    candidate = raw.resolve() if raw.is_absolute() else (PROJECT_ROOT / raw).resolve()
+    if not _is_within(candidate, PROJECT_ROOT):
+        raise ValueError(f'路径必须位于项目根目录: {PROJECT_ROOT}')
+    return candidate
+
+
+def project_output_dir(*parts: str | Path, create: bool = True) -> Path:
+    """返回项目根 output 下的安全目录，拒绝绝对或越界子路径。"""
+    candidate = OUTPUT_DIR
+    for part in parts:
+        piece = Path(part)
+        if piece.is_absolute():
+            raise ValueError('output 子路径只能是项目内相对路径')
+        candidate /= piece
+    candidate = candidate.resolve()
+    if not _is_within(candidate, OUTPUT_DIR):
+        raise ValueError(f'输出路径必须位于项目 output 目录: {OUTPUT_DIR}')
+    if create:
+        candidate.mkdir(parents=True, exist_ok=True)
+    return candidate
+
+
+def get_project_output_dir(create: bool = True) -> Path:
+    """返回唯一允许创建产物的项目内 output 目录。"""
+    return project_output_dir(create=create)
+
+
+def resolve_output_path(value: str | Path = '', *, create_parent: bool = False) -> Path:
+    """规范化输出路径；相对路径固定落在 PROJECT_ROOT/output，拒绝外部绝对路径。"""
+    raw = Path(value).expanduser() if value else Path()
+    if raw.is_absolute():
+        candidate = raw.resolve()
+        if not _is_within(candidate, OUTPUT_DIR):
+            import logging
+            logging.getLogger('JJYB_AI智剪').warning('拒绝项目 output 外的输出路径: %s', candidate)
+            raise ValueError(f'输出路径必须位于项目 output 目录: {OUTPUT_DIR}')
+    else:
+        parts = raw.parts
+        relative = Path(*parts[1:]) if parts and parts[0].casefold() == 'output' else raw
+        candidate = (OUTPUT_DIR / relative).resolve()
+    if not _is_within(candidate, OUTPUT_DIR):
+        import logging
+        logging.getLogger('JJYB_AI智剪').warning('拒绝越界输出路径: %s', candidate)
+        raise ValueError(f'输出路径必须位于项目 output 目录: {OUTPUT_DIR}')
+    if create_parent:
+        candidate.parent.mkdir(parents=True, exist_ok=True)
+    return candidate
 
 # ==================== 资源目录配置 ====================
 
@@ -158,7 +219,8 @@ _auto_register_font_styles()
 TEMP_DIR = PROJECT_ROOT / 'temp'
 UPLOADS_DIR = TEMP_DIR / 'uploads'
 PROCESSING_DIR = TEMP_DIR / 'processing'
-OUTPUTS_DIR = TEMP_DIR / 'outputs'
+# 兼容旧名称：运行时可下载输出固定到项目根 output。
+OUTPUTS_DIR = OUTPUT_DIR / 'temp_outputs'
 
 # 确保临时目录存在
 TEMP_DIR.mkdir(exist_ok=True)
@@ -210,7 +272,6 @@ def get_font_path(font_name: str = None) -> str:
         # 如果指定字体不存在，返回默认字体
         return DEFAULT_FONT
 
-
 def get_subtitle_style(style_name: str = 'default') -> dict:
     """
     获取字幕样式配置
@@ -223,7 +284,6 @@ def get_subtitle_style(style_name: str = 'default') -> dict:
     """
     return SUBTITLE_STYLES.get(style_name, SUBTITLE_STYLES['default']).copy()
 
-
 def ensure_temp_dir() -> Path:
     """
     确保临时目录存在并返回路径
@@ -233,7 +293,6 @@ def ensure_temp_dir() -> Path:
     """
     TEMP_DIR.mkdir(exist_ok=True)
     return TEMP_DIR
-
 
 def clean_temp_dir():
     """递归清理临时目录中的普通文件，保留目录结构并返回清理统计。"""
@@ -252,7 +311,6 @@ def clean_temp_dir():
     except Exception:
         pass
     return stats
-
 
 def get_output_path(filename: str) -> Path:
     """

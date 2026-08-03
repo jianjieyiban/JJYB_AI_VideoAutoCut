@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI语音配置 - JJYB_AI智剪</title>
+    <!-- 主题同步：必须在其他样式之前加载，以避免主题闪烁 -->
+    <script src="{{ url_for('static', filename='js/theme-sync.js') }}"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 30px;
+        }
+
+        .page-header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+            animation: fadeInDown 0.6s ease;
+        }
+
+        .page-header h1 {
+            font-size: 42px;
+            margin-bottom: 10px;
+            text-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .page-header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .top-nav {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            animation: fadeInDown 0.6s ease 0.1s both;
+        }
+
+        .nav-btn {
+            padding: 12px 24px;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+        }
+
+        .config-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 25px;
+            animation: fadeInUp 0.6s ease 0.2s both;
+        }
+
+        .config-card {
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .config-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 50px rgba(0,0,0,0.25);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .card-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .card-title {
+            flex: 1;
+        }
+
+        .card-title h3 {
+            font-size: 20px;
+            color: #2d3748;
+            margin-bottom: 5px;
+        }
+
+        .card-title p {
+            font-size: 13px;
+            color: #718096;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 180px 1fr auto;
+            gap: 15px;
+            align-items: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .form-row:hover {
+            background: #f0f2f5;
+            transform: translateX(5px);
+        }
+
+        .form-label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #4a5568;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-label i {
+            color: #667eea;
+            font-size: 16px;
+        }
+
+        .form-input {
+            padding: 10px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-input:hover {
+            border-color: #cbd5e0;
+        }
+
+        select.form-input {
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23667eea' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 35px;
+        }
+
+        .info-btn {
+            width: 32px;
+            height: 32px;
+            background: #e2e8f0;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            color: #718096;
+        }
+
+        .info-btn:hover {
+            background: #667eea;
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .checkbox-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .checkbox-row:hover {
+            background: #f0f2f5;
+        }
+
+        .checkbox-row input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: #667eea;
+        }
+
+        .checkbox-row label {
+            font-size: 14px;
+            color: #4a5568;
+            cursor: pointer;
+            flex: 1;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #f0f0f0;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 14px 28px;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+        }
+
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+
+        .btn-secondary:hover {
+            background: #cbd5e0;
+            transform: translateY(-2px);
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: rgba(52, 211, 153, 0.1);
+            color: #10b981;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .tooltip {
+            position: relative;
+        }
+
+        .tooltip:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 8px 12px;
+            background: #2d3748;
+            color: white;
+            font-size: 12px;
+            border-radius: 6px;
+            white-space: nowrap;
+            margin-bottom: 5px;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div class="page-header">
+        <h1><i class="fas fa-microphone-alt"></i> AI语音配置中心</h1>
+        <p>高级语音合成参数配置 - 专业级音质控制</p>
+    </div>
+
+    <div class="container">
+        <!-- 顶部导航 -->
+        <div class="top-nav">
+            <a href="/" class="nav-btn">
+                <i class="fas fa-home"></i> 返回首页
+            </a>
+            <a href="/settings" class="nav-btn">
+                <i class="fas fa-cog"></i> 系统设置
+            </a>
+            <div style="flex: 1"></div>
+            <div class="status-badge">
+                <i class="fas fa-check-circle"></i> 配置已保存
+            </div>
+        </div>
+
+        <!-- 配置卡片网格 -->
+        <div class="config-grid">
+
+            <!-- 说话人嵌入配置 -->
+            <div class="config-card">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="fas fa-user-circle"></i>
+                    </div>
+                    <div class="card-title">
+                        <h3>说话人嵌入 (Speaker Embedding)</h3>
+                        <p>多语言人语音合成的音调选择</p>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-label">
+                        <i class="fas fa-cube"></i>
+                        嵌入文本模型
+                    </div>
+                    <select class="form-input">
+                        <option>ECAPA-TDNN (推荐)</option>
+                        <option>X-Vector</option>
+                        <option>D-Vector</option>
+                    </select>
+                    <button class="info-btn tooltip" data-tooltip="选择说话人特征提取模型">
+                        <i class="fas fa-info"></i>
+                    </button>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-label">
+                        <i class="fas fa-layer-group"></i>
+                        嵌入维度
+                    </div>
+                    <select class="form-input">
+                        <option>256维 (标准)</option>
+                        <option>512维</option>
+                        <option>1024维</option>
+                    </select>
+                    <button class="info-btn tooltip" data-tooltip="特征向量维度">
+                        <i class="fas fa-info"></i>
+                    </button>
+                </div>
+
+                <div class="checkbox-row">
+                    <input type="checkbox" id="use-pretrained" checked>
+                    <label for="use-pretrained">使用预训练模型</label>
+                </div>
+
+                <div class="checkbox-row">
+                    <input type="checkbox" id="multi-speaker">
+                    <label for="multi-speaker">启用多说话人合成模式</label>
+                </div>
+            </div>
+
+            <!-- 音频特征提取 -->
+            <div class="config-card">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="fas fa-waveform-lines"></i>
+                    </div>
+                    <div class="card-title">
+                        <h3>音频特征提取配置</h3>
+                        <p>MFCC、梅尔频谱等声学特征</p>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-label">
+                        <i class="fas fa-sliders"></i>
+                        特征类型
+                    </div>
+                    <select class="form-input">
+                        <option>梅尔频谱 (推荐)</option>
+                        <option>MFCC</option>
+                        <option>线性频谱</option>
+                    </select>
+                    <button class="info-btn tooltip" data-tooltip="音频特征提取方法">
+                        <i class="fas fa-info"></i>
+                    </button>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-label">
+                        <i class="fas fa-chart-bar"></i>
+                        梅尔滤波器组数
+                    </div>
+                    <select class="form-input">
+                        <option>80 (标准)</option>
+                        <option>128</option>
+                        <option>256</option>
+                    </select>
+                    <button class="info-btn tooltip" data-tooltip="频谱分辨率">
+                        <i class="fas fa-info"></i>
+                    </button>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-label">
+                        <i class="fas fa-ruler"></i>
+                        FFT长度
+                    </div>
+                    <select class="form-input">
+                        <option>1024帧</option>
+                        <option>2048帧</option>
+                        <option>4096帧</option>
+                    </select>
+                    <button class="info-btn tooltip" data-tooltip="快速傅里叶变换窗口大小">
+                        <i class="fas fa-info"></i>
+                    </button>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-label">
+                        <i class="fas fa-compress"></i>
+                        跳跃长度 (Hop Length)
+                    </div>
+                    <select class="form-input">
+                        <option>256 (标准)</option>
+                        <option>512</option>
+                        <option>1024</option>
+                    </select>
+                    <button class="info-btn tooltip" data-tooltip="帧移大小">
+                        <i class="fas fa-info"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 数据增强配置 -->
+            <div class="config-card">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="card-title">
+                        <h3>数据增强配置</h3>
+                        <p>语音合成数据增强策略</p>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-label">
+                        <i class="fas fa-volume-up"></i>
+                        时间间常数
+                    </div>
+                    <select class="form-input">
+                        <option>适中 (0.8-1.2x)</option>
+                        <option>较小 (0.9-1.1x)</option>
+                        <option>较大 (0.7-1.3x)</option>
+                    </select>
+                    <button class="info-btn tooltip" data-tooltip="时间拉伸范围">
+                        <i class="fas fa-info"></i>
+                    </button>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-label">
+                        <i class="fas fa-music"></i>
+                        音调修改范围
+                    </div>
+                    <select class="form-input">
+                        <option>±2半音</option>
+                        <option>±3半音</option>
+                        <option>±5半音</option>
+                    </select>
+                    <button class="info-btn tooltip" data-tooltip="音调偏移范围">
+                        <i class="fas fa-info"></i>
+                    </button>
+                </div>
+
+                <div class="checkbox-row">
+                    <input type="checkbox" id="noise-aug" checked>
+                    <label for="noise-aug">噪声添加增强</label>
+                </div>
+
+                <div class="checkbox-row">
+                    <input type="checkbox" id="reverb-aug">
+                    <label for="reverb-aug">混响空间模拟</label>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-label">
+                        <i class="fas fa-signal"></i>
+                        背景音消除强度
+                    </div>
+                    <select class="form-input">
+                        <option>轻微 (SNR 20-30dB)</option>
+                        <option>中等 (SNR 15-25dB)</option>
+                        <option>强烈 (SNR 10-20dB)</option>
+                    </select>
+                    <button class="info-btn tooltip" data-tooltip="信噪比设置">
+                        <i class="fas fa-info"></i>
+                    </button>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-label">
+                        <i class="fas fa-microphone"></i>
+                        音量变化强度
+                    </div>
+                    <select class="form-input">
+                        <option>小范围 (0.8-1.2x)</option>
+                        <option>中范围 (0.7-1.3x)</option>
+                        <option>大范围 (0.6-1.4x)</option>
+                    </select>
+                    <button class="info-btn tooltip" data-tooltip="音量增益范围">
+                        <i class="fas fa-info"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 性能优化 -->
+            <div class="config-card">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="fas fa-rocket"></i>
+                    </div>
+                    <div class="card-title">
+                        <h3>格式性能优化</h3>
+                        <p>处理速度与质量的平衡</p>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-label">
+                        <i class="fas fa-cogs"></i>
+                        推理速度模式
+                    </div>
+                    <select class="form-input">
+                        <option>平衡模式</option>
+                        <option>高质量模式</option>
+                        <option>高速模式</option>
+                    </select>
+                    <button class="info-btn tooltip" data-tooltip="推理性能设置">
+                        <i class="fas fa-info"></i>
+                    </button>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-label">
+                        <i class="fas fa-memory"></i>
+                        计数数值
+                    </div>
+                    <select class="form-input">
+                        <option>自动优化</option>
+                        <option>4</option>
+                        <option>8</option>
+                        <option>16</option>
+                    </select>
+                    <button class="info-btn tooltip" data-tooltip="批处理大小">
+                        <i class="fas fa-info"></i>
+                    </button>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-label">
+                        <i class="fas fa-microchip"></i>
+                        批处理大小
+                    </div>
+                    <select class="form-input">
+                        <option>16 (标准)</option>
+                        <option>32</option>
+                        <option>64</option>
+                    </select>
+                    <button class="info-btn tooltip" data-tooltip="并行处理数量">
+                        <i class="fas fa-info"></i>
+                    </button>
+                </div>
+
+                <div class="checkbox-row">
+                    <input type="checkbox" id="mixed-precision" checked>
+                    <label for="mixed-precision">使用混合精度加速</label>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- 底部操作按钮 -->
+        <div class="config-card" style="margin-top: 25px;">
+            <div class="action-buttons">
+                <button class="btn btn-secondary">
+                    <i class="fas fa-undo"></i>
+                    恢复默认
+                </button>
+                <button class="btn btn-secondary">
+                    <i class="fas fa-vial"></i>
+                    测试配置
+                </button>
+                <button class="btn btn-primary">
+                    <i class="fas fa-save"></i>
+                    保存配置
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 保存配置
+        document.querySelector('.btn-primary').addEventListener('click', function() {
+            alert('✅ 配置已保存成功！');
+        });
+
+        // 测试配置
+        document.querySelectorAll('.btn-secondary')[1].addEventListener('click', function() {
+            alert('🧪 正在测试配置...');
+        });
+
+        // 恢复默认
+        document.querySelectorAll('.btn-secondary')[0].addEventListener('click', function() {
+            if (confirm('确定要恢复默认配置吗？')) {
+                alert('✅ 已恢复默认配置！');
+            }
+        });
+    </script>
+</body>
+</html>

@@ -8,6 +8,7 @@ import logging
 from typing import Dict, Any, Optional, List
 import os
 import json
+import re
 import shutil
 import uuid
 from pathlib import Path
@@ -23,11 +24,11 @@ logger = logging.getLogger('JJYB_AI智剪')
 
 class CommentaryService:
     """原创解说剪辑服务 - 完整实现"""
-    
+
     def __init__(self, db_manager, socketio, task_service):
         """
         初始化原创解说剪辑服务
-        
+
         Args:
             db_manager: 数据库管理器
             socketio: SocketIO实例
@@ -50,11 +51,11 @@ class CommentaryService:
         self.video_processor = VideoProcessor()
 
         logger.info('✅ 原创解说剪辑服务初始化完成')
-    
+
     def create_commentary_project(self, data: Dict) -> Dict:
         """
         创建原创解说剪辑项目
-        
+
         Args:
             data: 项目数据
                 - name: 项目名称
@@ -62,13 +63,13 @@ class CommentaryService:
                 - script: 解说文稿（可选）
                 - voice: 配音音色
                 - bgm: 背景音乐（可选）
-                
+
         Returns:
             项目信息
         """
         try:
             logger.info('🎬 创建原创解说剪辑项目...')
-            
+
             # 创建项目
             project = self.db_manager.create_project(
                 name=data.get('name', '原创解说项目'),
@@ -76,9 +77,9 @@ class CommentaryService:
                 description='原创解说剪辑项目',
                 template='commentary'
             )
-            
+
             project_id = project['id']
-            
+
             # 如果有视频，添加为素材
             if data.get('video_path'):
                 self.db_manager.create_material(
@@ -88,7 +89,7 @@ class CommentaryService:
                     path=data['video_path'],
                     metadata={'source': 'upload'}
                 )
-            
+
             # 保存配置
             config = {
                 'script': data.get('script', ''),
@@ -97,29 +98,29 @@ class CommentaryService:
                 'auto_subtitle': data.get('auto_subtitle', True),
                 'auto_bgm': data.get('auto_bgm', True)
             }
-            
+
             self.db_manager.update_project(project_id, {'config': config})
-            
+
             logger.info(f'✅ 原创解说项目创建成功: {project_id}')
-            
+
             return {
                 'project_id': project_id,
                 'project': project,
                 'config': config
             }
-            
+
         except Exception as e:
             logger.error(f'❗ 创建原创解说项目失败: {e}', exc_info=True)
             raise
-    
+
     def generate_script(self, project_id: str, video_info: Dict) -> Dict:
         """
         AI生成解说文稿
-        
+
         Args:
             project_id: 项目ID
             video_info: 视频信息
-            
+
         Returns:
             生成的文稿
         """
@@ -218,15 +219,15 @@ class CommentaryService:
         except Exception as e:
             logger.error(f'❗ 生成文稿失败: {e}', exc_info=True)
             raise
-    
+
     def process_commentary(self, project_id: str, config: Dict) -> str:
         """
         处理原创解说剪辑
-        
+
         Args:
             project_id: 项目ID
             config: 配置信息
-            
+
         Returns:
             任务ID
         """
@@ -256,29 +257,29 @@ class CommentaryService:
                 project_id=project_id,
                 config=config
             )
-            
+
             logger.info(f'✅ 原创解说任务已创建: {task_id}')
-            
+
             return task_id
-            
+
         except Exception as e:
             logger.error(f'❗ 处理原创解说失败: {e}', exc_info=True)
             raise
-    
+
     def auto_clip_video(self, video_path: str, script: Dict) -> List[Dict]:
         """
         根据文稿自动剪辑视频
-        
+
         Args:
             video_path: 视频路径
             script: 解说文稿
-            
+
         Returns:
             剪辑片段列表
         """
         try:
             logger.info('✂️ 自动剪辑视频...')
-            
+
             clips = []
             for i, paragraph in enumerate(script.get('paragraphs', [])):
                 clip = {
@@ -289,28 +290,29 @@ class CommentaryService:
                     'text': paragraph['text']
                 }
                 clips.append(clip)
-            
+
             logger.info(f'✅ 自动剪辑完成: {len(clips)}个片段')
-            
+
             return clips
-            
+
         except Exception as e:
             logger.error(f'❗ 自动剪辑失败: {e}', exc_info=True)
             raise
-    
+
     def add_voice_over(self, clips: List[Dict], voice_config: Dict) -> List[Dict]:
         """
         添加配音
-        
+
         Args:
             clips: 视频片段
             voice_config: 配音配置
-            
+
         Returns:
             添加配音后的片段
         """
         try:
             logger.info('🎙️ 添加配音...')
+            voice_config = self._normalize_voice_config(voice_config)
 
             if not clips:
                 return []
@@ -351,16 +353,16 @@ class CommentaryService:
         except Exception as e:
             logger.error(f'❗ 添加配音失败: {e}', exc_info=True)
             raise
-    
+
     def add_bgm(self, video_path: str, bgm_path: str, volume: float = 0.3) -> str:
         """
         添加背景音乐
-        
+
         Args:
             video_path: 视频路径
             bgm_path: 背景音乐路径
             volume: 音量（0-1）
-            
+
         Returns:
             输出视频路径
         """
@@ -405,40 +407,40 @@ class CommentaryService:
         except Exception as e:
             logger.error(f'❗ 添加背景音乐失败: {e}', exc_info=True)
             raise
-    
+
     def generate_subtitles(self, script: Dict) -> str:
         """
         生成字幕文件
-        
+
         Args:
             script: 解说文稿
-            
+
         Returns:
             字幕文件路径
         """
         try:
             logger.info('📝 生成字幕...')
-            
+
             srt_path = f"output/subtitles/subtitle_{datetime.now().strftime('%Y%m%d%H%M%S')}.srt"
             Path(srt_path).parent.mkdir(parents=True, exist_ok=True)
-            
+
             with open(srt_path, 'w', encoding='utf-8') as f:
                 for i, paragraph in enumerate(script.get('paragraphs', []), 1):
                     start_time = self._format_srt_time(paragraph['time'])
                     end_time = self._format_srt_time(paragraph['time'] + paragraph['duration'])
-                    
+
                     f.write(f"{i}\n")
                     f.write(f"{start_time} --> {end_time}\n")
                     f.write(f"{paragraph['text']}\n\n")
-            
+
             logger.info(f'✅ 字幕生成完成: {srt_path}')
-            
+
             return srt_path
-            
+
         except Exception as e:
             logger.error(f'❗ 生成字幕失败: {e}', exc_info=True)
             raise
-    
+
     def _format_srt_time(self, seconds: float) -> str:
         """格式化SRT时间"""
         hours = int(seconds // 3600)
@@ -655,6 +657,10 @@ class CommentaryService:
                     or ''
                 )
                 abs_audio = _to_abs_path(audio_path)
+                if raw_voice.get('status') == 'failed':
+                    raise ValueError('第%s段配音生成失败，请先重录后再生成拟人化成片' % (pos + 1))
+                if render and not abs_audio:
+                    raise ValueError('第%s段配音没有可用音频文件，请先完成全部配音后再生成拟人化成片' % (pos + 1))
                 duration = 0.0
                 for key in ('duration', 'duration_seconds', 'audio_duration_seconds'):
                     try:
@@ -768,9 +774,19 @@ class CommentaryService:
             if not normalized_voices:
                 raise ValueError('配音段列表为空或文本全部无效，无法同步')
 
+            # A scene boundary is only a coarse candidate.  Expand long scenes
+            # into real source windows and assign one window to every narration
+            # segment before the renderer receives the timeline.
+            from backend.engine.storyboard_planner import StoryboardPlanner
+            planned_shots = StoryboardPlanner().plan(normalized_shots, normalized_voices)
+            logger.info(
+                '🎬 Storyboard planned: %s narration segments from %s coarse shots',
+                len(planned_shots), len(normalized_shots),
+            )
+
             engine = PuppetSyncEngine()
             timeline = engine.match_shots_to_voices(
-                normalized_shots, normalized_voices, allow_reuse=allow_reuse,
+                planned_shots, normalized_voices, allow_reuse=False,
                 insert_original_audio=insert_original_audio,
                 original_clip_interval=original_clip_interval,
                 original_clip_duration=original_clip_duration,
@@ -780,19 +796,22 @@ class CommentaryService:
                 original_audio_ratio=original_audio_ratio,
             )
 
-            if target_duration_seconds:
-                try:
-                    actual_duration = sum(
-                        float(seg.get('final_duration', 0) or 0)
-                        for seg in timeline if isinstance(seg, dict)
-                    )
-                    logger.info(
-                        '🎯 拟人化同步目标时长校验: 目标 %.2fs，时间线实际约 %.2fs，差值 %.2fs',
-                        float(target_duration_seconds), actual_duration,
-                        float(target_duration_seconds) - actual_duration,
-                    )
-                except Exception:
-                    logger.warning('拟人化同步目标时长校验失败，已跳过', exc_info=True)
+            timeline_duration = round(sum(
+                max(0.0, float(seg.get('final_duration', 0) or 0))
+                for seg in timeline if isinstance(seg, dict)
+            ), 3)
+            try:
+                normalized_target_duration = float(target_duration_seconds) if target_duration_seconds is not None else None
+                if normalized_target_duration is not None and normalized_target_duration <= 0:
+                    normalized_target_duration = None
+            except (TypeError, ValueError):
+                normalized_target_duration = None
+            duration_tolerance_seconds = 0.35
+            if normalized_target_duration is not None:
+                logger.info(
+                    '🎯 拟人化同步目标时长校验: 目标 %.2fs，时间线估算 %.2fs，差值 %.2fs',
+                    normalized_target_duration, timeline_duration, timeline_duration - normalized_target_duration,
+                )
 
             resolved_subtitle_path = ''
             if subtitle_path:
@@ -814,6 +833,13 @@ class CommentaryService:
                 'video_path': str(v_path),
                 'subtitle_path': resolved_subtitle_path,
                 'subtitle_count': subtitle_count,
+                'target_duration_seconds': normalized_target_duration,
+                'timeline_duration': timeline_duration,
+                'actual_duration_seconds': None,
+                'duration_delta_seconds': round(timeline_duration - normalized_target_duration, 3) if normalized_target_duration is not None else None,
+                'duration_within_tolerance': None,
+                'duration_estimated': True,
+                'duration_tolerance_seconds': duration_tolerance_seconds,
             }
 
             if render and timeline:
@@ -826,6 +852,18 @@ class CommentaryService:
                 )
                 result['output_video'] = out
                 result['output_url'] = '/' + str(Path(out).relative_to(PROJECT_ROOT)).replace('\\', '/')
+                rendered_duration = _probe_duration(out)
+                if rendered_duration > 0:
+                    result['actual_duration_seconds'] = round(rendered_duration, 3)
+                    result['duration_delta_seconds'] = round(rendered_duration - normalized_target_duration, 3) if normalized_target_duration is not None else None
+                    result['duration_within_tolerance'] = (
+                        abs(rendered_duration - normalized_target_duration) <= duration_tolerance_seconds
+                        if normalized_target_duration is not None else None
+                    )
+                    result['duration_estimated'] = False
+                else:
+                    result['duration_probe_warning'] = '未能读取最终文件时长，以下时长仅为时间线估算'
+                    result.setdefault('warnings', []).append(result['duration_probe_warning'])
 
             if project_id:
                 try:
@@ -849,6 +887,12 @@ class CommentaryService:
                                 'original_audio_summary': json.loads(json.dumps(engine.last_original_audio_summary, ensure_ascii=False, default=str)),
                                 'subtitle_path': resolved_subtitle_path,
                                 'output_video': result.get('output_video', ''), 'output_url': result.get('output_url', ''),
+                                'target_duration_seconds': result.get('target_duration_seconds'),
+                                'timeline_duration': result.get('timeline_duration'),
+                                'actual_duration_seconds': result.get('actual_duration_seconds'),
+                                'duration_delta_seconds': result.get('duration_delta_seconds'),
+                                'duration_within_tolerance': result.get('duration_within_tolerance'),
+                                'duration_estimated': result.get('duration_estimated'),
                             },
                         })
                         config.update({
@@ -882,7 +926,8 @@ class CommentaryService:
                               subtitle_text: str = '',
                               draft_dir: str = '',
                               bgm_path: str = '',
-                              project_name: str = '') -> Dict:
+                              project_name: str = '',
+                              flower_config: Optional[Dict] = None) -> Dict:
         """
         导出剪映草稿包（含视频轨道、TTS配音轨道、BGM轨道、字幕文字轨道）
 
@@ -913,6 +958,7 @@ class CommentaryService:
             resolved_bgm = str(bgm_path or '').strip()
             resolved_subtitle = str(subtitle_text or '').strip()
             resolved_project_name = str(project_name or '').strip()
+            resolved_flower_config = dict(flower_config) if isinstance(flower_config, dict) else None
 
             project: Dict[str, Any] = {}
             project_config: Dict[str, Any] = {}
@@ -932,6 +978,10 @@ class CommentaryService:
             workbench: Dict[str, Any] = project_config.get('workbench') if isinstance(project_config, dict) else {}
             if not isinstance(workbench, dict):
                 workbench = {}
+            if resolved_flower_config is None:
+                candidate_flower_config = project_config.get('flower_config') if isinstance(project_config, dict) else None
+                if isinstance(candidate_flower_config, dict):
+                    resolved_flower_config = dict(candidate_flower_config)
             # 1) 兜底 timeline
             if not resolved_timeline:
                 puppet_sync = workbench.get('puppet_sync') or {}
@@ -1007,6 +1057,7 @@ class CommentaryService:
                 subtitle_text=resolved_subtitle,
                 bgm_path=resolved_bgm,
                 project_name=resolved_project_name,
+                flower_config=resolved_flower_config,
             )
 
             # 同步写入项目 config.tracks / jianying_draft
@@ -1044,12 +1095,64 @@ class CommentaryService:
     # ================================================================== #
     # 升级能力 4：从文稿生成配音段（供 puppet_sync 使用）
     # ================================================================== #
+    @staticmethod
+    def _sanitize_voice_paragraphs(paragraphs: List[Dict]) -> List[Dict]:
+        cleaned: List[Dict] = []
+        terminal_re = re.compile(r'[\u3002\uff01\uff1f!?;\uff1b]$')
+        incomplete_tail_re = re.compile(r'[\uff0c\u3001:\uff1a\uff08(\u300a\u201c\"\']$')
+        for paragraph in paragraphs:
+            text = re.sub(r'\s+', ' ', str(paragraph.get('text') or '').strip())
+            text = re.sub(r'(\.\.\.+|\u2026\u2026+)$', '', text).strip()
+            if not text:
+                continue
+            if len(text) < 6 and terminal_re.search(text):
+                if cleaned:
+                    cleaned[-1]['text'] = (cleaned[-1]['text'] + text).strip()
+                continue
+            previous_text = str(cleaned[-1].get('text', '')) if cleaned else ''
+            if cleaned and (len(text) < 10 or incomplete_tail_re.search(previous_text) or not terminal_re.search(previous_text)):
+                cleaned[-1]['text'] = (previous_text + text).strip()
+                continue
+            item = dict(paragraph)
+            item['text'] = text
+            cleaned.append(item)
+        return cleaned
+
+    @staticmethod
+    def _normalize_voice_config(voice_config: Optional[Dict]) -> Dict:
+        """把前端倍率统一转换为 TTS 引擎可识别的参数。"""
+        config = dict(voice_config or {})
+        engine = TTSEngine._normalize_engine_name(config.get('engine'))
+
+        def percent(value, default=1.0) -> str:
+            if isinstance(value, str) and value.strip().endswith('%'):
+                return TTSEngine._normalize_edge_percent(value)
+            try:
+                multiplier = float(value)
+                if multiplier != multiplier or multiplier in (float('inf'), float('-inf')):
+                    multiplier = default
+            except (TypeError, ValueError):
+                multiplier = default
+            return TTSEngine._normalize_edge_percent((multiplier - 1.0) * 100.0)
+
+        config['engine'] = engine
+        policy = str(config.get('fallback_policy') or 'auto_fallback').strip().lower()
+        config['fallback_policy'] = policy if policy in ('auto_fallback', 'edge_only') else 'auto_fallback'
+        config['rate'] = percent(config.get('rate'), 1.0)
+        config['volume'] = percent(config.get('volume'), 1.0)
+        config['pitch'] = (
+            TTSEngine.normalize_edge_pitch(config.get('pitch'))
+            if engine == 'edge-tts' else TTSEngine.normalize_pitch(config.get('pitch'))
+        )
+        return config
+
     def generate_voices_from_script(self,
                                     script: Any,
                                     voice_config: Dict,
                                     segments: Optional[List[Dict]] = None,
                                     with_details: bool = False) -> Any:
         """根据文稿或指定分段生成配音；with_details=False 时保持旧列表返回。"""
+        voice_config = self._normalize_voice_config(voice_config)
         voices: List[Dict] = []
         failed_items: List[Dict] = []
         out_dir = PROJECT_ROOT / 'output' / 'commentary_voice'
@@ -1077,6 +1180,13 @@ class CommentaryService:
         else:
             raise ValueError(f'script 参数类型无效：期望 str 或 dict，得到 {type(script).__name__}')
 
+        original_count = len(paragraphs)
+        paragraphs = self._sanitize_voice_paragraphs(paragraphs)
+        if not paragraphs:
+            raise ValueError('script does not contain any complete voice segment after cleanup')
+        if len(paragraphs) != original_count:
+            logger.info('voice paragraph cleanup merged/dropped segments: %s -> %s', original_count, len(paragraphs))
+
         def audio_url(path: Path) -> str:
             try:
                 relative = path.resolve().relative_to(PROJECT_ROOT.resolve()).as_posix()
@@ -1088,20 +1198,47 @@ class CommentaryService:
                 return '/' + relative
             return ''
 
-        def voice_item(paragraph: Dict, path: Path, duration: float) -> Dict:
+        def voice_item(paragraph: Dict, path: Path, duration: float,
+                       engine_used: Optional[str] = None, fallback_reason: str = '') -> Dict:
+            url = audio_url(path)
+            duration = float(duration or 0.0)
+            if duration <= 0:
+                duration = max(0.1, len(paragraph['text']) / 4.0)
+            actual_engine = engine_used or engine or self.tts_engine.default_engine
+            fallback_used = bool(fallback_reason and actual_engine != engine)
             return {'id': paragraph['id'], 'index': paragraph['index'], 'text': paragraph['text'],
-                    'voice_path': str(path), 'audio_url': audio_url(path), 'duration': duration,
-                    'status': 'ready', 'error': None}
+                    'voice_path': str(path), 'audio_path': str(path), 'audio_url': url,
+                    'duration': duration, 'duration_seconds': duration, 'status': 'ready', 'error': None, 'reason': None,
+                    'engine': actual_engine, 'engine_requested': engine or self.tts_engine.default_engine,
+                    'engine_used': actual_engine, 'fallback_used': fallback_used,
+                    'fallback_reason': fallback_reason if fallback_used else None,
+                    'voice': voice_id, 'rate': voice_config['rate'], 'volume': voice_config['volume'],
+                    'pitch': voice_config['pitch'], 'fallback_policy': voice_config['fallback_policy']}
 
-        def failed(paragraph: Dict, reason: str = 'TTS synthesis failed') -> None:
+        def failed(paragraph: Dict, reason: str = 'TTS 合成失败') -> None:
+            engine_name = engine or self.tts_engine.default_engine
+            reason = str(reason or 'TTS 合成失败')
+            if not reason.startswith(f'[{engine_name}]'):
+                reason = f'[{engine_name}] {reason}'
             failed_items.append({'id': paragraph['id'], 'index': paragraph['index'], 'text': paragraph['text'],
-                                 'reason': reason, 'status': 'failed'})
+                                 'voice_path': '', 'audio_path': '', 'audio_url': '',
+                                 'duration': 0.0, 'duration_seconds': 0.0, 'status': 'failed',
+                                 'error': reason, 'reason': reason,
+                                 'engine': engine or self.tts_engine.default_engine,
+                                 'engine_requested': engine or self.tts_engine.default_engine,
+                                 'engine_used': None, 'fallback_used': False, 'fallback_reason': None,
+                                 'fallback_policy': voice_config['fallback_policy'], 'voice': voice_id,
+                                 'rate': voice_config['rate'], 'volume': voice_config['volume'], 'pitch': voice_config['pitch']})
 
         def finalize():
+            all_segments = voices + failed_items
             if not with_details:
                 return voices
-            return {'voices': voices, 'total_count': len(paragraphs), 'success_count': len(voices),
-                    'failed_count': len(failed_items), 'failed_items': failed_items}
+            fallback_count = sum(1 for item in voices if item.get('fallback_used'))
+            return {'voices': all_segments, 'segments': all_segments, 'total_count': len(paragraphs),
+                    'success_count': len(voices), 'failed_count': len(failed_items),
+                    'fallback_count': fallback_count, 'failed_items': failed_items,
+                    'total_duration_seconds': sum(float(item.get('duration_seconds') or 0) for item in voices)}
 
         if engine == 'indextts2':
             reference_audio = voice_config.get('reference_audio') or ''
@@ -1118,7 +1255,7 @@ class CommentaryService:
                     result = local_voice_clone_service.generate(text=paragraph['text'], reference_audio=reference_audio)
                     rel_path = result.get('output_path', '')
                     path = PROJECT_ROOT / rel_path if rel_path else None
-                    if path and path.exists():
+                    if path and path.is_file() and path.stat().st_size >= 1024:
                         voices.append(voice_item(paragraph, path, self._probe_audio_duration(path)))
                     else:
                         failed(paragraph)
@@ -1145,26 +1282,77 @@ class CommentaryService:
                     if result_path.exists() and result_path != voice_file:
                         try: shutil.move(str(result_path), str(voice_file))
                         except Exception: voice_file = result_path
-                    if voice_file.exists() and voice_file.stat().st_size > 0:
+                    if voice_file.is_file() and voice_file.stat().st_size >= 1024:
                         voices.append(voice_item(paragraph, voice_file, self._probe_audio_duration(voice_file)))
-                    else: failed(paragraph)
+                    else:
+                        failed(paragraph, 'TTS 未生成有效音频文件')
                 except Exception:
                     logger.exception('火山引擎配音失败: %s', paragraph['index'])
-                    failed(paragraph)
+                    failed(paragraph, 'TTS 合成失败')
             return finalize()
 
-        for paragraph in paragraphs:
+        total_paragraphs = len(paragraphs)
+        for position, paragraph in enumerate(paragraphs, 1):
             suffix = uuid.uuid4().hex[:8]
             voice_file = out_dir / f"voice_{paragraph['index']}_{datetime.now().strftime('%Y%m%d%H%M%S')}_{suffix}.mp3"
+            logger.info('配音段开始：第 %s/%s 段（index=%s）', position, total_paragraphs, paragraph['index'])
             try:
-                ok = self.tts_engine.synthesize(text=paragraph['text'], output_path=str(voice_file), engine=engine, voice=voice_id, rate=voice_config.get('rate', '+0%'), volume=voice_config.get('volume', '+0%'), pitch=voice_config.get('pitch', 0))
-                if ok and voice_file.exists():
-                    voices.append(voice_item(paragraph, voice_file, self._probe_audio_duration(voice_file)))
+                requested_engine = engine or self.tts_engine.default_engine
+                ok = self.tts_engine.synthesize(
+                    text=paragraph['text'], output_path=str(voice_file), engine=requested_engine,
+                    voice=voice_id, rate=voice_config.get('rate', '+0%'),
+                    volume=voice_config.get('volume', '+0%'), pitch=voice_config.get('pitch', 0),
+                )
+                call_error = self.tts_engine.last_error
+                used_engine = requested_engine
+                fallback_reason = ''
+                valid_audio = ok and self.tts_engine._validate_audio_file(voice_file)
+                if (not valid_audio and requested_engine == 'edge-tts'
+                        and voice_config['fallback_policy'] == 'auto_fallback'):
+                    fallback_reason = call_error or 'Edge TTS 未返回有效音频（已完成 3 次重试）'
+                    candidates = []
+                    if self.tts_engine.has_compatible_pyttsx3_voice(voice_id):
+                        candidates.append('pyttsx3')
+                    if 'gtts' in self.tts_engine.available_engines:
+                        candidates.append('gtts')
+                    for candidate in candidates:
+                        self.tts_engine._remove_partial_output(str(voice_file))
+                        logger.warning('配音段 Edge 失败，尝试透明回退：段=%s，引擎=%s', paragraph['index'], candidate)
+                        ok = self.tts_engine.synthesize(
+                            text=paragraph['text'], output_path=str(voice_file), engine=candidate,
+                            voice=voice_id, rate=voice_config.get('rate', '+0%'),
+                            volume=voice_config.get('volume', '+0%'), pitch=voice_config.get('pitch', 0),
+                        )
+                        if ok and self.tts_engine._validate_audio_file(voice_file):
+                            used_engine = candidate
+                            valid_audio = True
+                            break
+                        call_error = self.tts_engine.last_error or call_error
+                    if not valid_audio:
+                        fallback_reason = ''
+                if valid_audio:
+                    voices.append(voice_item(
+                        paragraph, voice_file, self._probe_audio_duration(voice_file),
+                        engine_used=used_engine, fallback_reason=fallback_reason,
+                    ))
+                    if used_engine != requested_engine:
+                        logger.warning('配音段已回退成功：第 %s/%s 段，%s → %s', position, total_paragraphs, requested_engine, used_engine)
+                    else:
+                        logger.info('配音段成功：第 %s/%s 段（index=%s）', position, total_paragraphs, paragraph['index'])
                 else:
-                    failed(paragraph)
-            except Exception:
-                logger.exception('配音失败: %s', paragraph['index'])
-                failed(paragraph)
+                    self.tts_engine._remove_partial_output(str(voice_file))
+                    if requested_engine == 'edge-tts' and voice_config['fallback_policy'] == 'edge_only':
+                        call_error = f'{call_error or "Edge TTS 未生成有效音频"}；当前为 edge_only，未启用回退。可切换 auto_fallback，或检查本地中文语音。'
+                    elif requested_engine == 'edge-tts' and voice_config['fallback_policy'] == 'auto_fallback':
+                        call_error = f'{call_error or "Edge TTS 未生成有效音频"}；本地 Windows SAPI/gTTS 回退均不可用或未生成有效非静音音频，请检查本地中文语音或切换 edge_only。'
+                    failed(paragraph, call_error or 'TTS 未生成有效音频文件')
+                    logger.warning('配音段失败：第 %s/%s 段（index=%s）：%s；继续下一段',
+                                   position, total_paragraphs, paragraph['index'], call_error)
+            except Exception as error:
+                reason = self.tts_engine.last_error or f'TTS 合成失败：{error}'
+                failed(paragraph, reason)
+                logger.warning('配音段异常：第 %s/%s 段（index=%s）：%s；继续下一段',
+                               position, total_paragraphs, paragraph['index'], reason)
         return finalize()
 
     @staticmethod

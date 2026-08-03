@@ -3,8 +3,12 @@ logs/*
 !logs/.gitkeep
 output/*
 !output/.gitkeep
+outputs/*
+!outputs/.gitkeep
 uploads/*
 !uploads/.gitkeep
+storage/*
+!storage/.gitkeep
 temp/*
 !temp/.gitkeep
 
@@ -27,6 +31,8 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.coverage
+htmlcov/
 
 # ===== 虚拟环境、构建产物与编辑器文件 =====
 .venv/
@@ -37,6 +43,7 @@ dist/
 *.egg-info/
 .vscode/
 .writerHelper/
+.playwright-cli/
 .cursor/
 .idea/
 
@@ -54,6 +61,13 @@ models/index-tts/source_archive/
 models/index-tts/checkpoints/**/*
 
 # ===== 大型二进制资源（Release 包提供，不进 git） =====
+backend/assets/fonts/
+backend/assets/audio/*.mp3
+backend/assets/audio/*.MP3
+backend/assets/audio/*.m4a
+backend/assets/audio/*.M4A
+resource/
+models/
 resource/imageMagick/*.exe
 resource/models/transnetv2-weights/**/*.pth
 resource/models/transnetv2-weights/**/*.pb

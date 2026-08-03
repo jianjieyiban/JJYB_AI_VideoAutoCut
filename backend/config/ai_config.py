@@ -6,6 +6,7 @@ AI模型配置管理
 import json
 import os
 import logging
+import tempfile
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, asdict, fields
 
@@ -275,6 +276,10 @@ class GlobalConfig:
     # 提示音
     enable_sound: bool = True  # 完成任务会有提示
 
+    # 剪映专业版原生草稿根目录；为空时由系统自动检测。
+    # 该字段必须在配置模型中声明，才能在重启后保持用户手动确认的目录。
+    jianying_draft_path: str = ""
+
     # 原创解说生产路径只接受真实云端 AI 结果
     strict_ai_results: bool = True
 
@@ -447,8 +452,17 @@ class AIConfigManager:
                 'image': asdict(self.image_config)
             }
 
-            with open(self.config_file, 'w', encoding='utf-8') as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
+            config_dir = os.path.dirname(os.path.abspath(self.config_file))
+            fd, temporary_file = tempfile.mkstemp(prefix='ai_config_', suffix='.tmp', dir=config_dir, text=True)
+            try:
+                with os.fdopen(fd, 'w', encoding='utf-8') as f:
+                    json.dump(data, f, ensure_ascii=False, indent=2)
+                    f.flush()
+                    os.fsync(f.fileno())
+                os.replace(temporary_file, self.config_file)
+            finally:
+                if os.path.exists(temporary_file):
+                    os.unlink(temporary_file)
 
             logger.info("✅ AI配置保存成功")
             return True
@@ -806,6 +820,7 @@ class AIConfigManager:
         - Vision 画面分析（视觉）→ get_vision_connection → 走 VisionConfig.custom_openai_*
         - Image 封面生成（图像）→ get_image_connection  → 走 ImageGenConfig.custom_openai_*
         """
+        from copy import deepcopy
         normalized = self.normalize_vision_provider(provider)
         config = self.vision_config
         conn: Dict[str, Any] = {

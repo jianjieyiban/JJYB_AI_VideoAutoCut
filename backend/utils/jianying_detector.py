@@ -18,10 +18,26 @@ JIANYING_DRAFT_NAMES = ['JianyingDrafts', 'JianyingDraft', '草稿', '剪映草�
 MICROSECONDS = 1_000_000
 
 
-def detect_jianying_draft_dir() -> str:
-    """返回可写的 JianyingPro / CapCut 草稿根目录，未检测到时返回空字符串。"""
+def detect_jianying_draft_info() -> Dict[str, Any]:
+    """Locate a Jianying/CapCut draft root and report whether this process can write it.
+
+    Detection and writeability are intentionally separate: Windows Controlled
+    Folder Access or a sandbox may block this process while the Jianying draft
+    root still exists. Returning the path lets the UI explain the real issue
+    instead of incorrectly claiming that Jianying is not installed.
+    """
     home = Path.home()
     candidates: List[Path] = []
+
+    # A user-confirmed path is more reliable than filename heuristics, and is
+    # persisted independently from browser localStorage for both workflows.
+    try:
+        from backend.config.ai_config import get_config_manager
+        configured = str(getattr(get_config_manager().global_config, 'jianying_draft_path', '') or '').strip()
+        if configured:
+            candidates.append(Path(configured).expanduser())
+    except Exception as exc:
+        logger.debug('读取已保存的剪映草稿目录失败，将继续自动检测: %s', exc)
 
     if sys.platform.startswith('win'):
         local_appdata = Path(os.environ.get('LOCALAPPDATA') or str(home / 'AppData' / 'Local'))
@@ -151,10 +167,31 @@ def detect_jianying_draft_dir() -> str:
         if key in seen:
             continue
         seen.add(key)
-        if _is_writable_directory(candidate):
-            logger.info('检测到剪映草稿目录: %s', candidate)
-            return str(candidate)
-    return ''
+        try:
+            if not candidate.exists() or not candidate.is_dir():
+                continue
+        except OSError:
+            continue
+        writable = _is_writable_directory(candidate)
+        if writable:
+            logger.info('检测到可写剪映草稿目录: %s', candidate)
+        else:
+            logger.warning('检测到剪映草稿目录但当前进程不可写: %s', candidate)
+        return {
+            'draft_dir': str(candidate),
+            'detected': True,
+            'writable': writable,
+            'message': '' if writable else '已找到剪映草稿目录，但当前应用进程没有写入权限。请以与剪映相同的 Windows 用户运行本工具，或授予该目录修改权限。',
+        }
+    return {'draft_dir': '', 'detected': False, 'writable': False, 'message': '未检测到剪映草稿目录'}
+
+
+def detect_jianying_draft_dir(require_writable: bool = True) -> str:
+    """Return the detected draft root, optionally requiring write permission."""
+    info = detect_jianying_draft_info()
+    if not info['detected'] or (require_writable and not info['writable']):
+        return ''
+    return str(info['draft_dir'])
 
 
 def export_draft_package(
@@ -166,12 +203,23 @@ def export_draft_package(
     subtitle_text: str = '',
     bgm_path: str = '',
     project_name: str = '',
+    flower_config: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """导出可被 JianyingPro 5.9 扫描和打开的原生草稿目录。
 
     素材保留在原位置，draft_content.json 使用 POSIX 绝对路径引用，不复制素材也不生成 ZIP。
     """
+    # 先校验真实视频时间线，禁止生成空草稿或仅字幕草稿。
+    if not isinstance(timeline, list) or not timeline:
+        raise ValueError('时间线为空，无法导出包含视频轨道的剪映草稿')
+    if not any(isinstance(item, dict) and _existing_path(
+        item.get('source_video') or item.get('source_video_path') or item.get('video_path') or item.get('source_path') or video_path
+    ) for item in timeline):
+        raise ValueError('时间线没有合法视频片段，无法导出剪映草稿')
+
     requested_root = _resolve_path(draft_dir) if draft_dir else None
+    if requested_root and requested_root.exists() and requested_root.is_dir() and not _is_writable_directory(requested_root):
+        raise PermissionError(f'剪映草稿目录不可写: {requested_root}。请以与剪映相同的 Windows 用户运行本工具，或授予该目录“修改”权限。')
     native_jianying_project = bool(requested_root and _is_native_jianying_root(requested_root))
     if not native_jianying_project:
         requested_root = PROJECT_ROOT / 'output' / 'jianying_drafts'
@@ -222,6 +270,24 @@ def export_draft_package(
     original_segments: List[Dict[str, Any]] = []
     text_segments: List[Dict[str, Any]] = []
     subtitle_clips: List[Dict[str, Any]] = []
+    fallback_voice_cursor: Dict[str, int] = {}
+    fallback_audio_materials = list(voice_materials.values())
+    has_explicit_voice_mapping = any(
+        isinstance(item, dict) and any(item.get(field) for field in ('voice_paths', 'voice_path', 'audio_path', 'audio_url'))
+        for item in timeline
+    )
+    fallback_subtitles: Dict[int, str] = {}
+    if subtitle_text and not any(str(item.get('subtitle_text') or '').strip() for item in timeline if isinstance(item, dict)):
+        narration_items = [index for index, item in enumerate(timeline) if isinstance(item, dict) and not (bool(item.get('original_audio')) or item.get('kind') == 'original_audio')]
+        pieces = [piece.strip() for piece in str(subtitle_text).splitlines() if piece.strip()]
+        if narration_items and pieces:
+            for position, item_index in enumerate(narration_items):
+                start = round(position * len(pieces) / len(narration_items))
+                end = round((position + 1) * len(pieces) / len(narration_items))
+                fallback_subtitles[item_index] = ' '.join(pieces[start:end]) or pieces[min(start, len(pieces) - 1)]
+            warnings.append('时间线未提供 subtitle_text，已按非原声片段时长顺序分配传入字幕。')
+        elif subtitle_text:
+            warnings.append('没有可分配字幕的非原声时间线片段，传入字幕未写入草稿。')
     cursor = 0
     render_index = 11000
     for item_index, item in enumerate(timeline or []):
@@ -271,19 +337,41 @@ def export_draft_package(
         elif not is_original:
             voice_cursor = cursor
             remaining = target_duration
-            for voice_path in item.get('voice_paths') or []:
+            item_voice_values: List[Any] = []
+            for field in ('voice_paths', 'voice_path', 'audio_path', 'audio_url'):
+                value = item.get(field)
+                item_voice_values.extend(value if isinstance(value, list) else [value])
+            item_materials: List[Dict[str, Any]] = []
+            for voice_path in item_voice_values:
                 voice_file = _existing_path(voice_path)
                 material = voice_materials.get(str(voice_file)) if voice_file else None
-                if not material or remaining <= 0:
-                    continue
-                duration = min(int(material['duration']), remaining)
+                if voice_file and not material:
+                    material = _audio_material(_uuid(), voice_file, _probe_media_info(voice_file))
+                    voice_materials[str(voice_file)] = material
+                    materials['audios'].append(material)
+                    fallback_audio_materials.append(material)
+                if material and material not in item_materials:
+                    item_materials.append(material)
+            if not item_materials and not has_explicit_voice_mapping and len(fallback_audio_materials) == 1:
+                item_materials = fallback_audio_materials
+            elif not item_materials and not has_explicit_voice_mapping and len(fallback_audio_materials) > 1:
+                warnings.append(f'时间线第 {item_index + 1} 段未指定配音，多个全局配音无法可靠同步，已跳过配音轨。')
+            for material in item_materials:
+                source_start = fallback_voice_cursor.get(material['id'], 0) if not item_voice_values else 0
+                available = max(0, int(material['duration']) - source_start)
+                duration = min(available, remaining)
                 if duration <= 0:
                     continue
-                voice_segments.append(_segment(material['id'], voice_cursor, duration, 0, duration, 1.0, []))
+                voice_segments.append(_segment(material['id'], voice_cursor, duration, source_start, duration, 1.0, []))
+                fallback_voice_cursor[material['id']] = source_start + duration
                 voice_cursor += duration
                 remaining -= duration
+                if remaining <= 0:
+                    break
+            if item_materials and remaining > 0:
+                warnings.append(f'时间线第 {item_index + 1} 段配音短于画面，剩余 {remaining / MICROSECONDS:.2f}s 不创建静音伪轨。')
 
-        text = str(item.get('subtitle_text') or '').strip()
+        text = str(item.get('subtitle_text') or fallback_subtitles.get(item_index) or '').strip()
         if text:
             text_id = _uuid()
             materials['texts'].append(_text_material(text_id, text))
@@ -308,8 +396,36 @@ def export_draft_package(
         tracks.append(_track('audio', bgm_segments))
     if text_segments:
         tracks.append(_track('text', text_segments))
+    flower_track = _build_flower_track_from_subtitles(subtitle_clips, flower_config, cursor)
+    flower_segments = [segment for material, segment in flower_track['segments']]
+    materials['texts'].extend(material for material, segment in flower_track['segments'])
+    if flower_segments:
+        tracks.append(_track('text', flower_segments))
+    flower_sfx_segments: List[Dict[str, Any]] = []
+    for sfx in flower_track.get('sfx') or []:
+        sfx_file = _existing_path(sfx.get('asset_path') or sfx.get('sfx_path', ''))
+        if not sfx_file:
+            warnings.append(f'花字音效素材不存在，已跳过: {sfx.get("asset_path") or sfx.get("sfx_path", "")}')
+            continue
+        start = _us(sfx.get('start_seconds', 0))
+        info = _probe_media_info(sfx_file)
+        duration = min(_us(sfx.get('duration_seconds', 0)), _us(info.get('duration', 0)), max(0, cursor - start))
+        if duration <= 0:
+            warnings.append(f'花字音效时段无效或超出视频，已跳过: {sfx_file}')
+            continue
+        material = _audio_material(_uuid(), sfx_file, info)
+        materials['audios'].append(material)
+        flower_sfx_segments.append(_segment(material['id'], start, duration, 0, duration, 1.0, [], volume=max(0.0, min(1.0, _float_or(sfx.get('volume'), 0.18)))))
+    if flower_sfx_segments:
+        tracks.append(_track('audio', flower_sfx_segments))
 
     content = _draft_content(draft_id, cursor, canvas_width, canvas_height, now_us, materials, tracks)
+    try:
+        _validate_draft_content(content)
+    except Exception:
+        import shutil
+        shutil.rmtree(draft_path, ignore_errors=True)
+        raise
     meta = _draft_meta(draft_id, draft_path, draft_root, draft_path.name, cursor, now_us, materials)
     content_path = draft_path / 'draft_content.json'
     meta_path = draft_path / 'draft_meta_info.json'
@@ -328,12 +444,125 @@ def export_draft_package(
         'draft_meta_info_path': str(meta_path), 'native_jianying_project': native_jianying_project,
         'archive_path': '', 'warnings': warnings, 'track_count': len(tracks), 'tracks': tracks,
         'assets_count': len(materials['videos']) + len(materials['audios']),
+        'video_segment_count': len(video_segments), 'voice_segment_count': len(voice_segments),
+        'subtitle_segment_count': len(text_segments),
+        'flower_config_applied': flower_track['applied'],
+        'flower_count': flower_track['count'],
+        'flower_sound_effect_count': len(flower_sfx_segments), 'flower_sfx_count': len(flower_sfx_segments),
         'total_duration': cursor / MICROSECONDS, 'project_name': project_name or draft_path.name,
     }
 
 
+def _build_flower_track_from_subtitles(subtitle_clips: List[Dict[str, Any]], flower_config: Optional[Dict[str, Any]], total_duration: int) -> Dict[str, Any]:
+    config = flower_config if isinstance(flower_config, dict) else {}
+    if not config.get('enabled') or not config.get('jianying_track'):
+        return {'segments': [], 'sfx': [], 'applied': False, 'count': 0}
+    try:
+        from backend.engine.subtitle_generator import SubtitleGenerator
+        generator = SubtitleGenerator()
+        narrations = [
+            {'text': clip['text'], 'time_range': f"{clip['start']}s-{clip['end']}s"}
+            for clip in subtitle_clips if clip.get('text') and clip.get('end', 0) > clip.get('start', 0)
+        ]
+        if not narrations:
+            return {'segments': [], 'applied': True, 'count': 0}
+        flower_data = generator.build_jianying_flower_track({'narrations': narrations}, config)
+        segments = []
+        render_index = 12000
+        for item in flower_data.get('items') or []:
+            start = _us(item.get('time_start_ms', 0) / 1000)
+            end = _us(item.get('time_end_ms', 0) / 1000)
+            duration = max(0, min(total_duration - start, end - start))
+            if duration <= 0:
+                continue
+            text_id = _uuid()
+            style = item.get('style') or {}
+            material = _text_material(text_id, str(item.get('text') or ''))
+            material.update({'font_name': style.get('fontname') or '', 'font_size': float(style.get('fontsize') or 9), 'text_color': style.get('primary_color') or '#FFFFFF', 'border_color': style.get('stroke_color') or '#000000'})
+            segments.append((material, _segment(text_id, start, duration, None, None, 1.0, [text_id], render_index)))
+            render_index += 1
+        return {'segments': segments, 'sfx': flower_data.get('flower_sfx') or [], 'applied': True, 'count': len(segments)}
+    except Exception as exc:
+        logger.warning('花字轨道构建失败，已跳过: %s', exc)
+        return {'segments': [], 'applied': False, 'count': 0}
+
+
+def _validate_draft_content(content: Dict[str, Any]) -> None:
+    duration = int(content.get('duration') or 0)
+    tracks = content.get('tracks') or []
+    videos = {item.get('id'): int(item.get('duration') or 0) for item in (content.get('materials') or {}).get('videos', [])}
+    audios = {item.get('id'): int(item.get('duration') or 0) for item in (content.get('materials') or {}).get('audios', [])}
+    video_segments = [segment for track in tracks if track.get('type') == 'video' for segment in track.get('segments') or []]
+    if duration <= 0 or not video_segments:
+        raise ValueError('草稿校验失败：必须包含时长大于零的视频轨道')
+    video_segments.sort(key=lambda segment: int(segment['target_timerange']['start']))
+    expected_start = 0
+    for segment in video_segments:
+        target = segment.get('target_timerange') or {}
+        source = segment.get('source_timerange') or {}
+        start, length = int(target.get('start') or 0), int(target.get('duration') or 0)
+        if length <= 0 or start != expected_start:
+            raise ValueError('草稿校验失败：视频片段必须连续且时段合法')
+        material_duration = videos.get(segment.get('material_id'), 0)
+        if int(source.get('start') or 0) < 0 or int(source.get('duration') or 0) <= 0 or int(source.get('start') or 0) + int(source.get('duration') or 0) > material_duration:
+            raise ValueError('草稿校验失败：视频源时段超出素材范围')
+        expected_start += length
+    if abs(expected_start - duration) > 1:
+        raise ValueError('草稿校验失败：总时长与最后视频片段不一致')
+    for track in tracks:
+        for segment in track.get('segments') or []:
+            target = segment.get('target_timerange') or {}
+            start, length = int(target.get('start') or 0), int(target.get('duration') or 0)
+            if start < 0 or length <= 0 or start + length > duration:
+                raise ValueError('草稿校验失败：目标时段非法')
+            source = segment.get('source_timerange')
+            if source is not None:
+                material_duration = videos.get(segment.get('material_id'), audios.get(segment.get('material_id'), 0))
+                if int(source.get('start') or 0) < 0 or int(source.get('duration') or 0) <= 0 or int(source.get('start') or 0) + int(source.get('duration') or 0) > material_duration:
+                    raise ValueError('草稿校验失败：源时段超出素材范围')
+
+
+def _build_flower_track(timeline: List[Dict[str, Any]], flower_config: Optional[Dict[str, Any]], total_duration: int) -> Dict[str, Any]:
+    config = flower_config if isinstance(flower_config, dict) else {}
+    if not config.get('enabled') or not config.get('jianying_track'):
+        return {'segments': [], 'applied': False, 'count': 0}
+    try:
+        from backend.engine.subtitle_generator import SubtitleGenerator
+        generator = SubtitleGenerator()
+        narrations = []
+        cursor = 0
+        for item in timeline or []:
+            if not isinstance(item, dict):
+                continue
+            duration = _us(item.get('final_duration') or item.get('audio_duration') or 0)
+            text = str(item.get('subtitle_text') or '').strip()
+            if text and duration > 0:
+                narrations.append({'text': text, 'time_range': f'{cursor / MICROSECONDS}s-{(cursor + duration) / MICROSECONDS}s'})
+            cursor += max(0, duration)
+        if not narrations:
+            return {'segments': [], 'applied': True, 'count': 0}
+        flower_data = generator.build_jianying_flower_track({'narrations': narrations}, config)
+        segments = []
+        render_index = 12000
+        for item in flower_data.get('items') or []:
+            start = _us(item.get('time_start_ms', 0) / 1000)
+            end = _us(item.get('time_end_ms', 0) / 1000)
+            duration = max(0, min(total_duration - start, end - start))
+            if duration <= 0:
+                continue
+            text_id = _uuid()
+            style = item.get('style') or {}
+            material = _text_material(text_id, str(item.get('text') or ''))
+            material.update({'font_name': style.get('fontname') or '', 'font_size': float(style.get('fontsize') or 9), 'text_color': style.get('primary_color') or '#FFFFFF', 'border_color': style.get('stroke_color') or '#000000'})
+            segments.append((material, _segment(text_id, start, duration, None, None, 1.0, [text_id], render_index)))
+            render_index += 1
+        return {'segments': segments, 'applied': True, 'count': len(segments)}
+    except Exception as exc:
+        logger.warning('花字轨道构建失败，已跳过: %s', exc)
+        return {'segments': [], 'applied': False, 'count': 0}
+
 def _resolve_path(value: str) -> Path:
-    path = Path(value).expanduser()
+    path = Path(str(value)).expanduser()
     return path if path.is_absolute() else PROJECT_ROOT / path
 
 
@@ -352,7 +581,6 @@ def _is_native_jianying_root(path: Path) -> bool:
         parts = [part.casefold() for part in resolved.parts]
         return (
             resolved.name.casefold() == 'com.lveditor.draft'
-            and 'jianyingpro' in parts
             and 'user data' in parts
             and 'projects' in parts
             and _is_writable_directory(resolved)

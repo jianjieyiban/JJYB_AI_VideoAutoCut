@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </linearGradient>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- 背景圆形 -->
+  <circle cx="256" cy="256" r="240" fill="url(#grad1)"/>
+
+  <!-- 剪刀图标 -->
+  <g fill="white" filter="url(#shadow)">
+    <!-- 左剪刀环 -->
+    <circle cx="180" cy="180" r="40" fill="none" stroke="white" stroke-width="16"/>
+    <circle cx="180" cy="180" r="20" fill="white"/>
+
+    <!-- 右剪刀环 -->
+    <circle cx="332" cy="180" r="40" fill="none" stroke="white" stroke-width="16"/>
+    <circle cx="332" cy="180" r="20" fill="white"/>
+
+    <!-- 剪刀刀片 -->
+    <path d="M 180 220 L 256 320 L 200 380 L 124 280 Z" fill="white" opacity="0.9"/>
+    <path d="M 332 220 L 256 320 L 312 380 L 388 280 Z" fill="white" opacity="0.9"/>
+
+    <!-- 中心连接点 -->
+    <circle cx="256" cy="320" r="24" fill="white"/>
+  </g>
+
+  <!-- AI文字 -->
+  <text x="256" y="450" font-family="Arial, sans-serif" font-size="120" font-weight="900" text-anchor="middle" fill="white" filter="url(#shadow)">AI</text>
+
+  <!-- 装饰光效 -->
+  <circle cx="140" cy="140" r="20" fill="white" opacity="0.3"/>
+  <circle cx="372" cy="140" r="16" fill="white" opacity="0.2"/>
+</svg>

@@ -353,6 +353,14 @@ def puppet_sync_commentary():
             'data': result
         })
     except Exception as e:
+        from backend.engine.storyboard_planner import StoryboardPlanningError
+        if isinstance(e, StoryboardPlanningError):
+            logger.warning(f'拟人化同步规划无法完成: {e}')
+            return jsonify({
+                'code': 2,
+                'msg': f'同步规划未完成: {str(e)}',
+                'data': {'unmatched_segments': e.unmatched_segments},
+            }), 422
         logger.error(f'拟人化同步剪辑失败: {e}', exc_info=True)
         return jsonify({'code': 1, 'msg': f'同步失败: {str(e)}', 'data': None}), 500
 
@@ -385,16 +393,22 @@ def generate_voices():
         if total_count == 0:
             return jsonify({'code': 1, 'msg': '未发现可生成配音的有效段落', 'data': result}), 400
         if success_count == 0:
+            segments = result.get('segments') or result.get('voices') or []
+            first_failed = next((item for item in segments if item.get('status') == 'failed'), {})
+            reason = first_failed.get('reason') or first_failed.get('error') or '请检查配音引擎、音色和网络后重试'
             return jsonify({
                 'code': 1,
-                'msg': f'配音生成失败：0/{total_count} 段成功，请检查配音引擎、音色和网络后重试',
+                'msg': f'配音生成失败：0/{total_count} 段成功，首段失败原因：{reason}',
                 'data': result,
             }), 422
 
+        fallback_count = int(result.get('fallback_count') or 0)
         if success_count < total_count:
             msg = f'配音段生成完成，成功 {success_count}/{total_count} 段，失败 {result["failed_count"]} 段'
+        elif fallback_count:
+            msg = f'全部配音已生成（含{fallback_count}段回退）'
         else:
-            msg = f'配音段生成完成，共 {total_count} 段'
+            msg = f'全部配音已生成，共 {total_count} 段'
         return jsonify({'code': 0, 'msg': msg, 'data': result})
     except Exception as e:
         logger.error(f'生成配音段失败: {e}', exc_info=True)
@@ -406,54 +420,31 @@ def generate_voices():
 def generate_single_voice():
     """按段工作台「重新生成」调用。请求体包含 segment dict + voice_config"""
     try:
-        from backend.engine.tts_engine import TTSEngine
-        from backend.utils.file_utils import get_audio_duration_safe
         data = request.get_json() or {}
         seg = data.get('segment') or {}
         text = (seg.get('text') or '').strip()
         if not text:
             return jsonify({'code': 1, 'msg': '段落文本为空', 'data': None}), 400
-        engine_key = (data.get('tts_engine') or seg.get('engine') or (data.get('voice_config') or {}).get('engine') or 'edge-tts').strip().lower()
-        voice_id = (data.get('voice') or seg.get('voice') or (data.get('voice_config') or {}).get('voice_id') or 'zh-CN-XiaoxiaoNeural').strip()
         voice_config = dict(data.get('voice_config') or {})
-        voice_config.setdefault('voice_id', voice_id)
-        voice_config.setdefault('voice', voice_id)
-        voice_config.setdefault('engine', engine_key)
-        voice_config.setdefault('rate', seg.get('rate') or 1)
-        voice_config.setdefault('pitch', seg.get('pitch') or '+0Hz')
-        voice_config.setdefault('volume', 1)
-
-        engine = TTSEngine.get_default()
-        synthesis = engine.synthesize(text, engine=engine_key, voice_id=voice_id, extra=voice_config)
-        if not synthesis or not synthesis.get('ok'):
-            return jsonify({'code': 2, 'msg': synthesis.get('reason') or 'TTS 合成失败', 'data': synthesis}), 422
-        out_path = synthesis.get('output_path')
-        if out_path:
-            duration = 0.0
-            try:
-                duration = float(get_audio_duration_safe(str(out_path)) or 0.0)
-            except Exception:
-                duration = 0.0
-            try:
-                rel = Path(out_path).relative_to(PROJECT_ROOT).as_posix()
-                url = f"/api/download/{rel}"
-            except Exception:
-                url = f"/api/download/{Path(out_path).name}"
-            seg.update({
-                'text': text,
-                'audio_path': str(out_path),
-                'audio_url': url,
-                'duration': duration,
-                'duration_seconds': duration,
-                'engine': synthesis.get('engine_used') or engine_key,
-                'voice': synthesis.get('voice_used') or voice_id,
-                'rate': voice_config.get('rate') or 1,
-                'pitch': voice_config.get('pitch') or '+0Hz',
-                'need_regenerate': False,
-            })
-        else:
-            seg.update({'text': text, 'need_regenerate': True})
-        return jsonify({'code': 0, 'msg': '单段生成完成', 'segment': seg})
+        engine_key = (data.get('tts_engine') or seg.get('engine') or voice_config.get('engine') or 'edge-tts').strip().lower()
+        voice_id = (data.get('voice') or seg.get('voice') or voice_config.get('voice_id') or 'zh-CN-XiaoxiaoNeural').strip()
+        voice_config.update({
+            'voice_id': voice_id, 'voice': voice_id, 'engine': engine_key,
+            'rate': voice_config.get('rate', seg.get('rate', 1)),
+            'pitch': voice_config.get('pitch', seg.get('pitch', '+0Hz')),
+            'volume': voice_config.get('volume', 1),
+        })
+        result = commentary_service.generate_voices_from_script(
+            script='', voice_config=voice_config,
+            segments=[{'id': seg.get('id'), 'index': seg.get('index', data.get('index', 0)), 'text': text}],
+            with_details=True,
+        )
+        generated = (result.get('segments') or result.get('voices') or [None])[0]
+        if not generated or generated.get('status') != 'ready' or not (generated.get('audio_path') or generated.get('audio_url')):
+            message = (generated or {}).get('reason') or (generated or {}).get('error') or 'TTS 合成失败'
+            return jsonify({'code': 2, 'msg': message, 'data': result, 'segment': generated}), 422
+        fallback_note = '（已由 %s 回退生成，音色可能与 Edge 不同）' % generated.get('engine_used') if generated.get('fallback_used') else ''
+        return jsonify({'code': 0, 'msg': f'单段生成完成{fallback_note}', 'data': result, 'segment': generated})
     except Exception as e:
         logger.error(f'重新生成单段配音失败: {e}', exc_info=True)
         return jsonify({'code': 1, 'msg': f'生成失败: {str(e)}', 'segment': None}), 500
@@ -469,18 +460,30 @@ def export_voice_zip():
         segments = data.get('segments') or []
         items = []
         for i, s in enumerate(segments):
-            p = s.get('audio_path')
-            if not p:
+            if not isinstance(s, dict):
                 continue
-            try:
-                path = Path(str(p))
-                if path.exists() and path.is_file():
-                    items.append((str(path), f"{i+1:03d}_{s.get('index') or (i+1)}_{str(s.get('voice') or 'voice')[:12]}{path.suffix.lower()}"))
-            except Exception:
-                continue
+            path = None
+            for value in (s.get('audio_path'), s.get('audio_url')):
+                value = str(value or '').strip()
+                if not value or value.startswith(('http://', 'https://')):
+                    continue
+                if value.startswith('/api/download/'):
+                    value = value[len('/api/download/'):]
+                elif value.startswith('/output/'):
+                    value = 'output/' + value[len('/output/'):]
+                elif value.startswith('file:///'):
+                    value = value[8:]
+                candidate = Path(value)
+                if not candidate.is_absolute():
+                    candidate = PROJECT_ROOT / value.lstrip('/\\')
+                if candidate.is_file():
+                    path = candidate
+                    break
+            if path:
+                items.append((str(path), f"{i+1:03d}_{s.get('index') or (i+1)}_{str(s.get('voice') or 'voice')[:12]}{path.suffix.lower()}"))
         if not items:
             return jsonify({'code': 1, 'msg': '没有可导出的配音段', 'data': None}), 400
-        out_dir = PROJECT_ROOT / 'storage' / 'voice_zips'
+        out_dir = PROJECT_ROOT / 'output' / 'voice_zips'
         out_dir.mkdir(parents=True, exist_ok=True)
         zip_name = f"voice_segments_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{abs(hash(str(items)[:50])) % 100000}.zip"
         zip_path = out_dir / zip_name
@@ -493,8 +496,7 @@ def export_voice_zip():
                 zf.writestr('README.txt', readme.encode('utf-8'))
             except Exception:
                 pass
-        rel = zip_path.relative_to(PROJECT_ROOT).as_posix()
-        url = f"/api/download/{rel}"
+        url = f"/output/voice_zips/{zip_name}"
         return jsonify({'code': 0, 'msg': f'已打包 {len(items)} 个配音段', 'data': {'zip_path': str(zip_path), 'zip_url': url, 'count': len(items)}})
     except Exception as e:
         logger.error(f'导出配音段ZIP失败: {e}', exc_info=True)
@@ -508,15 +510,12 @@ def export_voice_zip():
 def detect_jianying_draft_dir():
     """自动检测剪映草稿目录"""
     try:
-        from backend.utils.jianying_detector import detect_jianying_draft_dir as _detect
-        draft_dir = _detect()
+        from backend.utils.jianying_detector import detect_jianying_draft_info
+        info = detect_jianying_draft_info()
         return jsonify({
             'code': 0,
-            'msg': '检测成功' if draft_dir else '未检测到剪映草稿目录',
-            'data': {
-                'draft_dir': draft_dir,
-                'detected': bool(draft_dir)
-            }
+            'msg': '检测成功' if info['detected'] and info['writable'] else info['message'],
+            'data': info
         })
     except Exception as e:
         logger.error(f'检测剪映草稿目录失败: {e}', exc_info=True)
@@ -552,6 +551,7 @@ def export_jianying_draft():
             draft_dir=data.get('draft_dir', ''),
             bgm_path=data.get('bgm_path', ''),
             project_name=data.get('project_name', ''),
+            flower_config=data.get('flower_config'),
         )
 
         native = bool(result.get('native_jianying_project'))
@@ -560,6 +560,9 @@ def export_jianying_draft():
             'msg': '剪映原生草稿已导出' if native else '本地原生草稿目录已生成，需放入剪映草稿根目录才会被扫描',
             'data': result
         })
+    except ValueError as e:
+        logger.warning(f'导出剪映草稿参数/时间线无效: {e}')
+        return jsonify({'code': 1, 'msg': f'导出失败: {str(e)}', 'data': None}), 422
     except Exception as e:
         logger.error(f'导出剪映草稿失败: {e}', exc_info=True)
         return jsonify({'code': 1, 'msg': f'导出失败: {str(e)}', 'data': None}), 500
