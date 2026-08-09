@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#5f72e8"/><stop offset=".55" stop-color="#7c4fa5"/><stop offset="1" stop-color="#e66c88"/></linearGradient><filter id="s"><feDropShadow dx="0" dy="16" stdDeviation="22" flood-opacity=".3"/></filter></defs>
+  <rect width="1024" height="1024" rx="190" fill="url(#bg)"/><circle cx="180" cy="160" r="120" fill="#fff" opacity=".08"/><circle cx="850" cy="820" r="180" fill="#fff" opacity=".08"/>
+  <g transform="translate(512 455)" filter="url(#s)"><circle cx="-125" cy="-100" r="83" fill="none" stroke="white" stroke-width="27"/><circle cx="125" cy="-100" r="83" fill="none" stroke="white" stroke-width="27"/><circle cx="-125" cy="-100" r="35" fill="white"/><circle cx="125" cy="-100" r="35" fill="white"/><path d="M-125 -17 L0 150 L-95 252 L-220 85Z" fill="white"/><path d="M125 -17 L0 150 L95 252 L220 85Z" fill="white"/><circle cx="0" cy="150" r="45" fill="#7c4fa5" stroke="white" stroke-width="14"/></g>
+  <text x="512" y="790" text-anchor="middle" fill="white" font-family="Arial,Microsoft YaHei" font-size="132" font-weight="900" letter-spacing="8">AI</text>
+  <text x="512" y="900" text-anchor="middle" fill="white" font-family="Microsoft YaHei,Arial" font-size="37" font-weight="700" letter-spacing="5">JJYB 智剪</text>
+</svg>

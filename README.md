@@ -1,28 +1,48 @@
-# JJYB_AI智剪
+# JJYB AI VideoAutoCut
+# JJYB_AI 智剪 · AI 视频自动剪辑工作室
 
 <p align="center">
-  <strong>本地运行的 AI 视频创作工具 · 闭源私有部署</strong>
+  <img src="frontend/static/brand/promo-05-community-avatar.png" width="128" alt="JJYB AI 智剪 Logo">
+</p>
+
+<p align="center">
+  <strong>从素材理解到成片导出的一站式、本地优先 AI 视频创作工作台</strong>
 </p>
 
 <p align="center">
   原创解说 · 智能混剪 · AI 配音 · 声音复刻 · AI 封面生成 · 精选视频复刻 · 剪映草稿导出
 </p>
 
+> **授权提示：本项目源代码公开供个人学习、研究和自行使用。未经作者事先书面授权，禁止任何商业使用、收费服务、付费分发、商业部署或将本项目用于商业产品。详情见 [LICENSE](LICENSE)。**
+
+<p align="center">
+  <a href="https://github.com/jianjieyiban/JJYB_AI_VideoAutoCut/releases"><img alt="GitHub Release" src="https://img.shields.io/github/v/release/jianjieyiban/JJYB_AI_VideoAutoCut?display_name=tag&style=flat-square"></a>
+  <a href="https://github.com/jianjieyiban/JJYB_AI_VideoAutoCut"><img alt="Python" src="https://img.shields.io/badge/Python-3.10--3.13-3776AB?style=flat-square&logo=python&logoColor=white"></a>
+  <img alt="Platform" src="https://img.shields.io/badge/Platform-Windows%2010%20%7C%2011-0078D4?style=flat-square&logo=windows">
+  <img alt="Frontend" src="https://img.shields.io/badge/Desktop-Flask%20%2B%20PyWebView-45A29E?style=flat-square">
+</p>
+
 <p align="center">
   <a href="#快速开始">快速开始</a> ·
   <a href="#核心功能">核心功能</a> ·
+  <a href="#技术栈">技术栈</a> ·
   <a href="#项目结构">项目结构</a> ·
   <a href="#配置说明">配置说明</a> ·
-  <a href="#常见问题">常见问题</a>
+  <a href="#使用许可">使用许可</a> ·
+  <a href="#加入交流群">加入交流群</a>
+</p>
+
+<p align="center">
+  <img src="frontend/static/brand/promo-01-smart-editing.png" width="720" alt="JJYB AI 智剪全流程智能剪辑">
 </p>
 
 ---
 
 ## 项目简介
 
-JJYB_AI智剪是一款本地桌面优先的 AI 视频创作工具，提供原创解说、智能混剪、AI 配音、声音复刻、AI 封面生成与精选视频复刻能力。前端基于 Flask + PyWebView，视频渲染依赖 FFmpeg，项目数据保存在本地 SQLite。
+JJYB_AI智剪是一款面向视频创作者的本地桌面优先 AI 视频创作工具。它把素材分析、智能分镜、解说文案、语音生成、音画同步、字幕、混剪和成片导出组织在同一个工作流中，尽量减少在多个工具之间来回搬运素材。前端基于 Flask + PyWebView，视频渲染依赖 FFmpeg，项目数据保存在本地 SQLite。
 
-**最近维护更新**：2026-08-03
+**当前版本**：v3.3.0 · **最近维护更新**：2026-08-09
 
 > **重要声明**：本工具仅处理用户拥有合法权利的文本、视频、音乐与参考音频。使用声音复刻功能前必须取得参考音频权利人的明确授权。云端模型、外部 TTS 和本地声音复刻是否可用，取决于对应 API 配置、运行环境及模型权重是否就绪。
 
@@ -31,6 +51,10 @@ JJYB_AI智剪是一款本地桌面优先的 AI 视频创作工具，提供原创
 ## 核心功能
 
 ### 1. 原创解说（完整工作流）
+
+<p align="center">
+  <img src="frontend/static/brand/promo-02-commentary.png" width="560" alt="JJYB AI 智剪原创解说模式">
+</p>
 
 完整的"视频→分析→文稿→配音→同步→导出"工作流：
 
@@ -50,6 +74,10 @@ JJYB_AI智剪是一款本地桌面优先的 AI 视频创作工具，提供原创
 
 ### 2. 智能混剪
 
+<p align="center">
+  <img src="frontend/static/brand/promo-03-remix.png" width="560" alt="JJYB AI 智剪智能混剪模式">
+</p>
+
 两种混剪模式，适配不同创作场景：
 
 - **普通模式**：先批量分镜，再按画面评分选择高光镜头；可根据配音时长做逐段音画匹配。
@@ -61,6 +89,10 @@ JJYB_AI智剪是一款本地桌面优先的 AI 视频创作工具，提供原创
 - 支持 Edge TTS、Azure、gTTS、火山引擎、IndexTTS2 克隆等多种 TTS 引擎。
 
 ### 3. AI 配音与声音复刻
+
+<p align="center">
+  <img src="frontend/static/brand/promo-04-voiceover.png" width="560" alt="JJYB AI 智剪 AI 配音工作室">
+</p>
 
 - **常规配音**：Edge TTS、gTTS、pyttsx3、Azure TTS、火山引擎 TTS、可选 Coqui TTS。
 - **声音复刻**：
@@ -135,7 +167,7 @@ JJYB_AI智剪是一款本地桌面优先的 AI 视频创作工具，提供原创
 
 ### 方式一：Release 包（推荐）
 
-1. 从 [GitHub Releases](https://github.com/jianjieyiban/JJYB-AI-ZhiJian/releases) 下载最新版本的 `JJYB_AI智剪-vX.X.X.zip`。
+1. 从 [GitHub Releases](https://github.com/jianjieyiban/JJYB_AI_VideoAutoCut/releases) 下载最新版本的 `JJYB_AI_VideoAutoCut-vX.X.X-source.zip`。
 2. 解压到任意目录。
 3. 安装 Python 依赖：`py -3 -m pip install -r requirements.txt`。
 4. 安装 [FFmpeg](https://ffmpeg.org/download.html) 并加入 PATH。
@@ -145,8 +177,8 @@ JJYB_AI智剪是一款本地桌面优先的 AI 视频创作工具，提供原创
 
 ```powershell
 # 1. 克隆仓库
-git clone https://github.com/jianjieyiban/JJYB-AI-ZhiJian.git
-cd JJYB-AI-ZhiJian
+git clone https://github.com/jianjieyiban/JJYB_AI_VideoAutoCut.git
+cd JJYB_AI_VideoAutoCut
 
 # 2. 安装主程序依赖
 py -3 -m pip install -r requirements.txt
@@ -578,9 +610,48 @@ py -3 -c "import ast; ast.parse(open('backend/services/commentary_service_enhanc
 
 ---
 
+## 加入交流群
+
+欢迎加入 **JJYB_AI_VideoAutoCut 官方 QQ 交流群**，交流安装部署、模型配置、原创解说、智能混剪、AI 配音和问题排查。提问时建议附上软件版本、复现步骤和已脱敏的日志片段。
+
+<p align="center">
+  <img src="frontend/static/brand/promo-05-community-avatar.png" width="120" alt="JJYB AI 智剪社群头像">
+</p>
+
+<p align="center"><strong>QQ群号：279549628</strong></p>
+
+<p align="center">
+  <img src="frontend/static/brand/qq-group-279549628.jpg" width="420" alt="扫码加入 JJYB AI 智剪 QQ 群 279549628">
+</p>
+
+> 群二维码可能因 QQ 平台规则失效；无法扫码时，可直接在 QQ 中搜索群号 `279549628`。
+
+---
+
+## 使用许可
+
+本仓库采用 **JJYB_AI_VideoAutoCut 个人使用许可**，属于“源代码公开”项目，不是允许自由商业利用的标准开源许可证。
+
+你可以：
+
+- 为个人学习、技术研究、功能体验和非商业创作下载、运行及修改本软件。
+- 在保留版权和许可说明的前提下，为非商业学习目的研究源码。
+
+未经作者事先书面授权，你不可以：
+
+- 将软件、源码、修改版或打包版用于任何直接或间接商业用途。
+- 出售、出租、付费分发软件，或提供收费安装、代部署、托管、剪辑、生成内容等服务。
+- 将本项目或其主要代码集成到收费产品、商业平台、企业内部商业流程或广告变现项目。
+- 删除或篡改版权、作者、许可和来源说明，或以他人名义重新发布。
+
+商业授权请通过项目主页或 QQ 群 `279549628` 联系作者。完整条款以 [LICENSE](LICENSE) 为准。
+
+---
+
 ## 免责声明
 
 - 本工具仅供个人合法使用，使用者需遵守当地法律法规。
+- 本软件未经作者书面授权不可商用，只能用于个人学习、研究和自行使用。
 - 使用声音复刻功能前必须取得参考音频权利人的明确授权。
 - 请只对拥有合法权利的文本、视频、音乐与参考音频进行处理。
 - 生成内容的版权归属由使用者自行判断和承担。
@@ -592,6 +663,7 @@ py -3 -c "import ast; ast.parse(open('backend/services/commentary_service_enhanc
 
 | 版本 | 日期 | 主要更新 |
 |---|---|---|
+| v3.3.0 | 2026-08-09 | 全量同步新版源码，重构公开源码 README，加入完整品牌介绍图与 QQ 群入口，补齐 Release 构建流程和发布安全规则 |
 | v3.2.0 | 2026-08-03 | 混剪高级功能改为混剪专用节奏包，修复剪映草稿路径检测成功后误报网络失败，补充运行目录忽略规则与维护文档 |
 | v3.1.0 | 2026-08-01 | 三处解说风格联动、10种钩子选择、配音段容错、音画同步兜底、剪映草稿导出修复 |
 | v3.0.0 | 2026-07-31 | 全面重构原创解说流程、新增拟人化同步引擎、原片原声穿插 |

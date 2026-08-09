@@ -1,4 +1,4 @@
-# ===== 运行时数据与日志 =====
+# Runtime data and logs
 logs/*
 !logs/.gitkeep
 output/*
@@ -11,43 +11,40 @@ storage/*
 !storage/.gitkeep
 temp/*
 !temp/.gitkeep
+database/*
+!database/.gitkeep
 
-# ===== 本地敏感配置与用户数据 =====
+# Local secrets and user configuration
 config/ai_config.json
-database/*.db
-database/*.db-*
-*.sqlite
-*.sqlite3
 .env
 .env.*
 !.env.example
+*.sqlite
+*.sqlite3
+*.db
+*.db-*
 
-# ===== Python / Notebook 缓存 =====
+# Python caches and test output
 __pycache__/
 *.py[cod]
-.dbg/
 *$py.class
-.ipynb_checkpoints/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
 .coverage
 htmlcov/
+.ipynb_checkpoints/
 
-# ===== 虚拟环境、构建产物与编辑器文件 =====
+# Virtual environments and build output
 .venv/
 venv/
 env/
 build/
 dist/
+release/
 *.egg-info/
-.vscode/
-.writerHelper/
-.playwright-cli/
-.cursor/
-.idea/
 
-# ===== 本地模型权重、模型缓存与下载包 =====
+# Local models and large binary resources
 *.pt
 *.pth
 *.ckpt
@@ -56,24 +53,20 @@ dist/
 *.bin
 *.onnx
 *.gguf
-models/index-tts/checkpoints/
-models/index-tts/source_archive/
-models/index-tts/checkpoints/**/*
-
-# ===== 大型二进制资源（Release 包提供，不进 git） =====
+models/
+resource/
 backend/assets/fonts/
 backend/assets/audio/*.mp3
 backend/assets/audio/*.MP3
 backend/assets/audio/*.m4a
 backend/assets/audio/*.M4A
-resource/
-models/
-resource/imageMagick/*.exe
-resource/models/transnetv2-weights/**/*.pth
-resource/models/transnetv2-weights/**/*.pb
-resource/models/transnetv2-weights/variables/*
 
-# ===== 操作系统与临时文件 =====
+# Editors, automation state, and operating-system files
+.vscode/
+.idea/
+.cursor/
+.writerHelper/
+.playwright-cli/
 .DS_Store
 Thumbs.db
 *.log

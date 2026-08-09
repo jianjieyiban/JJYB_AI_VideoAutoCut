@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1440" viewBox="0 0 1080 1440">
+  <defs><linearGradient id="b" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#17132f"/><stop offset="1" stop-color="#39224f"/></linearGradient><linearGradient id="c" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#ffbb66"/><stop offset="1" stop-color="#ff6d83"/></linearGradient></defs>
+  <rect width="1080" height="1440" fill="url(#b)"/><path d="M0 980 C220 850 300 1080 490 940 S820 800 1080 960 L1080 1440 L0 1440Z" fill="#0e172b" opacity=".65"/>
+  <text x="90" y="112" fill="#ffd39d" font-family="Microsoft YaHei,Arial" font-size="28" font-weight="700" letter-spacing="5">ORIGINAL COMMENTARY</text>
+  <text x="90" y="260" fill="white" font-family="Microsoft YaHei,Arial" font-size="82" font-weight="900">一条视频</text><text x="90" y="360" fill="white" font-family="Microsoft YaHei,Arial" font-size="82" font-weight="900">讲出完整故事</text>
+  <text x="90" y="465" fill="#e7cbe6" font-family="Microsoft YaHei,Arial" font-size="32">自动梳理重点，生成顺畅解说文案</text>
+  <g transform="translate(110 590)"><rect width="860" height="300" rx="28" fill="#241f42" stroke="#85547a" stroke-width="2"/><rect x="42" y="50" width="235" height="190" rx="14" fill="#6d4d68"/><path d="M64 205 L125 135 L170 170 L220 100 L255 205Z" fill="#ffbb66" opacity=".85"/><circle cx="200" cy="100" r="18" fill="#ff6d83"/>
+    <path d="M350 92 H770 M350 150 H690 M350 208 H735" stroke="#f5dbea" stroke-width="14" stroke-linecap="round"/><path d="M315 74 V226" stroke="url(#c)" stroke-width="8"/><circle cx="315" cy="74" r="12" fill="#ffbb66"/><circle cx="315" cy="226" r="12" fill="#ff6d83"/></g>
+  <g transform="translate(90 1020)"><circle cx="54" cy="54" r="54" fill="url(#c)"/><path d="M30 54 H78 M54 30 V78" stroke="white" stroke-width="8" stroke-linecap="round"/><text x="135" y="48" fill="white" font-family="Microsoft YaHei,Arial" font-size="34" font-weight="700">文案 · 配音 · 字幕 · 画面</text><text x="135" y="94" fill="#d5bed8" font-family="Microsoft YaHei,Arial" font-size="27">逐段对齐，节奏清楚，重点不丢</text></g>
+  <text x="90" y="1310" fill="#ffcc8a" font-family="Microsoft YaHei,Arial" font-size="31" font-weight="700">原创解说模式</text>
+</svg>
