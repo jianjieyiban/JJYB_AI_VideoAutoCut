@@ -100,8 +100,30 @@ class VoiceoverService:
             }
         ]
 
+    @staticmethod
+    def _default_voice_id(language: Optional[str] = None) -> str:
+        if not language:
+            try:
+                from backend.core.global_state import get_global_state
+                state = get_global_state()
+                if hasattr(state, 'get_user_setting'):
+                    language = state.get_user_setting('language', 'tts', None)
+                else:
+                    language = (getattr(state, 'user_settings', {}).get('language', {}) or {}).get('tts')
+            except Exception:
+                language = None
+
+        prefix = str(language or 'en-US').strip().lower().split('-', 1)[0]
+        return {
+            'en': 'en-US-JennyNeural',
+            'ja': 'ja-JP-NanamiNeural',
+            'ko': 'ko-KR-SunHiNeural',
+            'es': 'es-ES-ElviraNeural',
+            'fr': 'fr-FR-DeniseNeural',
+        }.get(prefix, 'zh-CN-XiaoxiaoNeural')
+
     def _normalize_voice_id(self, voice_id: str) -> str:
-        vid = (voice_id or 'zh-CN-XiaoxiaoNeural').strip()
+        vid = (voice_id or self._default_voice_id()).strip()
         lower = vid.lower()
         if 'neural' in lower and '-' in lower:
             return vid
@@ -418,7 +440,7 @@ class VoiceoverService:
             # 保存配置
             config = {
                 'text': data.get('text', ''),
-                'voice_id': data.get('voice_id', 'zh-CN-XiaoxiaoNeural'),
+                'voice_id': data.get('voice_id') or self._default_voice_id(),
                 'rate': data.get('rate', '+0%'),  # -50% to +100%
                 'pitch': data.get('pitch', '+0Hz'),  # -50Hz to +50Hz
                 'volume': data.get('volume', '+0%'),  # -100% to +100%
@@ -458,8 +480,8 @@ class VoiceoverService:
         try:
             logger.info(f'🎙️ 生成AI配音: {len(text)}字')
 
-            # 读取基本配置
-            voice_id_raw = voice_config.get('voice_id', 'zh-CN-XiaoxiaoNeural')
+            # 读取基本配置；未指定音色时使用全局 TTS 语言的默认音色
+            voice_id_raw = voice_config.get('voice_id')
             voice_id = self._normalize_voice_id(voice_id_raw)
             rate = voice_config.get('rate', '+0%')
             volume = voice_config.get('volume', '+0%')

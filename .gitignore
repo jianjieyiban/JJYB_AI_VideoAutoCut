@@ -23,6 +23,19 @@ config/ai_config.json
 *.sqlite3
 *.db
 *.db-*
+credentials*.json
+censor_words.json
+
+# Private Anna partnership files: never publish these to the open-source repository.
+app.json
+manifest.json
+bundle/
+executas/
+.anna/
+jjyb_wsl/
+*.vhdx
+*.vhdx.lock
+.github/workflows/build-executa-linux.yml
 
 # Python caches and test output
 __pycache__/
@@ -60,6 +73,9 @@ backend/assets/audio/*.mp3
 backend/assets/audio/*.MP3
 backend/assets/audio/*.m4a
 backend/assets/audio/*.M4A
+executas/**/dist/
+executas/**/build/
+executas/**/__pycache__/
 
 # Editors, automation state, and operating-system files
 .vscode/
@@ -74,3 +90,6 @@ Thumbs.db
 *.bak
 *.orig
 *.swp
+_sync_git.py
+_[a-z]*.py
+_push_result.txt

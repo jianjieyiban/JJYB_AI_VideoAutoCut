@@ -1486,6 +1486,24 @@ def run_server():
             use_reloader=False,
             allow_unsafe_werkzeug=True
         )
+    except OSError as e:
+        if e.errno == 10048 or '10048' in str(e) or 'Address already in use' in str(e):
+            logger.error('=' * 60)
+            logger.error('❌ 端口被占用！')
+            logger.error('=' * 60)
+            logger.error(f'端口 {APP_PORT} 已被占用，可能有其他程序正在运行。')
+            logger.error('')
+            logger.error('解决方案:')
+            logger.error('1. 关闭其他正在运行的 JJYB_AI智剪 窗口')
+            logger.error(f'2. 或修改端口: 编辑 config/config.yaml 中的 app.port 为其他值（如 {APP_PORT + 1}）')
+            logger.error('3. 或在任务管理器中结束占用该端口的进程')
+            logger.error('')
+            logger.error('查找占用端口的进程:')
+            logger.error(f'   netstat -ano | findstr :{APP_PORT}')
+            logger.error('')
+            logger.error('=' * 60)
+        else:
+            logger.error(f'❗ 服务器启动失败 (OSError): {e}', exc_info=True)
     except Exception as e:
         logger.error(f'❗ 服务器启动失败: {e}', exc_info=True)
 

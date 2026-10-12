@@ -22,10 +22,22 @@ logger = logging.getLogger('JJYB_AI智剪')
 @dataclass
 class TTSRequest:
     """TTS合成请求（统一参数）"""
+
+    def __post_init__(self):
+        if not self.language:
+            try:
+                from backend.core.global_state import get_global_state
+                state = get_global_state()
+                if hasattr(state, 'get_user_setting'):
+                    self.language = state.get_user_setting('language', 'tts', 'en-US')
+                else:
+                    self.language = (getattr(state, 'user_settings', {}).get('language', {}) or {}).get('tts') or 'en-US'
+            except Exception:
+                self.language = 'en-US'
     text: str
     output_path: str
     voice: str = ''             # 音色ID/名称
-    language: str = 'zh-CN'     # 语言
+    language: Optional[str] = None  # 语言，未指定时读取全局 TTS 设置
     rate: str = '+0%'           # 语速（百分比字符串）
     volume: str = '+0%'         # 音量
     pitch: Optional[int] = None  # 音调（半音）
@@ -172,11 +184,15 @@ class EdgeTTSProvider(TTSProviderBase):
         from backend.engine.tts_engine import TTSEngine
 
         engine = TTSEngine(default_engine='edge-tts')
+        voice = request.voice
+        if not voice:
+            from backend.services.voiceover_service import VoiceoverService
+            voice = VoiceoverService._default_voice_id(request.language)
         ok = engine.synthesize(
             text=request.text,
             output_path=request.output_path,
             engine=self.name,
-            voice=request.voice or 'zh-CN-XiaoxiaoNeural',
+            voice=voice,
             rate=request.rate,
             volume=request.volume,
             pitch=request.pitch,
@@ -198,7 +214,7 @@ class EdgeTTSProvider(TTSProviderBase):
             file_size=out_file.stat().st_size,
             audio_format=request.audio_format,
             engine_name=self.name,
-            voice_used=request.voice or 'zh-CN-XiaoxiaoNeural',
+            voice_used=voice,
             metadata={'style': self.EMOTION_TO_STYLE.get(request.emotion), 'emotion': request.emotion}
         )
 
@@ -220,7 +236,10 @@ class EdgeTTSProvider(TTSProviderBase):
         if not self.is_available():
             raise RuntimeError(f'[{self.name}] 引擎不可用')
         import edge_tts
-        voice = request.voice or 'zh-CN-XiaoxiaoNeural'
+        voice = request.voice
+        if not voice:
+            from backend.services.voiceover_service import VoiceoverService
+            voice = VoiceoverService._default_voice_id(request.language)
         communicate = edge_tts.Communicate(
             request.text, voice,
             rate=request.rate, volume=request.volume
@@ -263,7 +282,10 @@ class AzureTTSProvider(TTSProviderBase):
             import azure.cognitiveservices.speech as speechsdk
 
             Path(request.output_path).parent.mkdir(parents=True, exist_ok=True)
-            voice = request.voice or 'zh-CN-XiaoxiaoNeural'
+            voice = request.voice
+            if not voice:
+                from backend.services.voiceover_service import VoiceoverService
+                voice = VoiceoverService._default_voice_id(request.language)
 
             speech_config = speechsdk.SpeechConfig(
                 subscription=self.api_key, region=self.region

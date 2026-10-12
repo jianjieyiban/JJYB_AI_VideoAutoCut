@@ -427,7 +427,10 @@ def generate_single_voice():
             return jsonify({'code': 1, 'msg': '段落文本为空', 'data': None}), 400
         voice_config = dict(data.get('voice_config') or {})
         engine_key = (data.get('tts_engine') or seg.get('engine') or voice_config.get('engine') or 'edge-tts').strip().lower()
-        voice_id = (data.get('voice') or seg.get('voice') or voice_config.get('voice_id') or 'zh-CN-XiaoxiaoNeural').strip()
+        voice_id = (data.get('voice') or seg.get('voice') or voice_config.get('voice_id') or '').strip()
+        if not voice_id:
+            from backend.services.voiceover_service import VoiceoverService
+            voice_id = VoiceoverService._default_voice_id()
         voice_config.update({
             'voice_id': voice_id, 'voice': voice_id, 'engine': engine_key,
             'rate': voice_config.get('rate', seg.get('rate', 1)),

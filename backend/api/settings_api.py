@@ -638,7 +638,10 @@ def register_settings_routes(app, db_manager):
         """生成 Azure TTS 试听音频"""
         try:
             data = request.get_json() or {}
-            voice_id = (data.get('voice_id') or '').strip() or 'zh-CN-XiaoxiaoNeural'
+            voice_id = (data.get('voice_id') or '').strip()
+            if not voice_id:
+                from backend.services.voiceover_service import VoiceoverService
+                voice_id = VoiceoverService._default_voice_id()
             text = (data.get('text') or '').strip() or '这是 Azure TTS 试听示例，您好！'
 
             gs = get_global_state()

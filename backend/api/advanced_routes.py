@@ -503,7 +503,7 @@ def curated_remake_extract_script():
     try:
         data = request.get_json() or {}
         video_path = data.get('video_path', '').strip()
-        language = data.get('language', 'zh')
+        language = data.get('language')
         engine_name = data.get('engine', 'whisper')
 
         if not video_path:
@@ -933,6 +933,13 @@ def tts_synthesize():
         engine = data.get('engine', '')
         voice = data.get('voice', '')
         output_dir = data.get('output_dir', 'output/audios/tts_provider')
+        language = data.get('language')
+        if not language:
+            try:
+                from backend.core.global_state import get_global_state
+                language = get_global_state().get_user_setting('language', 'tts', 'zh-CN')
+            except Exception:
+                language = 'zh-CN'
         if not os.path.isabs(output_dir):
             from backend.config.paths import PROJECT_ROOT
             output_dir = str(PROJECT_ROOT / output_dir)
@@ -948,7 +955,7 @@ def tts_synthesize():
             text=text,
             output_path=output_path,
             voice=voice,
-            language=data.get('language', 'zh-CN'),
+            language=language,
             rate=data.get('rate', '+0%'),
             volume=data.get('volume', '+0%'),
             pitch=data.get('pitch'),

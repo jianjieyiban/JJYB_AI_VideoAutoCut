@@ -189,6 +189,16 @@
         }
     }
 
+    function applyLanguage(settings) {
+        if (settings && settings.app && window.appI18n) {
+            window.appI18n.apply(settings.app);
+        }
+    }
+
+    document.addEventListener('jjyb-language-changed', function (event) {
+        applyLanguage(event.detail);
+    });
+
     // 4. 监听跨标签页 storage 事件
     window.addEventListener('storage', function (event) {
         if (event.key === 'jjybAppearance') {
@@ -197,6 +207,9 @@
             } catch (e) {
                 // ignore parse errors
             }
+        }
+        if (event.key === 'jjybLanguage') {
+            try { applyLanguage(JSON.parse(event.newValue || '{}')); } catch (e) {}
         }
     });
 
@@ -248,6 +261,7 @@
                                     var localVal = localStorage.getItem(storageKey);
                                     if (!localVal) {
                                         localStorage.setItem(storageKey, JSON.stringify(result.data[mod]));
+                                        if (mod === 'language') applyLanguage(result.data[mod]);
                                     }
                                 } catch (e) {}
                             }

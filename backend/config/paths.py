@@ -3,12 +3,21 @@
 管理项目中所有资源文件的路径
 """
 import os
+import sys
 from pathlib import Path
 
-# 项目根目录
-BASE_DIR = Path(__file__).resolve().parent.parent
-PROJECT_ROOT = BASE_DIR.parent
-OUTPUT_DIR = PROJECT_ROOT / 'output'
+if getattr(sys, "frozen", False):
+    # PyInstaller 冻结模式（Anna Executa 二进制分发）：
+    # 资源（backend/assets）随包打包在 _MEIPASS/backend 下保持原布局，
+    # 输出/临时目录重定向到用户可写目录，避免写入程序安装目录。
+    BASE_DIR = Path(getattr(sys, "_MEIPASS", "")) / "backend"
+    PROJECT_ROOT = Path(os.environ.get("LOCALAPPDATA") or str(Path.home())) / "JJYB_AI智剪"
+    OUTPUT_DIR = PROJECT_ROOT / "output"
+else:
+    # 项目根目录
+    BASE_DIR = Path(__file__).resolve().parent.parent
+    PROJECT_ROOT = BASE_DIR.parent
+    OUTPUT_DIR = PROJECT_ROOT / 'output'
 
 
 def _is_within(path: Path, parent: Path) -> bool:

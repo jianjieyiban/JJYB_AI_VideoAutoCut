@@ -12,6 +12,7 @@ import subprocess
 from pathlib import Path
 from flask import Blueprint, request, jsonify, send_file
 from werkzeug.utils import secure_filename
+from backend.config.paths import PROJECT_ROOT
 
 from backend.config.ai_config import (
     AIServiceError,
@@ -21,6 +22,29 @@ from backend.config.ai_config import (
 )
 
 logger = logging.getLogger('JJYB_AI智剪')
+
+
+def _resolve_existing_video_path(value):
+    """Resolve absolute, project-relative, and upload URL paths consistently."""
+    raw = str(value or '').strip()
+    if not raw:
+        return None
+    candidates = []
+    path = Path(raw).expanduser()
+    if path.is_absolute():
+        candidates.append(path)
+    else:
+        candidates.append(PROJECT_ROOT / path)
+    if raw.startswith('/'):
+        candidates.append(PROJECT_ROOT / raw.lstrip('/'))
+    for candidate in candidates:
+        try:
+            resolved = candidate.resolve()
+        except OSError:
+            resolved = candidate.absolute()
+        if resolved.is_file():
+            return str(resolved)
+    return None
 
 
 # ==========================================================================
@@ -281,8 +305,10 @@ def register_commentary_routes_enhanced(app, db_manager, task_service, socketio)
                 video_path_abs = video_path
             else:
                 video_path_abs = os.path.normpath(os.path.join(base_dir, video_path))
-            if not os.path.exists(video_path_abs):
+            resolved_video_path = _resolve_existing_video_path(video_path)
+            if not resolved_video_path:
                 return jsonify({'code': 1, 'msg': '视频文件不存在', 'data': None}), 400
+            video_path_abs = resolved_video_path
 
             # 创建任务（使用真实 project_id 以便结果回写项目）
             task_id = str(uuid.uuid4())
@@ -393,7 +419,8 @@ def register_commentary_routes_enhanced(app, db_manager, task_service, socketio)
             if not project_id or not video_path:
                 return jsonify({'code': 1, 'msg': '缺少必要参数', 'data': None}), 400
 
-            if not os.path.exists(video_path):
+            video_path = _resolve_existing_video_path(video_path)
+            if not video_path:
                 return jsonify({'code': 1, 'msg': '视频文件不存在', 'data': None}), 400
 
             # 在后台执行完整处理，避免长视频的镜头分析阻塞 HTTP 响应，导致前端无法绑定任务进度。

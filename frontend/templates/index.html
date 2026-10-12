@@ -39,8 +39,8 @@
         }
     </style>
     <div class="loader-spinner"></div>
-    <div class="loader-text">正在加载编辑器...</div>
-    <div style="color: #888; font-size: 12px; margin-top: 10px;">首次加载可能需要几秒钟</div>
+    <div class="loader-text" data-i18n="loadingEditor">正在加载编辑器...</div>
+    <div style="color: #888; font-size: 12px; margin-top: 10px;" data-i18n="firstLoadTip">首次加载可能需要几秒钟</div>
 </div>
 
 <script>
@@ -244,18 +244,18 @@ console.log('✅ 页面基础脚本加载完成');
                                 <i class="fa fa-plus mr-2"></i>新建
                             </button>
                             <div class="divider"></div>
-                            <button id="undo-btn" class="toolbar-btn opacity-50 cursor-not-allowed" disabled aria-disabled="true" onclick="console.log('🔘 点击撤销按钮'); if(typeof undoEdit === 'function') undoEdit(); else alert('功能加载中，请稍候...');" title="撤销 (Ctrl+Z)">
-                                <i class="fa fa-undo mr-2"></i>撤销
+                            <button id="undo-btn" class="toolbar-btn opacity-50 cursor-not-allowed" disabled aria-disabled="true" onclick="console.log('🔘 点击撤销按钮'); if(typeof undoEdit === 'function') undoEdit(); else alert('功能加载中，请稍候...');" data-i18n-title="undo" title="撤销 (Ctrl+Z)">
+                                <i class="fa fa-undo mr-2"></i><span data-i18n="undo">撤销</span>
                             </button>
-                            <button id="redo-btn" class="toolbar-btn opacity-50 cursor-not-allowed" disabled aria-disabled="true" onclick="console.log('🔘 点击重做按钮'); if(typeof redoEdit === 'function') redoEdit(); else alert('功能加载中，请稍候...');" title="重做 (Ctrl+Y)">
-                                <i class="fa fa-repeat mr-2"></i>重做
+                            <button id="redo-btn" class="toolbar-btn opacity-50 cursor-not-allowed" disabled aria-disabled="true" onclick="console.log('🔘 点击重做按钮'); if(typeof redoEdit === 'function') redoEdit(); else alert('功能加载中，请稍候...');" data-i18n-title="redo" title="重做 (Ctrl+Y)">
+                                <i class="fa fa-repeat mr-2"></i><span data-i18n="redo">重做</span>
                             </button>
                             <div class="divider"></div>
-                            <button class="toolbar-btn toolbar-btn-primary" onclick="console.log('🔘 点击保存按钮'); if(typeof saveProject === 'function') saveProject(); else alert('功能加载中，请稍候...');" title="保存项目 (Ctrl+S)">
-                                <i class="fa fa-save mr-2"></i>保存
+                            <button class="toolbar-btn toolbar-btn-primary" onclick="console.log('🔘 点击保存按钮'); if(typeof saveProject === 'function') saveProject(); else alert('功能加载中，请稍候...');" data-i18n-title="save" title="保存项目 (Ctrl+S)">
+                                <i class="fa fa-save mr-2"></i><span data-i18n="save">保存</span>
                             </button>
-                            <button class="toolbar-btn toolbar-btn-export" onclick="console.log('🔘 点击导出按钮'); if(typeof exportVideo === 'function') exportVideo(); else alert('功能加载中，请稍候...');" title="导出视频">
-                                <i class="fa fa-download mr-2"></i>导出
+                            <button class="toolbar-btn toolbar-btn-export" onclick="console.log('🔘 点击导出按钮'); if(typeof exportVideo === 'function') exportVideo(); else alert('功能加载中，请稍候...');" data-i18n-title="export" title="导出视频">
+                                <i class="fa fa-download mr-2"></i><span data-i18n="export">导出</span>
                             </button>
                         </div>
                     </div>
@@ -429,10 +429,10 @@ console.log('✅ 页面基础脚本加载完成');
 
                         <div class="p-4 border-b border-border-color">
                             <div class="flex items-center justify-between flex-wrap gap-2">
-                                <h3 class="text-sm font-medium text-text-primary">视频预览</h3>
+                                <h3 class="text-sm font-medium text-text-primary" data-i18n="videoPreview">视频预览</h3>
                                 <div class="flex items-center flex-wrap gap-2">
                                     <div class="flex items-center space-x-2">
-                                        <span class="text-xs text-text-secondary">画质:</span>
+                                        <span class="text-xs text-text-secondary" data-i18n="quality">画质:</span>
                                         <select id="quality-select" class="operation-btn px-2 py-1 bg-dark-lighter text-text-secondary rounded-lg text-xs hover:bg-dark-lighter/80" onchange="changeQuality(this.value)">
                                             <option value="1080">1080p</option>
                                             <option value="720" selected>720p</option>
@@ -441,7 +441,7 @@ console.log('✅ 页面基础脚本加载完成');
                                     </div>
                                     <button class="operation-btn w-8 h-8 bg-dark-lighter rounded-full flex items-center justify-center text-text-secondary hover:bg-dark-lighter/80 tooltip" onclick="toggleFullscreen()">
                                         <i class="fa fa-expand"></i>
-                                        <span class="tooltip-text">全屏预览</span>
+                                        <span class="tooltip-text" data-i18n="fullscreenPreview">全屏预览</span>
                                     </button>
                                 </div>
                             </div>
@@ -630,9 +630,9 @@ console.log('✅ 页面基础脚本加载完成');
 
 <!-- 编辑器检查器内容：运行时挂载到全局右侧上下文栏，保持常驻布局 -->
 <details id="editor-embedded-panel" class="glass-card rounded-xl border border-border-color" open>
-  <summary class="p-3 text-sm font-medium text-text-primary cursor-pointer" id="embedded-title">剪辑检查器</summary>
+  <summary class="p-3 text-sm font-medium text-text-primary cursor-pointer" id="embedded-title" data-i18n="clipInspector">剪辑检查器</summary>
   <div id="embedded-content" class="overflow-auto p-4">
-    <div class="text-xs text-text-secondary leading-5">选择色彩校正、导出设置或历史操作后，相关参数会在此处显示。</div>
+    <div class="text-xs text-text-secondary leading-5" data-i18n="inspectorTip">选择色彩校正、导出设置或历史操作后，相关参数会在此处显示。</div>
   </div>
 </details>
 
@@ -641,18 +641,18 @@ console.log('✅ 页面基础脚本加载完成');
 
 <template id="tpl-panel-color">
   <div class="space-y-3">
-    <div class="text-sm font-medium text-text-primary mb-3">色彩校正</div>
+    <div class="text-sm font-medium text-text-primary mb-3" data-i18n="colorCorrection">色彩校正</div>
     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
       <div>
         <div class="flex items-center justify-between mb-1">
-          <label class="text-xs text-text-secondary">亮度</label>
+          <label class="text-xs text-text-secondary" data-i18n="brightness">亮度</label>
           <span class="text-xs text-primary" id="grid-brightness-value">0%</span>
         </div>
         <input id="grid-brightness-slider" type="range" class="w-full accent-primary" min="-100" max="100" value="0" style="height:6px;" oninput="adjustBrightness(this.value)">
       </div>
       <div>
         <div class="flex items-center justify-between mb-1">
-          <label class="text-xs text-text-secondary">对比度</label>
+          <label class="text-xs text-text-secondary" data-i18n="contrast">对比度</label>
           <span class="text-xs text-primary" id="grid-contrast-value">0%</span>
         </div>
         <input id="grid-contrast-slider" type="range" class="w-full accent-primary" min="-100" max="100" value="0" style="height:6px;" oninput="adjustContrast(this.value)">
@@ -3994,7 +3994,7 @@ window.openAIVision = window.openAIVision || function() {
                         <form class="layui-form" lay-filter="ai-subtitle-form">
                             <!-- 视频选择 -->
                             <div class="layui-form-item">
-                                <label class="layui-form-label">视频源</label>
+                                <label class="layui-form-label" data-i18n="videoSource">视频源</label>
                                 <div class="layui-input-block">
                                     <select name="video" lay-verify="required">
                                         <option value="">请选择视频</option>
@@ -4009,7 +4009,7 @@ window.openAIVision = window.openAIVision || function() {
                             <div class="layui-row layui-col-space15">
                                 <div class="layui-col-md6">
                                     <div class="layui-form-item">
-                                        <label class="layui-form-label">识别语言</label>
+                                        <label class="layui-form-label" data-i18n="recognitionLanguage">识别语言</label>
                                         <div class="layui-input-block">
                                             <select name="language" lay-verify="required">
                                                 <option value="zh">中文</option>

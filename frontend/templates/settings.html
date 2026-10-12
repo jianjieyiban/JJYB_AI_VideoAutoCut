@@ -7,23 +7,23 @@
 <div class="floating-actions left">
     <button onclick="window.location.href='/'" style="padding: 10px 20px; background: rgba(255,255,255,0.9); color: #667eea; border: 2px solid #667eea; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
         <span>←</span>
-        <span>返回首页</span>
+        <span data-i18n="backHome">返回首页</span>
     </button>
 </div>
 
 <!-- 快捷导航 -->
 <div class="floating-actions right">
     <button onclick="window.location.href='/commentary'" style="padding: 8px 16px; background: rgba(255,255,255,0.9); color: #667eea; border: 2px solid #667eea; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600;">
-        🎙️ 原创解说
+        🎙️ <span data-i18n="originalCommentary">原创解说</span>
     </button>
     <button onclick="window.location.href='/remix'" style="padding: 8px 16px; background: rgba(255,255,255,0.9); color: #667eea; border: 2px solid #667eea; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600;">
-        ✂️ 混剪模式
+        ✂️ <span data-i18n="remixMode">混剪模式</span>
     </button>
     <button onclick="window.location.href='/voiceover'" style="padding: 8px 16px; background: rgba(255,255,255,0.9); color: #667eea; border: 2px solid #667eea; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600;">
-        🔊 AI配音
+        🔊 <span data-i18n="aiVoiceover">AI配音</span>
     </button>
     <button onclick="window.location.href='/editor'" style="padding: 8px 16px; background: rgba(255,255,255,0.9); color: #667eea; border: 2px solid #667eea; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600;">
-        🎬 编辑器
+        🎬 <span data-i18n="editorMode">编辑器</span>
     </button>
 </div>
 
@@ -250,58 +250,58 @@
     <!-- 左侧导航栏 -->
     <aside class="settings-sidebar">
         <div class="sidebar-header">
-            <h3>⚙️ 系统设置</h3>
-            <p>配置您的智剪工作区</p>
+            <h3 data-i18n="systemSettings">⚙️ 系统设置</h3>
+            <p data-i18n="configureWorkspace">配置您的智剪工作区</p>
         </div>
 
         <ul class="settings-menu">
             <li class="menu-item">
                 <a class="menu-link active" data-tab="api" onclick="switchTab(event, 'api')">
                     <span class="menu-icon">🔑</span>
-                    <span class="menu-text">API配置</span>
-                    <span class="menu-badge">核心</span>
+                    <span class="menu-text" data-i18n="apiConfig">API配置</span>
+                    <span class="menu-badge" data-i18n="core">核心</span>
                 </a>
             </li>
             <li class="menu-item">
                 <a class="menu-link" data-tab="appearance" onclick="switchTab(event, 'appearance')">
                     <span class="menu-icon">🎨</span>
-                    <span class="menu-text">外观设置</span>
+                    <span class="menu-text" data-i18n="appearanceSettings">外观设置</span>
                 </a>
             </li>
             <li class="menu-item">
                 <a class="menu-link" data-tab="language" onclick="switchTab(event, 'language')">
                     <span class="menu-icon">🌐</span>
-                    <span class="menu-text">语言设置</span>
+                    <span class="menu-text" data-i18n="languageSettings">语言设置</span>
                 </a>
             </li>
             <li class="menu-item">
                 <a class="menu-link" data-tab="file" onclick="switchTab(event, 'file')">
                     <span class="menu-icon">📁</span>
-                    <span class="menu-text">文件设置</span>
+                    <span class="menu-text" data-i18n="fileSettings">文件设置</span>
                 </a>
             </li>
             <li class="menu-item">
                 <a class="menu-link" data-tab="notification" onclick="switchTab(event, 'notification')">
                     <span class="menu-icon">🔔</span>
-                    <span class="menu-text">通知设置</span>
+                    <span class="menu-text" data-i18n="notificationSettings">通知设置</span>
                 </a>
             </li>
             <li class="menu-item">
                 <a class="menu-link" data-tab="performance" onclick="switchTab(event, 'performance')">
                     <span class="menu-icon">⚡</span>
-                    <span class="menu-text">性能设置</span>
+                    <span class="menu-text" data-i18n="performanceSettings">性能设置</span>
                 </a>
             </li>
             <li class="menu-item">
                 <a class="menu-link" data-tab="advanced" onclick="switchTab(event, 'advanced')">
                     <span class="menu-icon">🔧</span>
-                    <span class="menu-text">高级设置</span>
+                    <span class="menu-text" data-i18n="advancedSettings">高级设置</span>
                 </a>
             </li>
             <li class="menu-item">
                 <a class="menu-link" data-tab="about" onclick="switchTab(event, 'about')">
                     <span class="menu-icon">ℹ️</span>
-                    <span class="menu-text">关于</span>
+                    <span class="menu-text" data-i18n="about">关于</span>
                 </a>
             </li>
         </ul>
@@ -322,11 +322,11 @@
                         <i class="fa fa-key" style="color: white; font-size: 32px;"></i>
                     </div>
                     <div style="flex: 1;">
-                        <h2 style="margin: 0 0 10px 0; font-size: 28px; color: white; font-weight: 900;">AI大模型API配置中心</h2>
-                        <p style="margin: 0; font-size: 14px; color: rgba(255,255,255,0.9); line-height: 1.5;">配置各大AI平台的API密钥，解锁强大的智能创作能力</p>
+                        <h2 style="margin: 0 0 10px 0; font-size: 28px; color: white; font-weight: 900;" data-i18n="aiModelConfigCenter">AI大模型API配置中心</h2>
+                        <p style="margin: 0; font-size: 14px; color: rgba(255,255,255,0.9); line-height: 1.5;" data-i18n="aiModelConfigTip">配置各大AI平台的API密钥，解锁强大的智能创作能力</p>
                     </div>
                     <button onclick="saveAPIConfig()" style="padding: 14px 30px; background: rgba(255,255,255,0.95); color: #667eea; border: none; border-radius: 12px; font-weight: 700; font-size: 15px; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.1); transition: all 0.3s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
-                        <i class="fa fa-save" style="margin-right: 6px;"></i>保存所有配置
+                        <i class="fa fa-save" style="margin-right: 6px;"></i><span data-i18n="saveAllConfig">保存所有配置</span>
                     </button>
                 </div>
             </div>
@@ -379,15 +379,15 @@
                         <div style="width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;">
                             <i class="fa fa-database" style="color:#fff"></i>
                         </div>
-                        <div style="color:#fff;font-weight:700;">存储情况</div>
+                        <div style="color:#fff;font-weight:700;" data-i18n="storageStatus">存储情况</div>
                     </div>
                     <div style="color:rgba(255,255,255,0.85);font-size:22px;font-weight:800;" id="metric-storage-app">--</div>
                     <div style="margin:10px 0;height:8px;background:rgba(255,255,255,0.12);border-radius:6px;overflow:hidden;">
                         <div id="metric-storage-progress" style="height:8px;width:0%;background:linear-gradient(90deg,#22d3ee,#6366f1);"></div>
                     </div>
                     <div style="display:flex;justify-content:space-between;color:rgba(255,255,255,0.7);font-size:12px;">
-                        <span id="metric-storage-used">已用 --</span>
-                        <span id="metric-storage-total">总计 --</span>
+                        <span id="metric-storage-used" data-i18n="used">已用 --</span>
+                        <span id="metric-storage-total" data-i18n="total">总计 --</span>
                     </div>
                 </div>
                 <!-- 项目个数 -->
@@ -396,7 +396,7 @@
                         <div style="width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;">
                             <i class="fa fa-folder" style="color:#fff"></i>
                         </div>
-                        <div style="color:#fff;font-weight:700;">项目概览</div>
+                        <div style="color:#fff;font-weight:700;" data-i18n="projectOverview">项目概览</div>
                     </div>
                     <div style="color:rgba(255,255,255,0.85);font-size:22px;font-weight:800;" id="metric-projects-total">--</div>
                     <div style="display:flex;gap:10px;margin-top:8px;color:rgba(255,255,255,0.75);font-size:12px;">
@@ -1739,12 +1739,12 @@
                 <!-- 编辑器布局 -->
                 <div style="background: rgba(30,41,59,0.4); border-radius: 20px; padding: 30px; margin-bottom: 25px; border: 1px solid rgba(236,72,153,0.2);">
                     <h3 style="margin: 0 0 20px 0; font-size: 18px; font-weight: 700; color: rgba(255,255,255,0.95); display: flex; align-items: center; gap: 10px;">
-                        <span style="font-size: 24px;">🧩</span> 编辑器布局
+                        <span style="font-size: 24px;">🧩</span> <span data-i18n="editorLayout">编辑器布局</span>
                     </h3>
                     <div style="background: rgba(15,23,42,0.4); padding: 20px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center;">
                         <div>
-                            <h4 style="margin: 0 0 5px 0; font-size: 15px; font-weight: 700; color: rgba(255,255,255,0.95);">默认折叠右侧属性栏</h4>
-                            <p style="margin: 0; font-size: 12px; color: rgba(255,255,255,0.6);">开启：进入编辑器时自动折叠；关闭：记住上次状态</p>
+                            <h4 style="margin: 0 0 5px 0; font-size: 15px; font-weight: 700; color: rgba(255,255,255,0.95);" data-i18n="autoCollapseSidebar">默认折叠右侧属性栏</h4>
+                            <p style="margin: 0; font-size: 12px; color: rgba(255,255,255,0.6);" data-i18n="autoCollapseTip">开启：进入编辑器时自动折叠；关闭：记住上次状态</p>
                         </div>
                         <label class="switch">
                             <input type="checkbox" id="editor-auto-collapse-switch" onchange="updateEditorAutoCollapsePref(this.checked)">
@@ -1757,10 +1757,10 @@
             <!-- 保存按钮 -->
             <div style="display: flex; justify-content: flex-end; gap: 15px;">
                 <button onclick="resetAppearance()" style="padding: 14px 30px; background: rgba(100,116,139,0.2); color: rgba(255,255,255,0.8); border: 1px solid rgba(100,116,139,0.3); border-radius: 12px; font-weight: 700; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.background='rgba(100,116,139,0.3)'" onmouseout="this.style.background='rgba(100,116,139,0.2)'">
-                    <i class="fa fa-undo" style="margin-right: 6px;"></i>恢复默认
+                    <i class="fa fa-undo" style="margin-right: 6px;"></i><span data-i18n="resetDefault">恢复默认</span>
                 </button>
                 <button onclick="saveAppearance()" style="padding: 14px 30px; background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%); color: white; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 15px rgba(236,72,153,0.3); transition: all 0.3s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
-                    <i class="fa fa-save" style="margin-right: 6px;"></i>保存设置
+                    <i class="fa fa-save" style="margin-right: 6px;"></i><span data-i18n="saveSettings">保存设置</span>
                 </button>
             </div>
         </div>
@@ -1828,10 +1828,17 @@
                 <h3 style="margin: 0 0 20px 0; font-size: 18px; font-weight: 700; color: rgba(255,255,255,0.95); display: flex; align-items: center; gap: 10px;">
                     <span style="font-size: 24px;">🌍</span> 应用语言
                 </h3>
+                <select name="app-language" aria-label="应用语言" style="position:absolute; width:1px; height:1px; opacity:0; pointer-events:none;">
+                    <option value="en-US" selected>English</option>
+                    <option value="zh-CN">简体中文</option>
+                    <option value="ja-JP">日本語</option>
+                    <option value="ko-KR">한국어</option>
+                    <option value="zh-TW">繁體中文</option>
+                </select>
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
                     <!-- 简体中文 -->
-                    <div onclick="selectLanguage('zh-CN')" style="background: linear-gradient(135deg, rgba(6,182,212,0.15) 0%, rgba(59,130,246,0.15) 100%); border: 2px solid #06b6d4; border-radius: 16px; padding: 20px; cursor: pointer; transition: all 0.3s; position: relative;" onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 25px rgba(6,182,212,0.3)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
-                        <div style="position: absolute; top: 10px; right: 10px; width: 20px; height: 20px; background: #06b6d4; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                    <div data-language="zh-CN" onclick="selectLanguage('zh-CN')" style="background: rgba(30,41,59,0.3); border: 2px solid rgba(6,182,212,0.2); border-radius: 16px; padding: 20px; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.transform='translateY(-3px)'; this.style.borderColor='#06b6d4'" onmouseout="this.style.transform='translateY(0)'; this.style.borderColor='rgba(6,182,212,0.2)'">
+                        <div class="lang-check-icon" style="position: absolute; top: 10px; right: 10px; width: 20px; height: 20px; background: #06b6d4; border-radius: 50%; display: none; align-items: center; justify-content: center;">
                             <i class="fa fa-check" style="color: white; font-size: 10px;"></i>
                         </div>
                         <div style="font-size: 32px; margin-bottom: 10px;">🇨🇳</div>
@@ -1840,28 +1847,31 @@
                     </div>
 
                     <!-- English -->
-                    <div onclick="selectLanguage('en-US')" style="background: rgba(30,41,59,0.3); border: 2px solid rgba(6,182,212,0.2); border-radius: 16px; padding: 20px; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.transform='translateY(-3px)'; this.style.borderColor='#06b6d4'" onmouseout="this.style.transform='translateY(0)'; this.style.borderColor='rgba(6,182,212,0.2)'">
+                    <div data-language="en-US" onclick="selectLanguage('en-US')" style="background: linear-gradient(135deg, rgba(6,182,212,0.15) 0%, rgba(59,130,246,0.15) 100%); border: 2px solid #06b6d4; border-radius: 16px; padding: 20px; cursor: pointer; transition: all 0.3s; position: relative;" onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 25px rgba(6,182,212,0.3)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                        <div class="lang-check-icon" style="position: absolute; top: 10px; right: 10px; width: 20px; height: 20px; background: #06b6d4; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                            <i class="fa fa-check" style="color: white; font-size: 10px;"></i>
+                        </div>
                         <div style="font-size: 32px; margin-bottom: 10px;">🇺🇸</div>
                         <h4 style="margin: 0 0 5px 0; font-size: 16px; font-weight: 700; color: rgba(255,255,255,0.95);">English</h4>
                         <p style="margin: 0; font-size: 12px; color: rgba(255,255,255,0.6);">United States</p>
                     </div>
 
                     <!-- 日本語 -->
-                    <div onclick="selectLanguage('ja-JP')" style="background: rgba(30,41,59,0.3); border: 2px solid rgba(6,182,212,0.2); border-radius: 16px; padding: 20px; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.transform='translateY(-3px)'; this.style.borderColor='#06b6d4'" onmouseout="this.style.transform='translateY(0)'; this.style.borderColor='rgba(6,182,212,0.2)'">
+                    <div data-language="ja-JP" onclick="selectLanguage('ja-JP')" style="background: rgba(30,41,59,0.3); border: 2px solid rgba(6,182,212,0.2); border-radius: 16px; padding: 20px; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.transform='translateY(-3px)'; this.style.borderColor='#06b6d4'" onmouseout="this.style.transform='translateY(0)'; this.style.borderColor='rgba(6,182,212,0.2)'">
                         <div style="font-size: 32px; margin-bottom: 10px;">🇯🇵</div>
                         <h4 style="margin: 0 0 5px 0; font-size: 16px; font-weight: 700; color: rgba(255,255,255,0.95);">日本語</h4>
                         <p style="margin: 0; font-size: 12px; color: rgba(255,255,255,0.6);">Japanese</p>
                     </div>
 
                     <!-- 한국어 -->
-                    <div onclick="selectLanguage('ko-KR')" style="background: rgba(30,41,59,0.3); border: 2px solid rgba(6,182,212,0.2); border-radius: 16px; padding: 20px; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.transform='translateY(-3px)'; this.style.borderColor='#06b6d4'" onmouseout="this.style.transform='translateY(0)'; this.style.borderColor='rgba(6,182,212,0.2)'">
+                    <div data-language="ko-KR" onclick="selectLanguage('ko-KR')" style="background: rgba(30,41,59,0.3); border: 2px solid rgba(6,182,212,0.2); border-radius: 16px; padding: 20px; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.transform='translateY(-3px)'; this.style.borderColor='#06b6d4'" onmouseout="this.style.transform='translateY(0)'; this.style.borderColor='rgba(6,182,212,0.2)'">
                         <div style="font-size: 32px; margin-bottom: 10px;">🇰🇷</div>
                         <h4 style="margin: 0 0 5px 0; font-size: 16px; font-weight: 700; color: rgba(255,255,255,0.95);">한국어</h4>
                         <p style="margin: 0; font-size: 12px; color: rgba(255,255,255,0.6);">Korean</p>
                     </div>
 
                     <!-- 繁體中文 -->
-                    <div onclick="selectLanguage('zh-TW')" style="background: rgba(30,41,59,0.3); border: 2px solid rgba(6,182,212,0.2); border-radius: 16px; padding: 20px; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.transform='translateY(-3px)'; this.style.borderColor='#06b6d4'" onmouseout="this.style.transform='translateY(0)'; this.style.borderColor='rgba(6,182,212,0.2)'">
+                    <div data-language="zh-TW" onclick="selectLanguage('zh-TW')" style="background: rgba(30,41,59,0.3); border: 2px solid rgba(6,182,212,0.2); border-radius: 16px; padding: 20px; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.transform='translateY(-3px)'; this.style.borderColor='#06b6d4'" onmouseout="this.style.transform='translateY(0)'; this.style.borderColor='rgba(6,182,212,0.2)'">
                         <div style="font-size: 32px; margin-bottom: 10px;">🇹🇼</div>
                         <h4 style="margin: 0 0 5px 0; font-size: 16px; font-weight: 700; color: rgba(255,255,255,0.95);">繁體中文</h4>
                         <p style="margin: 0; font-size: 12px; color: rgba(255,255,255,0.6);">Traditional Chinese</p>
@@ -1888,8 +1898,8 @@
                             </div>
                         </div>
                         <select name="asr-language" style="width: 100%; padding: 14px; background: rgba(15,23,42,0.6); border: 1px solid rgba(6,182,212,0.3); border-radius: 12px; color: rgba(255,255,255,0.9); font-size: 14px; cursor: pointer;">
-                            <option value="zh-CN" selected>🇨🇳 中文</option>
-                            <option value="en-US">🇺🇸 英文</option>
+                            <option value="zh-CN">🇨🇳 中文</option>
+                            <option value="en-US" selected>🇺🇸 English</option>
                             <option value="ja-JP">🇯🇵 日文</option>
                             <option value="ko-KR">🇰🇷 韩文</option>
                             <option value="auto">🌐 自动识别</option>
@@ -1908,8 +1918,8 @@
                             </div>
                         </div>
                         <select name="tts-language" style="width: 100%; padding: 14px; background: rgba(15,23,42,0.6); border: 1px solid rgba(6,182,212,0.3); border-radius: 12px; color: rgba(255,255,255,0.9); font-size: 14px; cursor: pointer;">
-                            <option value="zh-CN" selected>🇨🇳 中文</option>
-                            <option value="en-US">🇺🇸 英文</option>
+                            <option value="zh-CN">🇨🇳 中文</option>
+                            <option value="en-US" selected>🇺🇸 English</option>
                             <option value="ja-JP">🇯🇵 日文</option>
                             <option value="ko-KR">🇰🇷 韩文</option>
                         </select>
@@ -1925,7 +1935,7 @@
                     </div>
                     <div>
                         <h4 style="margin: 0 0 5px 0; font-size: 15px; font-weight: 700; color: rgba(255,255,255,0.95);">重要提示</h4>
-                        <p style="margin: 0; font-size: 13px; color: rgba(255,255,255,0.75); line-height: 1.6;">应用语言设置需要重启应用才能生效，AI功能语言设置立即生效</p>
+                        <p style="margin: 0; font-size: 13px; color: rgba(255,255,255,0.75); line-height: 1.6;">界面语言保存后立即应用；ASR 与 TTS 语言用于后续新任务，进行中的任务不会被改写。</p>
                     </div>
                 </div>
             </div>
@@ -3150,18 +3160,19 @@
     // 保存语言设置
     window.saveLanguage = async function() {
         var payload = { language: {
-            app: _val('select[name="app-language"]') || 'zh-CN',
-            asr: _val('select[name="asr-language"]') || 'zh-CN',
-            tts: _val('select[name="tts-language"]') || 'zh-CN'
+            app: _val('select[name="app-language"]') || 'en-US',
+            asr: _val('select[name="asr-language"]') || 'en-US',
+            tts: _val('select[name="tts-language"]') || 'en-US'
         }};
         try {
             var res = await fetch('/api/settings', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)}).then(function(r){return r.json();});
             if (res && res.code === 0) {
                 // 同步到 localStorage 实现跨页面同步
                 try { localStorage.setItem('jjybLanguage', JSON.stringify(payload.language)); } catch(_) {}
-                // 触发自定义事件
                 try { document.dispatchEvent(new CustomEvent('jjyb-language-changed', { detail: payload.language })); } catch(_) {}
-                _toast('语言设置已保存', 1);
+                if (window.appI18n) window.appI18n.apply(payload.language.app);
+                window.selectLanguage && window.selectLanguage(payload.language.app);
+                _toast('语言设置已保存并立即应用', 1);
             } else {
                 _toast('保存失败: ' + ((res && res.msg) || ''), 2);
             }
@@ -3313,7 +3324,11 @@
                 // 同步所有设置到 localStorage，实现跨页面实时同步
                 try {
                     if (payload.appearance) localStorage.setItem('jjybAppearance', JSON.stringify(payload.appearance));
-                    if (payload.language) localStorage.setItem('jjybLanguage', JSON.stringify(payload.language));
+                    if (payload.language) {
+                        localStorage.setItem('jjybLanguage', JSON.stringify(payload.language));
+                        document.dispatchEvent(new CustomEvent('jjyb-language-changed', { detail: payload.language }));
+                        if (window.appI18n) window.appI18n.apply(payload.language.app);
+                    }
                     if (payload.file) localStorage.setItem('jjybFileSettings', JSON.stringify(payload.file));
                     if (payload.notification) localStorage.setItem('jjybNotification', JSON.stringify(payload.notification));
                     if (payload.performance) localStorage.setItem('jjybPerformance', JSON.stringify(payload.performance));
@@ -3830,6 +3845,38 @@
             });
         }
 
+        // 统一的API测试函数 - 适配后端 /api/settings/test-api 统一接口
+        window._testApi = function(provider, apiKey, baseUrl, extraParams) {
+            return new Promise(function(resolve, reject) {
+                var loading = layer.load(2, {content: '测试连接中...'});
+
+                var payload = {
+                    api_type: provider,
+                    api_key: apiKey || '',
+                    base_url: baseUrl || ''
+                };
+
+                // 合并额外参数
+                if (extraParams) {
+                    for (var key in extraParams) {
+                        if (extraParams.hasOwnProperty(key)) {
+                            payload[key] = extraParams[key];
+                        }
+                    }
+                }
+
+                apiRequest('/api/settings/test-api', 'POST', payload, function(data) {
+                    layer.close(loading);
+                    layer.msg('✅ ' + (data.msg || '连接成功'), {icon: 1, time: 2000});
+                    resolve(data);
+                }, function(error) {
+                    layer.close(loading);
+                    layer.msg('❌ 连接失败: ' + error, {icon: 2, time: 3000});
+                    reject(error);
+                });
+            });
+        };
+
         // 测试OpenAI连接
         window.testOpenAI = function() {
             var apiKey = $('input[name="openai_api_key"]').val();
@@ -3838,21 +3885,10 @@
 
             if (!apiKey) {
                 layer.msg('请先输入OpenAI API Key', {icon: 2});
-                return;
+                return Promise.reject('No API Key');
             }
 
-            var loading = layer.load(2, {content: '测试连接中...'});
-            apiRequest('/api/test/openai', 'POST', {
-                api_key: apiKey,
-                base_url: baseUrl,
-                model: model
-            }, function(data) {
-                layer.close(loading);
-                layer.msg('✅ OpenAI连接成功！', {icon: 1, time: 2000});
-            }, function(error) {
-                layer.close(loading);
-                layer.msg('❌ 连接失败: ' + error, {icon: 2, time: 3000});
-            });
+            return window._testApi('openai', apiKey, baseUrl, {model: model});
         };
 
         // 测试Anthropic/Claude连接
@@ -3862,20 +3898,10 @@
 
             if (!apiKey) {
                 layer.msg('请先输入Anthropic API Key', {icon: 2});
-                return;
+                return Promise.reject('No API Key');
             }
 
-            var loading = layer.load(2, {content: '测试连接中...'});
-            apiRequest('/api/test/anthropic', 'POST', {
-                api_key: apiKey,
-                model: model
-            }, function(data) {
-                layer.close(loading);
-                layer.msg('✅ Claude连接成功！', {icon: 1, time: 2000});
-            }, function(error) {
-                layer.close(loading);
-                layer.msg('❌ 连接失败: ' + error, {icon: 2, time: 3000});
-            });
+            return window._testApi('anthropic', apiKey, '', {model: model});
         };
 
         // 测试Claude连接（别名）
@@ -3887,20 +3913,10 @@
 
             if (!apiKey) {
                 layer.msg('请先输入Gemini API Key', {icon: 2});
-                return;
+                return Promise.reject('No API Key');
             }
 
-            var loading = layer.load(2, {content: '测试Gemini连接中...'});
-            apiRequest('/api/test/gemini', 'POST', {
-                api_key: apiKey
-            }, function(data) {
-                layer.close(loading);
-                var msg = (data && data.msg) ? data.msg : 'Gemini连接测试完成';
-                layer.msg('✅ ' + msg, {icon: 1, time: 2000});
-            }, function(error) {
-                layer.close(loading);
-                layer.msg('❌ 连接失败: ' + error, {icon: 2, time: 3000});
-            });
+            return window._testApi('gemini', apiKey, '');
         };
 
         // 测试月之暗面Kimi连接
@@ -3909,20 +3925,10 @@
 
             if (!apiKey) {
                 layer.msg('请先输入Kimi API Key', {icon: 2});
-                return;
+                return Promise.reject('No API Key');
             }
 
-            var loading = layer.load(2, {content: '测试Kimi连接中...'});
-            apiRequest('/api/test/kimi', 'POST', {
-                api_key: apiKey
-            }, function(data) {
-                layer.close(loading);
-                var msg = (data && data.msg) ? data.msg : 'Kimi连接测试完成';
-                layer.msg('✅ ' + msg, {icon: 1, time: 2000});
-            }, function(error) {
-                layer.close(loading);
-                layer.msg('❌ 连接失败: ' + error, {icon: 2, time: 3000});
-            });
+            return window._testApi('kimi', apiKey, '');
         };
 
         // 测试讯飞星火连接
@@ -3932,21 +3938,10 @@
 
             if (!apiKey || !apiSecret) {
                 layer.msg('请先输入讯飞星火API Key和API Secret', {icon: 2});
-                return;
+                return Promise.reject('Missing credentials');
             }
 
-            var loading = layer.load(2, {content: '测试讯飞星火连接中...'});
-            apiRequest('/api/test/spark', 'POST', {
-                api_key: apiKey,
-                api_secret: apiSecret
-            }, function(data) {
-                layer.close(loading);
-                var msg = (data && data.msg) ? data.msg : '讯飞星火连接测试完成';
-                layer.msg('✅ ' + msg, {icon: 1, time: 2000});
-            }, function(error) {
-                layer.close(loading);
-                layer.msg('❌ 连接失败: ' + error, {icon: 2, time: 3000});
-            });
+            return window._testApi('spark', apiKey, '', {api_secret: apiSecret});
         };
 
         // 测试通义千问连接
@@ -3955,20 +3950,10 @@
 
             if (!apiKey) {
                 layer.msg('请先输入通义千问API Key', {icon: 2});
-                return;
+                return Promise.reject('No API Key');
             }
 
-            var loading = layer.load(2, {content: '测试通义千问连接中...'});
-            apiRequest('/api/test/qwen', 'POST', {
-                api_key: apiKey
-            }, function(data) {
-                layer.close(loading);
-                var msg = (data && data.msg) ? data.msg : '通义千问连接测试完成';
-                layer.msg('✅ ' + msg, {icon: 1, time: 2000});
-            }, function(error) {
-                layer.close(loading);
-                layer.msg('❌ 连接失败: ' + error, {icon: 2, time: 3000});
-            });
+            return window._testApi('qwen', apiKey, '');
         };
 
         // 测试文心一言连接
@@ -3978,21 +3963,11 @@
 
             if (!apiKey || !secretKey) {
                 layer.msg('请先输入文心一言API Key和Secret Key', {icon: 2});
-                return;
+                return Promise.reject('Missing credentials');
             }
 
-            var loading = layer.load(2, {content: '测试文心一言连接中...'});
-            apiRequest('/api/test/ernie', 'POST', {
-                api_key: apiKey,
-                secret_key: secretKey
-            }, function(data) {
-                layer.close(loading);
-                var msg = (data && data.msg) ? data.msg : '文心一言连接测试完成';
-                layer.msg('✅ ' + msg, {icon: 1, time: 2000});
-            }, function(error) {
-                layer.close(loading);
-                layer.msg('❌ 连接失败: ' + error, {icon: 2, time: 3000});
-            });
+            // 文心一言需要 ak:sk 格式
+            return window._testApi('ernie', apiKey + ':' + secretKey, '');
         };
 
         // 测试ChatGLM连接
@@ -4001,20 +3976,10 @@
 
             if (!apiKey) {
                 layer.msg('请先输入ChatGLM API Key', {icon: 2});
-                return;
+                return Promise.reject('No API Key');
             }
 
-            var loading = layer.load(2, {content: '测试ChatGLM连接中...'});
-            apiRequest('/api/test/chatglm', 'POST', {
-                api_key: apiKey
-            }, function(data) {
-                layer.close(loading);
-                var msg = (data && data.msg) ? data.msg : 'ChatGLM连接测试完成';
-                layer.msg('✅ ' + msg, {icon: 1, time: 2000});
-            }, function(error) {
-                layer.close(loading);
-                layer.msg('❌ 连接失败: ' + error, {icon: 2, time: 3000});
-            });
+            return window._testApi('chatglm', apiKey, '');
         };
 
         // 测试DeepSeek连接
@@ -4023,20 +3988,10 @@
 
             if (!apiKey) {
                 layer.msg('请先输入DeepSeek API Key', {icon: 2});
-                return;
+                return Promise.reject('No API Key');
             }
 
-            var loading = layer.load(2, {content: '测试DeepSeek连接中...'});
-            apiRequest('/api/test/deepseek', 'POST', {
-                api_key: apiKey
-            }, function(data) {
-                layer.close(loading);
-                var msg = (data && data.msg) ? data.msg : 'DeepSeek连接测试完成';
-                layer.msg('✅ ' + msg, {icon: 1, time: 2000});
-            }, function(error) {
-                layer.close(loading);
-                layer.msg('❌ 连接失败: ' + error, {icon: 2, time: 3000});
-            });
+            return window._testApi('deepseek', apiKey, '');
         };
 
         // 测试GPT-4V连接
@@ -4046,21 +4001,10 @@
 
             if (!apiKey) {
                 layer.msg('请先输入GPT-4V API Key', {icon: 2});
-                return;
+                return Promise.reject('No API Key');
             }
 
-            var loading = layer.load(2, {content: '测试GPT-4V连接中...'});
-            apiRequest('/api/test/gpt4v', 'POST', {
-                api_key: apiKey,
-                model: model
-            }, function(data) {
-                layer.close(loading);
-                var msg = (data && data.msg) ? data.msg : 'GPT-4V连接测试完成';
-                layer.msg('✅ ' + msg, {icon: 1, time: 2000});
-            }, function(error) {
-                layer.close(loading);
-                layer.msg('❌ 连接失败: ' + error, {icon: 2, time: 3000});
-            });
+            return window._testApi('gpt4v', apiKey, '', {model: model});
         };
 
         // 测试Claude Vision连接
@@ -4069,20 +4013,10 @@
 
             if (!apiKey) {
                 layer.msg('请先输入Claude Vision API Key', {icon: 2});
-                return;
+                return Promise.reject('No API Key');
             }
 
-            var loading = layer.load(2, {content: '测试Claude Vision连接中...'});
-            apiRequest('/api/test/claude-vision', 'POST', {
-                api_key: apiKey
-            }, function(data) {
-                layer.close(loading);
-                var msg = (data && data.msg) ? data.msg : 'Claude Vision连接测试完成';
-                layer.msg('✅ ' + msg, {icon: 1, time: 2000});
-            }, function(error) {
-                layer.close(loading);
-                layer.msg('❌ 连接失败: ' + error, {icon: 2, time: 3000});
-            });
+            return window._testApi('claude_vision', apiKey, '');
         };
 
         // 测试Azure TTS连接
@@ -4092,21 +4026,10 @@
 
             if (!apiKey) {
                 layer.msg('请先输入Azure TTS Subscription Key', {icon: 2});
-                return;
+                return Promise.reject('No API Key');
             }
 
-            var loading = layer.load(2, {content: '测试Azure TTS连接中...'});
-            apiRequest('/api/test/azure-tts', 'POST', {
-                subscription_key: apiKey,
-                region: region
-            }, function(data) {
-                layer.close(loading);
-                var msg = (data && data.msg) ? data.msg : 'Azure TTS连接测试完成';
-                layer.msg('✅ ' + msg, {icon: 1, time: 2000});
-            }, function(error) {
-                layer.close(loading);
-                layer.msg('❌ 连接失败: ' + error, {icon: 2, time: 3000});
-            });
+            return window._testApi('azure-tts', apiKey, '', {region: region});
         };
 
         // ========== 批量操作和实用功能 ==========
@@ -4519,9 +4442,8 @@
             });
             function selectLanguage(lang){
                 try{ $('select[name="app-language"]').val(lang); form.render('select'); }catch(e){}
-                document.querySelectorAll('#settings-language [onclick^="selectLanguage"]').forEach(function(card){
-                    var match = card.getAttribute('onclick').match(/selectLanguage\('([^']+)'\)/);
-                    var selected = match && match[1] === lang;
+                document.querySelectorAll('#settings-language [data-language]').forEach(function(card){
+                    var selected = card.dataset.language === lang;
                     card.style.borderColor = selected ? '#06b6d4' : 'rgba(6,182,212,0.2)';
                     card.style.background = selected
                         ? 'linear-gradient(135deg, rgba(6,182,212,0.15) 0%, rgba(59,130,246,0.15) 100%)'
@@ -4532,6 +4454,7 @@
                         check.className = 'lang-check-icon';
                         check.style.cssText = 'position:absolute;top:10px;right:10px;width:20px;height:20px;background:#06b6d4;border-radius:50%;display:flex;align-items:center;justify-content:center;';
                         check.innerHTML = '<i class="fa fa-check" style="color:white;font-size:10px;"></i>';
+                        card.style.position = 'relative';
                         card.appendChild(check);
                     }
                     if (check) check.style.display = selected ? 'flex' : 'none';
@@ -4605,12 +4528,12 @@
                     const res = await fetch('/api/settings', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)}).then(r=>r.json());
                     hideLoading(loading);
                     if(res && res.code===0){
-                        // 同步到 localStorage 实现跨页面同步
                         try{ localStorage.setItem('jjybLanguage', JSON.stringify(payload.language)); }catch(_){}
-                        // 触发自定义事件
                         document.dispatchEvent(new CustomEvent('jjyb-language-changed', { detail: payload.language }));
-                        layer.msg('✅ 语言设置已保存',{icon:1});
-                    } else { layer.msg('❌ 保存失败',{icon:2}); }
+                        if(window.appI18n) window.appI18n.apply(payload.language.app);
+                        selectLanguage(payload.language.app);
+                        layer.msg('语言设置已保存并立即应用',{icon:1});
+                    } else { layer.msg('保存失败',{icon:2}); }
                 }catch(e){ hideLoading(loading); layer.msg('❌ 保存异常',{icon:2}); }
             }
             async function saveFileSettings(){
@@ -4781,9 +4704,12 @@
 
             // 语言设置
             if (settings.language) {
-                $('select[name="app-language"]').val(settings.language.app || 'zh-CN');
-                $('select[name="asr-language"]').val(settings.language.asr || 'zh-CN');
-                $('select[name="tts-language"]').val(settings.language.tts || 'zh-CN');
+                var appLanguage = settings.language.app || 'en-US';
+                $('select[name="app-language"]').val(appLanguage);
+                $('select[name="asr-language"]').val(settings.language.asr || 'en-US');
+                $('select[name="tts-language"]').val(settings.language.tts || 'en-US');
+                selectLanguage(appLanguage);
+                if (window.appI18n) window.appI18n.apply(appLanguage);
             }
 
             // 文件设置

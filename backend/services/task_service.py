@@ -53,6 +53,28 @@ class TaskService:
 
         logger.info('✅ TaskService初始化完成，所有引擎已加载')
 
+    def _emit_progress(self, task_id: str, progress: int, step: str, detail: str = None):
+        """
+        发送详细进度更新到前端
+
+        Args:
+            task_id: 任务ID
+            progress: 进度值 (0-100)
+            step: 当前步骤名称
+            detail: 详细描述
+        """
+        try:
+            self.db_manager.update_task_progress(task_id, progress)
+            self.socketio.emit('task_progress', {
+                'task_id': task_id,
+                'progress': progress,
+                'step': step,
+                'detail': detail or '',
+                'timestamp': time.time()
+            })
+        except Exception as e:
+            logger.debug(f'进度推送失败 (任务 {task_id}): {e}')
+
     def process_task(self, task_id: str, task_type: str, input_data: Dict):
         """
         通用任务处理
@@ -213,17 +235,9 @@ class TaskService:
     def _run_remix_task(self, task_id: str, input_data: Dict):
         """执行混剪任务的实际处理逻辑（基础版）"""
         try:
-            # 标记任务运行中
+            # 标记任务运行中，发送详细进度
             self.db_manager.update_task_status(task_id, 'running')
-            self.db_manager.update_task_progress(task_id, 5)
-            try:
-                self.socketio.emit('task_status', {
-                    'task_id': task_id,
-                    'status': 'running',
-                    'progress': 5
-                })
-            except Exception:
-                pass
+            self._emit_progress(task_id, 5, '准备阶段', '初始化混剪任务...')
 
             plan: Dict = (input_data or {}).get('plan') or {}
             project_id: str = (input_data or {}).get('project_id') or ''
@@ -368,7 +382,7 @@ class TaskService:
                         if bgm_obj.exists():
                             engine = get_beat_remix_engine()
                             if getattr(engine, 'librosa_available', False) and getattr(engine, 'cv2_available', False):
-                                self.db_manager.update_task_progress(task_id, 20)
+                                self._emit_progress(task_id, 20, '卡点分析', '正在分析音乐节拍...')
                                 logger.info(f'🎵 混剪任务 {task_id}: 使用 BeatRemixEngine 进行音乐卡点剪辑')
 
                                 beat_target_duration = target_duration
@@ -395,6 +409,8 @@ class TaskService:
 
                                     segment_paths = []
                                     segment_durations = []
+                                    total_segments = len(beat_matches)
+                                    self._emit_progress(task_id, 25, '片段裁剪', f'正在裁剪 {total_segments} 个卡点片段...')
                                     for idx, match in enumerate(beat_matches):
                                         clip_path = match.get('clip_path')
                                         output_duration = float(match.get('output_duration', match.get('duration')) or 0)
@@ -436,7 +452,7 @@ class TaskService:
                                     if not segment_paths or len(segment_paths) != len(beat_matches):
                                         raise RuntimeError('未完整渲染全部卡点片段')
                                     merged_path = output_dir / f'{task_id}_beat_merged.mp4'
-                                    self.db_manager.update_task_progress(task_id, 60)
+                                    self._emit_progress(task_id, 60, '片段合并', '正在合并卡点片段...')
                                     if len(segment_paths) >= 2:
                                         # 音乐卡点必须硬切；任何重叠转场都会破坏 beat 边界。
                                         merged_ok = self.video_processor.merge_videos_with_transitions(
@@ -452,7 +468,7 @@ class TaskService:
                                         raise RuntimeError('卡点硬切合并后时长未覆盖目标')
 
                                     music_out = output_dir / f'{task_id}_beat_with_bgm.mp4'
-                                    self.db_manager.update_task_progress(task_id, 80)
+                                    self._emit_progress(task_id, 80, '添加BGM', '正在添加背景音乐...')
                                     _add_bgm_exact(str(merged_path), str(bgm_obj), str(music_out))
                                     final_path = music_out
                                     used_beat_remix = True
@@ -585,7 +601,7 @@ class TaskService:
                     if segment_paths:
                         merged_path = output_dir / f'{task_id}_clips_merged.mp4'
                         # 稍微提前一些进度，表示已完成片段裁剪
-                        self.db_manager.update_task_progress(task_id, 30)
+                        self._emit_progress(task_id, 30, '片段裁剪完成', f'已裁剪 {len(segment_paths)} 个片段')
                         if len(segment_paths) >= 2:
                             # 目标时长规划后的普通片段同样不能使用重叠转场，否则会缩短成片。
                             merged_ok = self.video_processor.merge_videos_with_transitions(
@@ -598,7 +614,7 @@ class TaskService:
                         if not merged_ok:
                             raise RuntimeError('精彩片段合并失败')
 
-                        self.db_manager.update_task_progress(task_id, 60)
+                        self._emit_progress(task_id, 60, '片段合并', '正在合并视频片段...')
                         merge_source_path = merged_path
                         final_path = merged_path
                         editing_mode = 'highlight_clips'
@@ -657,7 +673,7 @@ class TaskService:
                     if not merged_ok or not merged_path.exists():
                         raise RuntimeError('视频合并/转码失败')
 
-                    self.db_manager.update_task_progress(task_id, 60)
+                    self._emit_progress(task_id, 60, '视频合并', '整段视频合并完成')
                     merge_source_path = merged_path
                     final_path = merged_path
 
@@ -715,11 +731,15 @@ class TaskService:
                         if requested_engine in ('indextts2', 'volcano'):
                             raise RuntimeError(f'主任务暂不支持 {requested_engine} 自动配音合成')
                         voiceover_path = output_dir / f'{task_id}_voiceover.mp3'
+                        voice = plan.get('voice')
+                        if not voice:
+                            from backend.services.voiceover_service import VoiceoverService
+                            voice = VoiceoverService._default_voice_id()
                         voice_ok = self.tts_engine.synthesize(
                             text=subtitle_text,
                             output_path=str(voiceover_path),
                             engine=requested_engine,
-                            voice=plan.get('voice') or 'zh-CN-XiaoxiaoNeural',
+                            voice=voice,
                         )
                         if voice_ok and voiceover_path.exists() and voiceover_path.stat().st_size > 0:
                             audio_paths.append(str(voiceover_path))
@@ -729,7 +749,7 @@ class TaskService:
                         voiceover_error = str(voice_error) or '自动配音合成失败'
                         logger.warning('混剪任务自动配音失败，继续完成视频任务: %s', voiceover_error)
 
-            self.db_manager.update_task_progress(task_id, 90)
+            self._emit_progress(task_id, 90, '后期处理', '正在生成最终视频...')
 
             # 获取输出视频信息
             info = {}
@@ -794,7 +814,7 @@ class TaskService:
             if beat_remix_failure:
                 output_data['beat_remix_failure'] = beat_remix_failure
 
-            self.db_manager.update_task_progress(task_id, 100)
+            self._emit_progress(task_id, 100, '完成', f'视频生成完成，时长 {duration:.1f}秒')
             self.db_manager.update_task_status(task_id, 'completed', output_data=output_data)
             checkpoint_service.mark_stage_completed(task_id, 'clip_plan', {'editing_mode': editing_mode})
             checkpoint_service.mark_stage_completed(task_id, 'video_compose', {'output_path': str(final_path)})
@@ -805,6 +825,7 @@ class TaskService:
                     'task_id': task_id,
                     'status': 'completed',
                     'progress': 100,
+                    'step': '完成',
                     'output': output_data
                 })
             except Exception:
@@ -1018,7 +1039,20 @@ class TaskService:
             out_path = Path(f"temp/outputs/{task_id}.mp3")
             out_path.parent.mkdir(parents=True, exist_ok=True)
             text = data.get('text') or ''
-            voice = data.get('voice', 'zh-CN-XiaoxiaoNeural')
+            voice = data.get('voice')
+            if not voice:
+                try:
+                    from backend.core.global_state import get_global_state
+                    state = get_global_state()
+                    language = state.get_user_setting('language', 'tts', None)
+                    voice = {
+                        'en': 'en-US-JennyNeural',
+                        'ja': 'ja-JP-NanamiNeural',
+                        'ko': 'ko-KR-SunHiNeural',
+                    }.get(str(language or '').lower().split('-', 1)[0], 'zh-CN-XiaoxiaoNeural')
+                except Exception:
+                    from backend.services.voiceover_service import VoiceoverService
+                    voice = VoiceoverService._default_voice_id()
 
             # 回退链路：edge-tts -> gTTS -> pyttsx3
             ok = False
@@ -1093,9 +1127,9 @@ class TaskService:
             logger.info(f'开始处理ASR任务: {task_id}')
 
             asr_engine = ASREngine()
-            result = asr_engine.transcribe(
+            result = asr_engine.recognize(
                 audio_path=data.get('audio_path'),
-                language=data.get('language', 'zh')
+                language=data.get('language')
             )
 
             self.db_manager.update_task_status(task_id, 'completed', output_data=result)

@@ -25,6 +25,11 @@ logger = logging.getLogger('JJYB_AI智剪')
 class CommentaryService:
     """原创解说剪辑服务 - 完整实现"""
 
+    @staticmethod
+    def _default_voice_id(language: Optional[str] = None) -> str:
+        from backend.services.voiceover_service import VoiceoverService
+        return VoiceoverService._default_voice_id(language)
+
     def __init__(self, db_manager, socketio, task_service):
         """
         初始化原创解说剪辑服务
@@ -93,7 +98,7 @@ class CommentaryService:
             # 保存配置
             config = {
                 'script': data.get('script', ''),
-                'voice': data.get('voice', 'zh-CN-XiaoxiaoNeural'),
+                'voice': data.get('voice') or self._default_voice_id(),
                 'bgm': data.get('bgm', ''),
                 'auto_subtitle': data.get('auto_subtitle', True),
                 'auto_bgm': data.get('auto_bgm', True)
@@ -317,7 +322,7 @@ class CommentaryService:
             if not clips:
                 return []
 
-            voice_id = voice_config.get('voice_id') or voice_config.get('voice') or 'zh-CN-XiaoxiaoNeural'
+            voice_id = voice_config.get('voice_id') or voice_config.get('voice') or self._default_voice_id()
             engine = voice_config.get('engine') or None
 
             out_dir = PROJECT_ROOT / 'output' / 'commentary_voice'
@@ -1157,7 +1162,7 @@ class CommentaryService:
         failed_items: List[Dict] = []
         out_dir = PROJECT_ROOT / 'output' / 'commentary_voice'
         out_dir.mkdir(parents=True, exist_ok=True)
-        voice_id = voice_config.get('voice_id') or voice_config.get('voice') or 'zh-CN-XiaoxiaoNeural'
+        voice_id = voice_config.get('voice_id') or voice_config.get('voice') or self._default_voice_id()
         engine = (voice_config.get('engine') or '').strip().lower()
         engine = {'azure-tts': 'azure', 'azure_tts': 'azure', 'edge': 'edge-tts', 'edgetts': 'edge-tts',
                   'indextts': 'indextts2', 'index_tts': 'indextts2', 'index-tts2': 'indextts2'}.get(engine, engine)

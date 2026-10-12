@@ -27,6 +27,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js" defer></script>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js" defer></script>
     <script src="{{ url_for('static', filename='js/common.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/i18n.js') }}" defer></script>
 
     <!-- Tailwind配置 -->
     <script>
@@ -852,27 +853,27 @@
                             <i class="fa fa-scissors text-white text-lg"></i>
                         </div>
                         <div>
-                            <h1 class="text-xl font-bold gradient-text">JJYB_AI智剪</h1>
-                            <p class="text-xs text-text-secondary">Professional Video Editor</p>
+                            <h1 class="text-xl font-bold gradient-text" data-i18n="appName">JJYB_AI智剪</h1>
+                            <p class="text-xs text-text-secondary" data-i18n="appSubtitle">Professional Video Editor</p>
                         </div>
                     </div>
 
                     <!-- 主导航 - 优化后 -->
                     <div class="hidden md:flex items-center gap-3" style="background: rgba(255,255,255,0.03); padding: 6px; border-radius: 14px;">
                         <button class="nav-btn px-6 py-2.5 rounded-xl text-sm font-medium bg-dark-lighter text-text-secondary hover:bg-dark-lighter/80" data-nav-path="/editor" onclick="loadPage('index')" style="transition: all 0.3s;">
-                            <i class="fa fa-home mr-2"></i>编辑
+                            <i class="fa fa-home mr-2"></i><span data-i18n="editor">编辑</span>
                         </button>
                         <button class="nav-btn px-6 py-2.5 rounded-xl text-sm font-medium bg-dark-lighter text-text-secondary hover:bg-dark-lighter/80" data-nav-path="/projects" onclick="loadPage('projects')" style="transition: all 0.3s;" onmouseover="this.style.background='rgba(102,126,234,0.2)'; this.style.transform='translateY(-2px)'" onmouseout="this.style.background=''; this.style.transform='translateY(0)'">
-                            <i class="fa fa-folder mr-2"></i>项目
+                            <i class="fa fa-folder mr-2"></i><span data-i18n="projects">项目</span>
                         </button>
                         <button class="nav-btn px-6 py-2.5 rounded-xl text-sm font-medium bg-dark-lighter text-text-secondary hover:bg-dark-lighter/80" data-nav-path="/materials" onclick="loadPage('materials')" style="transition: all 0.3s;" onmouseover="this.style.background='rgba(102,126,234,0.2)'; this.style.transform='translateY(-2px)'" onmouseout="this.style.background=''; this.style.transform='translateY(0)'">
-                            <i class="fa fa-cubes mr-2"></i>素材库
+                            <i class="fa fa-cubes mr-2"></i><span data-i18n="mediaLibrary">素材库</span>
                         </button>
                         <button class="nav-btn px-6 py-2.5 rounded-xl text-sm font-medium bg-dark-lighter text-text-secondary hover:bg-dark-lighter/80" data-nav-path="/ai_features" onclick="loadPage('ai_features')" style="transition: all 0.3s;" onmouseover="this.style.background='rgba(102,126,234,0.2)'; this.style.transform='translateY(-2px)'" onmouseout="this.style.background=''; this.style.transform='translateY(0)'">
-                            <i class="fa fa-magic mr-2"></i>AI功能
+                            <i class="fa fa-magic mr-2"></i><span data-i18n="aiFeatures">AI功能</span>
                         </button>
                         <button class="nav-btn px-6 py-2.5 rounded-xl text-sm font-medium bg-dark-lighter text-text-secondary hover:bg-dark-lighter/80" data-nav-path="/settings" onclick="loadPage('settings')" style="transition: all 0.3s;" onmouseover="this.style.background='rgba(102,126,234,0.2)'; this.style.transform='translateY(-2px)'" onmouseout="this.style.background=''; this.style.transform='translateY(0)'">
-                            <i class="fa fa-cog mr-2"></i>设置
+                            <i class="fa fa-cog mr-2"></i><span data-i18n="settings">设置</span>
                         </button>
                     </div>
                 </div>
@@ -883,46 +884,46 @@
                     <!-- 快速操作按钮 -->
                     <div class="flex items-center space-x-3">
                         <button class="operation-btn px-4 py-2 bg-gradient-to-r from-primary/20 to-secondary/20 text-primary border border-primary/30 rounded-xl text-sm hover:bg-gradient-to-r from-primary/30 to-secondary/30" onclick="newProject()">
-                            <i class="fa fa-plus mr-2"></i>新建
+                            <i class="fa fa-plus mr-2"></i><span data-i18n="newProject">新建</span>
                         </button>
                         <button class="operation-btn px-4 py-2 btn-gradient text-white rounded-xl text-sm" onclick="saveProject()">
-                            <i class="fa fa-save mr-2"></i>保存
+                            <i class="fa fa-save mr-2"></i><span data-i18n="save">保存</span>
                         </button>
                         <button class="operation-btn px-4 py-2 bg-gradient-to-r from-accent/20 to-primary/20 text-accent border border-accent/30 rounded-xl text-sm hover:bg-gradient-to-r from-accent/30 to-primary/30" onclick="exportVideo()">
-                            <i class="fa fa-export mr-2"></i>导出
+                            <i class="fa fa-export mr-2"></i><span data-i18n="export">导出</span>
                         </button>
                     </div>
 
                     <!-- 用户头像 -->
                     <div class="relative" id="user-menu-wrapper">
-                        <button class="operation-btn w-10 h-10 bg-gradient-to-r from-primary to-secondary rounded-full flex items-center justify-center text-white shadow-button" onclick="toggleUserMenu(event)" aria-label="用户菜单">
+                        <button class="operation-btn w-10 h-10 bg-gradient-to-r from-primary to-secondary rounded-full flex items-center justify-center text-white shadow-button" onclick="toggleUserMenu(event)" data-i18n-aria-label="userMenu">
                             <i class="fa fa-user-circle text-sm"></i>
                         </button>
                         <div id="user-menu-popover" class="glass-card rounded-xl border border-border-color shadow-lg p-2 absolute right-0 mt-2 w-48" style="display:none; z-index:1000;">
-                            <button class="operation-btn w-full text-left px-3 py-2 rounded-lg hover:bg-dark-lighter/80" onclick="openUserProfile()"><i class="fa fa-id-badge mr-2"></i>个人中心</button>
-                            <button class="operation-btn w-full text-left px-3 py-2 rounded-lg hover:bg-dark-lighter/80" onclick="loadPage('settings')"><i class="fa fa-cog mr-2"></i>设置</button>
-                            <button class="operation-btn w-full text-left px-3 py-2 rounded-lg hover:bg-dark-lighter/80" onclick="logout()"><i class="fa fa-sign-out mr-2"></i>退出登录</button>
+                            <button class="operation-btn w-full text-left px-3 py-2 rounded-lg hover:bg-dark-lighter/80" onclick="openUserProfile()"><i class="fa fa-id-badge mr-2"></i><span data-i18n="personalCenter">个人中心</span></button>
+                            <button class="operation-btn w-full text-left px-3 py-2 rounded-lg hover:bg-dark-lighter/80" onclick="loadPage('settings')"><i class="fa fa-cog mr-2"></i><span data-i18n="settings">设置</span></button>
+                            <button class="operation-btn w-full text-left px-3 py-2 rounded-lg hover:bg-dark-lighter/80" onclick="logout()"><i class="fa fa-sign-out mr-2"></i><span data-i18n="logout">退出登录</span></button>
                         </div>
                     </div>
 
                     <div class="relative" id="notification-wrapper" style="isolation:isolate; z-index:1100;">
-                        <button class="operation-btn w-10 h-10 bg-dark-lighter rounded-full flex items-center justify-center text-text-secondary hover:bg-dark-lighter/80 relative" style="z-index:1; overflow:visible;" onclick="toggleNotifications(event)" aria-label="通知，未读 0 条">
+                        <button class="operation-btn w-10 h-10 bg-dark-lighter rounded-full flex items-center justify-center text-text-secondary hover:bg-dark-lighter/80 relative" style="z-index:1; overflow:visible;" onclick="toggleNotifications(event)" data-i18n-aria-label="notificationsUnread">
                             <i class="fa fa-bell text-sm"></i>
                             <span id="notification-unread-badge" class="absolute -top-1 -right-1 bg-red-500 text-white rounded-full text-[10px]" style="display:inline-flex;align-items:center;justify-content:center;border:2px solid #1e293b;box-shadow:0 2px 6px rgba(0,0,0,.45);line-height:1;" hidden></span>
                         </button>
                         <div id="notification-popover" class="glass-card rounded-xl border border-border-color shadow-lg absolute w-80 p-3" style="display:none; top:calc(100% + 8px); right:0; margin-top:0; z-index:1500; max-height:calc(100vh - 88px);">
                             <div class="flex flex-wrap items-center justify-between mb-2 gap-2">
-                                <span class="text-sm font-medium shrink-0">通知</span>
+                                <span class="text-sm font-medium shrink-0" data-i18n="notifications">通知</span>
                                 <div class="flex flex-wrap items-center gap-1">
-                                    <button class="operation-btn text-xs px-2 py-1 rounded-md hover:bg-dark-lighter/80" onclick="markAllNotificationsRead()" title="全部标记为已读">全部已读</button>
-                                    <button class="operation-btn text-xs px-2 py-1 rounded-md hover:bg-dark-lighter/80" onclick="clearAllNotifications()" title="清空所有通知">清空</button>
-                                    <button class="operation-btn text-xs px-2 py-1 rounded-md hover:bg-dark-lighter/80" onclick="loadNotifications()" title="手动刷新最新任务数据">刷新</button>
+                                    <button class="operation-btn text-xs px-2 py-1 rounded-md hover:bg-dark-lighter/80" onclick="markAllNotificationsRead()" data-i18n-title="markAllRead" title="全部已读"><span data-i18n="markAllRead">全部已读</span></button>
+                                    <button class="operation-btn text-xs px-2 py-1 rounded-md hover:bg-dark-lighter/80" onclick="clearAllNotifications()" data-i18n-title="clearAll" title="清空"><span data-i18n="clearAll">清空</span></button>
+                                    <button class="operation-btn text-xs px-2 py-1 rounded-md hover:bg-dark-lighter/80" onclick="loadNotifications()" data-i18n-title="refresh" title="刷新"><span data-i18n="refresh">刷新</span></button>
                                 </div>
                             </div>
-                            <div id="notification-list" class="space-y-2 max-h-64 overflow-y-auto" style="max-height:min(16rem, calc(100vh - 210px));"><div class="text-text-secondary text-xs">暂无通知</div></div>
+                            <div id="notification-list" class="space-y-2 max-h-64 overflow-y-auto" style="max-height:min(16rem, calc(100vh - 210px));"><div class="text-text-secondary text-xs" data-i18n="noNotifications">暂无通知</div></div>
                             <div class="pt-2 mt-2 border-t border-border-color/60 text-[11px] text-text-secondary flex items-center justify-between">
-                                <span id="notification-summary">任务事件实时同步</span>
-                                <span>以项目数据为准</span>
+                                <span id="notification-summary" data-i18n="realtimeSync">任务事件实时同步</span>
+                                <span data-i18n="basedOnProjectData">以项目数据为准</span>
                             </div>
                         </div>
                     </div>
@@ -1005,12 +1006,12 @@
 
                 <!-- 项目信息 -->
                 <div class="mb-6">
-                    <h3 class="text-sm font-semibold text-text-secondary mb-3 uppercase tracking-wider">当前项目</h3>
+                    <h3 class="text-sm font-semibold text-text-secondary mb-3 uppercase tracking-wider" data-i18n="currentProject">当前项目</h3>
                     <div class="glass-card rounded-xl p-4">
                         <div id="current-project-info">
-                            <p class="text-xs text-text-secondary mb-2">未选择项目</p>
+                            <p class="text-xs text-text-secondary mb-2" data-i18n="noProjectSelected">未选择项目</p>
                             <button class="operation-btn w-full text-sm btn-gradient text-white rounded-lg hover:opacity-90" onclick="newProject()">
-                                <i class="fa fa-plus mr-2"></i>创建新项目
+                                <i class="fa fa-plus mr-2"></i><span data-i18n="createNewProject">创建新项目</span>
                             </button>
                         </div>
                     </div>
@@ -1018,45 +1019,45 @@
 
                 <!-- 最近项目 -->
                 <div class="mb-6">
-                    <h3 class="text-sm font-semibold text-text-secondary mb-3 uppercase tracking-wider">最近项目</h3>
+                    <h3 class="text-sm font-semibold text-text-secondary mb-3 uppercase tracking-wider" data-i18n="recentProjects">最近项目</h3>
                     <div id="recent-projects" class="space-y-3">
                         <!-- 最近项目列表将通过JavaScript动态生成 -->
                         <div class="text-center py-8">
                             <i class="fa fa-folder-open text-3xl text-text-secondary mb-3"></i>
-                            <p class="text-xs text-text-secondary">暂无最近项目</p>
+                            <p class="text-xs text-text-secondary" data-i18n="noRecentProjects">暂无最近项目</p>
                         </div>
                     </div>
                 </div>
 
                 <!-- 快速工具 -->
                 <div>
-                    <h3 class="text-sm font-semibold text-text-secondary mb-3 uppercase tracking-wider">快速工具</h3>
+                    <h3 class="text-sm font-semibold text-text-secondary mb-3 uppercase tracking-wider" data-i18n="quickTools">快速工具</h3>
                     <div class="space-y-3">
                         <button class="operation-btn w-full flex items-center justify-between px-4 py-3 glass-card rounded-xl hover:border-primary/30" onclick="openAIVoice()">
                             <span class="text-sm flex items-center">
                                 <i class="fa fa-microphone mr-3 text-primary text-lg"></i>
-                                AI<br>配音
+                                <span data-i18n="aiDubbing">AI<br>配音</span>
                             </span>
                             <i class="fa fa-chevron-right text-text-secondary"></i>
                         </button>
                         <button class="operation-btn w-full flex items-center justify-between px-4 py-3 glass-card rounded-xl hover:border-primary/30" onclick="openAISubtitle()">
                             <span class="text-sm flex items-center">
                                 <i class="fa fa-font mr-3 text-secondary text-lg"></i>
-                                自动<br>字幕
+                                <span data-i18n="autoSubtitle">自动<br>字幕</span>
                             </span>
                             <i class="fa fa-chevron-right text-text-secondary"></i>
                         </button>
                         <button class="operation-btn w-full flex items-center justify-between px-4 py-3 glass-card rounded-xl hover:border-primary/30" onclick="openAIClip()">
                             <span class="text-sm flex items-center">
                                 <i class="fa fa-magic mr-3 text-accent text-lg"></i>
-                                智能<br>剪辑
+                                <span data-i18n="smartClip">智能<br>剪辑</span>
                             </span>
                             <i class="fa fa-chevron-right text-text-secondary"></i>
                         </button>
                         <button class="operation-btn w-full flex items-center justify-between px-4 py-3 glass-card rounded-xl hover:border-primary/30" onclick="openAIEnhance()">
                             <span class="text-sm flex items-center">
                                 <i class="fa fa-eye mr-3 text-warning text-lg"></i>
-                                画质<br>增强
+                                <span data-i18n="imageEnhance">画质<br>增强</span>
                             </span>
                             <i class="fa fa-chevron-right text-text-secondary"></i>
                         </button>
@@ -1076,12 +1077,12 @@
         <aside id="right-sidebar" class="glass-effect border-l border-border-color hidden lg:block animate-slide-in-right">
             <div id="right-sidebar-scroll">
                 <div class="inspector-head">
-                    <div class="inspector-kicker"><i class="fa fa-sliders"></i><span>上下文面板</span></div>
-                    <span class="inspector-status" id="inspector-status">就绪</span>
+                    <div class="inspector-kicker"><i class="fa fa-sliders"></i><span data-i18n="contextPanel">上下文面板</span></div>
+                    <span class="inspector-status" id="inspector-status" data-i18n="ready">就绪</span>
                 </div>
                 <div id="context-inspector" class="context-inspector-card">
-                    <h4 id="context-inspector-title">当前工作区</h4>
-                    <p id="context-inspector-description">选择素材后可在此调整剪辑属性、色彩与导出参数。</p>
+                    <h4 id="context-inspector-title" data-i18n="currentWorkspace">当前工作区</h4>
+                    <p id="context-inspector-description" data-i18n="workspaceTip">选择素材后可在此调整剪辑属性、色彩与导出参数。</p>
                 </div>
                 <div id="editor-inspector-slot"></div>
 
@@ -1091,18 +1092,18 @@
                         <div style="width: 38px; height: 38px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
                             <i class="fa fa-sliders" style="color: white; font-size: 17px;"></i>
                         </div>
-                        <h4 style="font-size: 14px; font-weight: 700; color: rgba(255,255,255,0.95); margin: 0;">剪辑属性</h4>
+                        <h4 style="font-size: 14px; font-weight: 700; color: rgba(255,255,255,0.95); margin: 0;" data-i18n="clipProperties">剪辑属性</h4>
                     </div>
 
                     <div style="display: grid; gap: 15px;">
                         <!-- 位置控制 -->
                         <div style="background: rgba(15,23,42,0.6); padding: 14px; border-radius: 12px; box-sizing: border-box;">
                             <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.8); margin-bottom: 10px;">
-                                <i class="fa fa-arrows" style="color: #667eea;"></i> 位置
+                                <i class="fa fa-arrows" style="color: #667eea;"></i> <span data-i18n="position">位置</span>
                             </label>
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                                <input type="number" placeholder="X" value="0" style="width: 100%; padding: 9px; background: rgba(30,41,59,0.8); border: 1px solid rgba(102,126,234,0.3); border-radius: 8px; color: rgba(255,255,255,0.9); font-size: 12px; box-sizing: border-box;">
-                                <input type="number" placeholder="Y" value="0" style="width: 100%; padding: 9px; background: rgba(30,41,59,0.8); border: 1px solid rgba(102,126,234,0.3); border-radius: 8px; color: rgba(255,255,255,0.9); font-size: 12px; box-sizing: border-box;">
+                                <input type="number" placeholder="X" data-i18n-placeholder="coordX" value="0" style="width: 100%; padding: 9px; background: rgba(30,41,59,0.8); border: 1px solid rgba(102,126,234,0.3); border-radius: 8px; color: rgba(255,255,255,0.9); font-size: 12px; box-sizing: border-box;">
+                                <input type="number" placeholder="Y" data-i18n-placeholder="coordY" value="0" style="width: 100%; padding: 9px; background: rgba(30,41,59,0.8); border: 1px solid rgba(102,126,234,0.3); border-radius: 8px; color: rgba(255,255,255,0.9); font-size: 12px; box-sizing: border-box;">
                             </div>
                         </div>
 
@@ -1110,7 +1111,7 @@
                         <div style="background: rgba(15,23,42,0.6); padding: 14px; border-radius: 12px; box-sizing: border-box;">
                             <label style="display: flex; align-items: center; justify-content: space-between; font-size: 12px; font-weight: 600; margin-bottom: 10px;">
                                 <span style="display: flex; align-items: center; gap: 8px; color: rgba(255,255,255,0.8);">
-                                    <i class="fa fa-search-plus" style="color: #4facfe;"></i> 缩放
+                                    <i class="fa fa-search-plus" style="color: #4facfe;"></i> <span data-i18n="scale">缩放</span>
                                 </span>
                                 <span id="scale-value" style="color: #4facfe; font-weight: 700; font-size: 13px;">100%</span>
                             </label>
@@ -1118,8 +1119,8 @@
                                 <input type="range" min="0" max="200" value="100" onchange="updateScale(this.value)" style="width: 100%; height: 6px; background: linear-gradient(90deg, rgba(79,172,254,0.2) 0%, rgba(79,172,254,0.8) 50%, rgba(79,172,254,0.2) 100%); border-radius: 3px; outline: none; -webkit-appearance: none; box-sizing: border-box;">
                             </div>
                             <div style="display: flex; justify-content: space-between; margin-top: 6px; font-size: 10px; color: rgba(255,255,255,0.5); padding: 0 4px;">
-                                <span>0%</span>
-                                <span>200%</span>
+                                <span data-i18n="minValue">0%</span>
+                                <span data-i18n="maxValue">200%</span>
                             </div>
                         </div>
 
@@ -1127,7 +1128,7 @@
                         <div style="background: rgba(15,23,42,0.6); padding: 14px; border-radius: 12px; box-sizing: border-box;">
                             <label style="display: flex; align-items: center; justify-content: space-between; font-size: 12px; font-weight: 600; margin-bottom: 10px;">
                                 <span style="display: flex; align-items: center; gap: 8px; color: rgba(255,255,255,0.8);">
-                                    <i class="fa fa-repeat" style="color: #f093fb;"></i> 旋转
+                                    <i class="fa fa-repeat" style="color: #f093fb;"></i> <span data-i18n="rotation">旋转</span>
                                 </span>
                                 <span id="rotation-value" style="color: #f093fb; font-weight: 700; font-size: 13px;">0°</span>
                             </label>
@@ -1144,7 +1145,7 @@
                         <div style="background: rgba(15,23,42,0.6); padding: 14px; border-radius: 12px; box-sizing: border-box;">
                             <label style="display: flex; align-items: center; justify-content: space-between; font-size: 12px; font-weight: 600; margin-bottom: 10px;">
                                 <span style="display: flex; align-items: center; gap: 8px; color: rgba(255,255,255,0.8);">
-                                    <i class="fa fa-volume-up" style="color: #43e97b;"></i> 音量
+                                    <i class="fa fa-volume-up" style="color: #43e97b;"></i> <span data-i18n="volume">音量</span>
                                 </span>
                                 <span id="volume-value" style="color: #43e97b; font-weight: 700; font-size: 13px;">100%</span>
                             </label>
@@ -1152,8 +1153,8 @@
                                 <input type="range" min="0" max="200" value="100" onchange="updateVolume(this.value)" style="width: 100%; height: 6px; background: linear-gradient(90deg, rgba(67,233,123,0.2) 0%, rgba(67,233,123,0.8) 50%, rgba(67,233,123,0.2) 100%); border-radius: 3px; outline: none; -webkit-appearance: none; box-sizing: border-box;">
                             </div>
                             <div style="display: flex; justify-content: space-between; margin-top: 6px; font-size: 10px; color: rgba(255,255,255,0.5); padding: 0 4px;">
-                                <span>0%</span>
-                                <span>200%</span>
+                                <span data-i18n="minValue">0%</span>
+                                <span data-i18n="maxValue">200%</span>
                             </div>
                         </div>
                     </div>
@@ -1165,14 +1166,14 @@
                         <div style="width: 38px; height: 38px; background: linear-gradient(135deg, #ffa500 0%, #ffc0cb 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
                             <i class="fa fa-adjust" style="color: white; font-size: 17px;"></i>
                         </div>
-                        <h4 style="font-size: 14px; font-weight: 700; color: rgba(255,255,255,0.95); margin: 0;">色彩校正</h4>
+                        <h4 style="font-size: 14px; font-weight: 700; color: rgba(255,255,255,0.95); margin: 0;" data-i18n="colorCorrection">色彩校正</h4>
                     </div>
 
                     <div style="display: grid; gap: 12px;">
                         <!-- 亮度 -->
                         <div style="background: rgba(15,23,42,0.6); padding: 12px; border-radius: 10px; box-sizing: border-box;">
                             <label style="display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.7); margin-bottom: 8px;">
-                                <i class="fa fa-sun-o" style="color: #ffeb3b;"></i> 亮度
+                                <i class="fa fa-sun-o" style="color: #ffeb3b;"></i> <span data-i18n="brightness">亮度</span>
                             </label>
                             <div style="width: 100%; box-sizing: border-box; padding: 0 4px;">
                                 <input id="cc-brightness" type="range" min="-100" max="100" value="0" style="width: 100%; height: 4px; background: linear-gradient(90deg, #333 0%, #ffeb3b 50%, #fff 100%); border-radius: 2px; box-sizing: border-box;">
@@ -1182,7 +1183,7 @@
                         <!-- 对比度 -->
                         <div style="background: rgba(15,23,42,0.6); padding: 12px; border-radius: 10px; box-sizing: border-box;">
                             <label style="display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.7); margin-bottom: 8px;">
-                                <i class="fa fa-adjust" style="color: #9c27b0;"></i> 对比度
+                                <i class="fa fa-adjust" style="color: #9c27b0;"></i> <span data-i18n="contrast">对比度</span>
                             </label>
                             <div style="width: 100%; box-sizing: border-box; padding: 0 4px;">
                                 <input id="cc-contrast" type="range" min="-100" max="100" value="0" style="width: 100%; height: 4px; background: linear-gradient(90deg, #666 0%, #fff 100%); border-radius: 2px; box-sizing: border-box;">
@@ -1192,7 +1193,7 @@
                         <!-- 饱和度 -->
                         <div style="background: rgba(15,23,42,0.6); padding: 12px; border-radius: 10px; box-sizing: border-box;">
                             <label style="display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.7); margin-bottom: 8px;">
-                                <i class="fa fa-tint" style="color: #00bcd4;"></i> 饱和度
+                                <i class="fa fa-tint" style="color: #00bcd4;"></i> <span data-i18n="saturation">饱和度</span>
                             </label>
                             <div style="width: 100%; box-sizing: border-box; padding: 0 4px;">
                                 <input id="cc-saturation" type="range" min="-100" max="100" value="0" style="width: 100%; height: 4px; background: linear-gradient(90deg, #888 0%, #ff6b6b 25%, #ffeb3b 50%, #4ecdc4 75%, #9b59b6 100%); border-radius: 2px; box-sizing: border-box;">
@@ -1202,7 +1203,7 @@
                         <!-- 色调 -->
                         <div style="background: rgba(15,23,42,0.6); padding: 12px; border-radius: 10px; box-sizing: border-box;">
                             <label style="display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.7); margin-bottom: 8px;">
-                                <i class="fa fa-paint-brush" style="color: #ff5722;"></i> 色调
+                                <i class="fa fa-paint-brush" style="color: #ff5722;"></i> <span data-i18n="hue">色调</span>
                             </label>
                             <div style="width: 100%; box-sizing: border-box; padding: 0 4px;">
                                 <input id="cc-hue" type="range" min="-100" max="100" value="0" style="width: 100%; height: 4px; background: linear-gradient(90deg, #e91e63 0%, #ff5722 20%, #ff9800 40%, #4caf50 60%, #2196f3 80%, #9c27b0 100%); border-radius: 2px; box-sizing: border-box;">
@@ -1213,29 +1214,29 @@
 
                 <!-- 特效面板 -->
                 <div id="effects-panel" class="mb-6">
-                    <h4 class="text-sm font-medium text-text-primary mb-4">特效</h4>
+                    <h4 class="text-sm font-medium text-text-primary mb-4" data-i18n="effects">特效</h4>
                     <div class="space-y-3">
                         <button class="operation-btn w-full flex items-center justify-between px-4 py-3 glass-card rounded-xl hover:border-primary/30" onclick="openEffects('color')">
                             <span class="text-sm">
-                                <i class="fa fa-adjust mr-3 text-primary"></i>色彩校正
+                                <i class="fa fa-adjust mr-3 text-primary"></i><span data-i18n="colorGrade">色彩校正</span>
                             </span>
                             <i class="fa fa-chevron-right text-text-secondary"></i>
                         </button>
                         <button class="operation-btn w-full flex items-center justify-between px-4 py-3 glass-card rounded-xl hover:border-primary/30" onclick="openEffects('filters')">
                             <span class="text-sm">
-                                <i class="fa fa-magic mr-3 text-secondary"></i>滤镜
+                                <i class="fa fa-magic mr-3 text-secondary"></i><span data-i18n="filters">滤镜</span>
                             </span>
                             <i class="fa fa-chevron-right text-text-secondary"></i>
                         </button>
                         <button class="operation-btn w-full flex items-center justify-between px-4 py-3 glass-card rounded-xl hover:border-primary/30" onclick="openEffects('transitions')">
                             <span class="text-sm">
-                                <i class="fa fa-exchange mr-3 text-accent"></i>转场
+                                <i class="fa fa-exchange mr-3 text-accent"></i><span data-i18n="transitions">转场</span>
                             </span>
                             <i class="fa fa-chevron-right text-text-secondary"></i>
                         </button>
                         <button class="operation-btn w-full flex items-center justify-between px-4 py-3 glass-card rounded-xl hover:border-primary/30" onclick="openEffects('visual')">
                             <span class="text-sm">
-                                <i class="fa fa-eye mr-3 text-warning"></i>视觉效果
+                                <i class="fa fa-eye mr-3 text-warning"></i><span data-i18n="visualEffects">视觉效果</span>
                             </span>
                             <i class="fa fa-chevron-right text-text-secondary"></i>
                         </button>
@@ -1248,17 +1249,17 @@
                         <div style="width: 38px; height: 38px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
                             <i class="fa fa-download" style="color: white; font-size: 17px;"></i>
                         </div>
-                        <h4 style="font-size: 14px; font-weight: 700; color: rgba(255,255,255,0.95); margin: 0;">导出设置</h4>
+                        <h4 style="font-size: 14px; font-weight: 700; color: rgba(255,255,255,0.95); margin: 0;" data-i18n="exportSettings">导出设置</h4>
                     </div>
 
                     <div style="display: grid; gap: 12px;">
                         <!-- 格式选择 -->
                         <div style="background: rgba(15,23,42,0.6); padding: 14px; border-radius: 12px; box-sizing: border-box;">
                             <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.8); margin-bottom: 10px;">
-                                <i class="fa fa-file-video-o" style="color: #10b981;"></i> 输出格式
+                                <i class="fa fa-file-video-o" style="color: #10b981;"></i> <span data-i18n="format">格式</span>
                             </label>
                             <select style="width: 100%; padding: 11px; background: rgba(30,41,59,0.8); border: 1px solid rgba(16,185,129,0.3); border-radius: 10px; color: rgba(255,255,255,0.9); font-size: 12px; font-weight: 600; box-sizing: border-box;">
-                                <option>MP4 (推荐)</option>
+                                <option data-i18n="mp4Recommended">MP4 (推荐)</option>
                                 <option>MOV</option>
                                 <option>AVI</option>
                                 <option>WMV</option>
@@ -1268,7 +1269,7 @@
                         <!-- 分辨率选择 -->
                         <div style="background: rgba(15,23,42,0.6); padding: 14px; border-radius: 12px; box-sizing: border-box;">
                             <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.8); margin-bottom: 10px;">
-                                <i class="fa fa-desktop" style="color: #10b981;"></i> 分辨率
+                                <i class="fa fa-desktop" style="color: #10b981;"></i> <span data-i18n="resolution">分辨率</span>
                             </label>
                             <select style="width: 100%; padding: 11px; background: rgba(30,41,59,0.8); border: 1px solid rgba(16,185,129,0.3); border-radius: 10px; color: rgba(255,255,255,0.9); font-size: 12px; font-weight: 600; box-sizing: border-box;">
                                 <option>1080p (1920x1080)</option>
@@ -1281,7 +1282,7 @@
                         <!-- 帧率选择 -->
                         <div style="background: rgba(15,23,42,0.6); padding: 14px; border-radius: 12px; box-sizing: border-box;">
                             <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.8); margin-bottom: 10px;">
-                                <i class="fa fa-film" style="color: #10b981;"></i> 帧率
+                                <i class="fa fa-film" style="color: #10b981;"></i> <span data-i18n="frameRate">帧率</span>
                             </label>
                             <select style="width: 100%; padding: 11px; background: rgba(30,41,59,0.8); border: 1px solid rgba(16,185,129,0.3); border-radius: 10px; color: rgba(255,255,255,0.9); font-size: 12px; font-weight: 600; box-sizing: border-box;">
                                 <option>60fps</option>
@@ -1292,7 +1293,7 @@
 
                         <!-- 导出按钮 -->
                         <button onclick="exportVideo()" style="width: 100%; padding: 16px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; box-shadow: 0 6px 20px rgba(16,185,129,0.3); transition: all 0.3s; margin-top: 10px;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 25px rgba(16,185,129,0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 6px 20px rgba(16,185,129,0.3)'">
-                            <i class="fa fa-rocket" style="margin-right: 8px;"></i>导出视频
+                            <i class="fa fa-rocket" style="margin-right: 8px;"></i><span data-i18n="exportVideo">导出视频</span>
                         </button>
                     </div>
                 </div>
@@ -1476,7 +1477,7 @@
                         <div>版本：<span class="text-text-primary">v3.1.0</span></div>
                         <div>状态：<span class="text-success">在线</span></div>
                     </div>
-                    <div class="mt-4"><button class="operation-btn px-4 py-2 glass-card rounded-lg hover:border-primary/40" onclick="loadPage('settings');layer.closeAll();"><i class="fa fa-cog mr-2"></i>打开设置</button></div>
+                    <div class="mt-4"><button class="operation-btn px-4 py-2 glass-card rounded-lg hover:border-primary/40" onclick="loadPage('settings');layer.closeAll();"><i class="fa fa-cog mr-2"></i><span data-i18n="openSettings">打开设置</span></button></div>
                 </div>`
             });
         }

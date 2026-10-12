@@ -38,14 +38,41 @@ def _normalize_segment_path(video_path):
 def _resolve_existing_media_path(value):
     if not isinstance(value, str) or not value.strip():
         return None
-    path = Path(value.strip())
+    raw = value.strip()
+    path = Path(raw)
     if not path.is_absolute():
         path = PROJECT_ROOT / path
     try:
         path = path.resolve()
     except OSError:
         path = path.absolute()
-    return path if path.is_file() else None
+    if path.is_file():
+        return path
+    # Browser uploads commonly return a URL-like project-relative path.
+    if raw.startswith('/'):
+        candidate = (PROJECT_ROOT / raw.lstrip('/')).resolve()
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def _normalize_existing_media_paths(values):
+    """Resolve upload paths once at the API boundary and reject missing media early."""
+    if not isinstance(values, list):
+        raise ValueError('video_paths must be a non-empty list')
+    normalized = []
+    missing = []
+    for value in values:
+        resolved = _resolve_existing_media_path(value)
+        if resolved is None:
+            missing.append(str(value))
+        else:
+            normalized.append(str(resolved))
+    if missing:
+        raise ValueError('视频素材不存在或不可读: ' + ', '.join(missing[:3]))
+    if not normalized:
+        raise ValueError('至少需要一个可读的视频素材')
+    return normalized
 
 
 def _validate_export_timeline(timeline):
@@ -206,6 +233,10 @@ def generate_remix():
         video_paths = data.get('video_paths') or []
         if not isinstance(video_paths, list) or not video_paths:
             return jsonify({'code': 1, 'msg': '缺少视频素材 video_paths', 'data': None}), 400
+        try:
+            video_paths = _normalize_existing_media_paths(video_paths)
+        except ValueError as exc:
+            return jsonify({'code': 1, 'msg': str(exc), 'data': None}), 400
 
         style = data.get('style') or 'dynamic'
         duration_mode = data.get('duration_mode')

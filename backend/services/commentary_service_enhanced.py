@@ -101,7 +101,7 @@ class CommentaryServiceEnhanced:
                 'source_duration_seconds': data.get('source_duration_seconds'),
                 'target_duration_seconds': data.get('target_duration_seconds'),
                 'script': data.get('script', ''),
-                'voice': data.get('voice', 'zh-CN-XiaoxiaoNeural'),
+                'voice': data.get('voice') or self._default_voice_id(),
                 # 默认使用本地 pyttsx3，避免在无网络环境下频繁触发云TTS失败
                 'tts_engine': data.get('tts_engine') or data.get('ttsEngine') or 'pyttsx3',
                 'auto_subtitle': data.get('auto_subtitle', True),
@@ -1442,8 +1442,9 @@ class CommentaryServiceEnhanced:
 
             # 获取音色参数，不使用 or 运算符避免空字符串被当作 False
             voice = config.get('voice')
-            if not voice:  # 只在真正为空时才用默认值
-                voice = 'zh-CN-XiaoxiaoNeural'
+            if not voice:  # 只在真正为空时才用全局 TTS 默认音色
+                from backend.services.voiceover_service import VoiceoverService
+                voice = VoiceoverService._default_voice_id()
             logger.info(f'🎤 用户选择的音色: {voice}')
 
             # 前端可选指定首选 TTS 引擎；未指定时沿用全局默认引擎。

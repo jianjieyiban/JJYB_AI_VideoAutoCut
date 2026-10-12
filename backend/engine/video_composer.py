@@ -212,25 +212,45 @@ class VideoComposer:
         video_codec = options.get('video_codec') or options.get('videoCodec') or 'libx264'
         video_bitrate = options.get('bitrate') or options.get('video_bitrate')
         encode_preset = options.get('preset') or options.get('encode_preset') or 'medium'
+        vertical_crop = options.get('vertical_crop', False)  # 是否裁剪为竖屏
+        vertical_anchor = options.get('vertical_anchor', 'center')  # 竖屏裁剪锚点
 
         # 将分辨率名称映射为具体尺寸
         resolution_map = {
+            # 横屏格式
             '720p': (1280, 720),
             '1080p': (1920, 1080),
             '2k': (2560, 1440),
             '4k': (3840, 2160),
+            # 竖屏格式 (YouTube Shorts / TikTok)
+            '9:16_720p': (720, 1280),
+            '9:16_1080p': (1080, 1920),
+            '9:16': (1080, 1920),  # 默认竖屏
+            'vertical_720p': (720, 1280),
+            'vertical_1080p': (1080, 1920),
+            'vertical': (1080, 1920),  # 默认竖屏
+            'shorts': (1080, 1920),   # YouTube Shorts
+            'tiktok': (1080, 1920),
+            'reels': (1080, 1920),     # Instagram Reels
+            # 方形格式
+            '1:1_720p': (720, 720),
+            '1:1_1080p': (1080, 1080),
+            'square': (1080, 1080),
         }
         target_width = None
         target_height = None
+        is_vertical = False
         if output_resolution:
             res_lower = str(output_resolution).lower()
             if res_lower in resolution_map:
                 target_width, target_height = resolution_map[res_lower]
+                is_vertical = target_height > target_width if target_width and target_height else False
             elif 'x' in res_lower:
                 try:
                     parts = res_lower.split('x')
                     target_width = int(parts[0])
                     target_height = int(parts[1])
+                    is_vertical = target_height > target_width
                 except Exception:
                     pass
 
@@ -361,6 +381,51 @@ class VideoComposer:
                     subtitle_font_size = max(subtitle_font_size, 44)
 
             logger.info(f"视频尺寸: {video_clip.size[0]}x{video_clip.size[1]}, 时长: {clip_dur:.2f}秒")
+
+            # ========================================
+            # 9:16 竖屏视频智能裁剪（用于 YouTube Shorts / TikTok）
+            # ========================================
+            vertical_anchor = options.get('vertical_anchor', 'center')
+            if target_width and target_height and target_width < target_height:
+                # 目标是竖屏格式
+                try:
+                    orig_w, orig_h = video_clip.size
+                    orig_aspect = orig_w / orig_h if orig_h > 0 else 1.0
+                    target_aspect = target_width / target_height if target_height > 0 else 1.0
+
+                    if orig_aspect > target_aspect:
+                        # 源视频更宽 (如16:9)，需要裁剪左右两侧
+                        # 计算裁剪后的宽度
+                        crop_h = orig_h
+                        crop_w = int(crop_h * target_aspect)
+
+                        # 根据锚点计算裁剪位置
+                        if vertical_anchor == 'top':
+                            x1 = 0
+                        elif vertical_anchor == 'bottom':
+                            x1 = orig_w - crop_w
+                        else:  # center
+                            x1 = (orig_w - crop_w) // 2
+
+                        logger.info(f"📐 竖屏裁剪: {orig_w}x{orig_h} -> {crop_w}x{crop_h}, 锚点: {vertical_anchor}, x1={x1}")
+                        video_clip = video_clip.cropped(x1=x1, x2=x1 + crop_w, y1=0, y2=crop_h)
+
+                    elif orig_aspect < target_aspect:
+                        # 源视频更高 (如9:16)，需要裁剪上下两侧
+                        crop_w = orig_w
+                        crop_h = int(crop_w / target_aspect)
+
+                        if vertical_anchor == 'top':
+                            y1 = 0
+                        elif vertical_anchor == 'bottom':
+                            y1 = orig_h - crop_h
+                        else:  # center
+                            y1 = (orig_h - crop_h) // 2
+
+                        logger.info(f"📐 竖屏裁剪(源更高): {orig_w}x{orig_h} -> {crop_w}x{crop_h}, 锚点: {vertical_anchor}, y1={y1}")
+                        video_clip = video_clip.cropped(x1=0, x2=crop_w, y1=y1, y2=y1 + crop_h)
+                except Exception as e:
+                    logger.warning(f"竖屏裁剪失败，将使用原始视频: {e}")
 
             # 应用输出分辨率调整（如果指定了目标分辨率）
             if target_width and target_height:
@@ -548,6 +613,7 @@ class VideoComposer:
                     logger.warning(f"最终时长裁剪失败，将使用当前长度: {e}")
 
         # 导出最终视频
+        temp_audiofile = None
         try:
             logger.info("开始导出视频...")
             logger.info(f"🎞️ 编码配置: codec={video_codec}, preset={encode_preset}, bitrate={video_bitrate or 'auto'}")
@@ -572,15 +638,45 @@ class VideoComposer:
             if video_bitrate:
                 write_kwargs['bitrate'] = video_bitrate
 
-            video_clip.write_videofile(**write_kwargs)
+            # 删除可能存在的旧输出文件（避免文件锁定问题）
+            if os.path.exists(output_path):
+                try:
+                    os.remove(output_path)
+                except Exception:
+                    pass
 
-            self._validate_output(output_path, require_audio=bool(audio_tracks))
+            # 使用 MoviePy 写入视频
+            try:
+                video_clip.write_videofile(**write_kwargs)
+            except Exception as write_error:
+                # 检查是否创建了空文件，如果是则删除
+                if os.path.exists(output_path):
+                    try:
+                        file_size = os.path.getsize(output_path)
+                        if file_size < 1024:  # 小于1KB认为是损坏的文件
+                            os.remove(output_path)
+                            logger.warning(f"删除了损坏的输出文件: {output_path}")
+                    except Exception:
+                        pass
+                raise write_error
+
+            # 验证输出文件
+            self._validate_output(output_path, require_audio=bool(audio_tracks), expected_duration=max_duration)
             file_size = os.path.getsize(output_path) / (1024 * 1024)
             logger.success(f"✅ 视频合成完成: {output_path} ({file_size:.2f}MB)")
             return output_path
 
         except Exception as e:
             logger.error(f"导出视频失败: {e}")
+            # 清理可能损坏的输出文件
+            if 'output_path' in dir() and os.path.exists(output_path):
+                try:
+                    file_size = os.path.getsize(output_path)
+                    if file_size < 1024:
+                        os.remove(output_path)
+                        logger.info(f"已清理损坏的输出文件: {output_path}")
+                except Exception:
+                    pass
             raise
         finally:
             # 关闭本方法创建的所有合成/素材 clip；重复 close 对 MoviePy 对象安全，逐个隔离避免清理被中断。
@@ -597,25 +693,73 @@ class VideoComposer:
                 except OSError as cleanup_error:
                     logger.warning(f"清理临时音频失败: {temp_path}: {cleanup_error}")
 
-    def _validate_output(self, output_path: str, require_audio: bool) -> None:
+    def _validate_output(self, output_path: str, require_audio: bool, expected_duration: float = None) -> None:
         """使用 FFprobe 验证最终成片，避免把不完整文件标记为成功。"""
-        if not os.path.isfile(output_path) or os.path.getsize(output_path) <= 0:
-            raise RuntimeError('输出视频文件未生成或为空')
+        # 1. 检查文件存在性和大小
+        if not os.path.isfile(output_path):
+            raise RuntimeError('输出视频文件未生成')
+        file_size = os.path.getsize(output_path)
+        if file_size <= 0:
+            raise RuntimeError('输出视频文件为空')
+        
+        # 2. 最小文件大小检查（防止生成不完整文件）
+        min_size = 10 * 1024  # 10KB
+        if file_size < min_size:
+            raise RuntimeError(f'输出视频文件过小 ({file_size} bytes < {min_size} bytes)，可能生成不完整')
+        
         try:
             result = subprocess.run(
-                ['ffprobe', '-v', 'error', '-show_entries', 'format=duration:stream=codec_type', '-of', 'json', output_path],
-                capture_output=True, text=True, timeout=20, check=False
+                ['ffprobe', '-v', 'error', '-show_entries', 
+                 'format=duration,size:stream=codec_type,codec_name,width,height', 
+                 '-of', 'json', output_path],
+                capture_output=True, text=True, timeout=30, check=False
             )
             if result.returncode != 0:
                 raise RuntimeError(result.stderr.strip() or 'FFprobe 无法读取输出视频')
+            
             info = json.loads(result.stdout or '{}')
             streams = info.get('streams') or []
-            if not any(stream.get('codec_type') == 'video' for stream in streams):
+            format_info = info.get('format') or {}
+            
+            # 3. 检查视频流
+            video_streams = [s for s in streams if s.get('codec_type') == 'video']
+            if not video_streams:
                 raise RuntimeError('输出视频缺少视频流')
-            if require_audio and not any(stream.get('codec_type') == 'audio' for stream in streams):
-                raise RuntimeError('输出视频缺少音频流')
-            if float((info.get('format') or {}).get('duration') or 0) <= 0:
-                raise RuntimeError('输出视频时长无效')
+            
+            video_stream = video_streams[0]
+            video_width = video_stream.get('width', 0)
+            video_height = video_stream.get('height', 0)
+            
+            # 4. 检查音频流（如果需要）
+            if require_audio:
+                audio_streams = [s for s in streams if s.get('codec_type') == 'audio']
+                if not audio_streams:
+                    raise RuntimeError('输出视频缺少音频流')
+                logger.info(f"✅ 音频流验证通过: {audio_streams[0].get('codec_name')}")
+            
+            # 5. 检查视频时长
+            duration_str = format_info.get('duration')
+            if duration_str:
+                duration = float(duration_str)
+                if duration <= 0:
+                    raise RuntimeError('输出视频时长无效')
+                
+                # 如果提供了预期时长，检查偏差
+                if expected_duration and expected_duration > 0:
+                    duration_diff = abs(duration - expected_duration)
+                    max_diff = expected_duration * 0.1  # 允许10%的偏差
+                    if duration_diff > max_diff:
+                        logger.warning(
+                            f'⚠️ 视频时长与预期偏差较大: {duration:.2f}s vs 预期 {expected_duration:.2f}s'
+                        )
+                else:
+                    logger.info(f"✅ 视频时长验证通过: {duration:.2f}秒")
+            
+            # 6. 验证视频尺寸
+            if video_width > 0 and video_height > 0:
+                logger.info(f"✅ 输出视频尺寸: {video_width}x{video_height}")
+            
+            logger.info(f"✅ 输出文件大小: {file_size / (1024*1024):.2f}MB")
         except FileNotFoundError as exc:
             raise RuntimeError('未找到 FFprobe，无法验证输出视频') from exc
         except (ValueError, json.JSONDecodeError) as exc:

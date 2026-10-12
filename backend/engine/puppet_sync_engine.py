@@ -647,9 +647,23 @@ class PuppetSyncEngine:
             clip_paths: List[str] = []
             for i, item in enumerate(timeline):
                 item_video_path = item.get('source_video') or item.get('source_video_path') or item.get('video_path') or item.get('source_path')
-                clip_source = Path(item_video_path).resolve() if item_video_path else v_path
+                
+                # 确定源视频路径：优先使用 item 指定的路径，否则使用主视频路径
+                if item_video_path:
+                    clip_source = Path(item_video_path).resolve()
+                else:
+                    clip_source = v_path
+                    self.logger.warning(
+                        '⚠️ 时间线片段 %d 未指定源视频路径，使用主视频: %s', i, v_path
+                    )
+                
+                # 验证源视频存在
                 if not clip_source.exists():
-                    raise FileNotFoundError(f'时间线片段源视频不存在: {clip_source}')
+                    raise FileNotFoundError(
+                        f'时间线片段 #{i} (shot={item.get("shot_id")}) 源视频不存在: {clip_source}\n'
+                        f'请检查素材路径是否正确'
+                    )
+                
                 clip_path = self._render_single_clip(
                     clip_source, item, tmp_dir / f"clip_{i:04d}.mp4"
                 )

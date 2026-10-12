@@ -61,8 +61,32 @@ class ASREngine:
                 logger.error(f'❗ Whisper模型加载失败: {e}')
                 raise
 
+    @staticmethod
+    def _locale_to_whisper_language(language: str) -> str:
+        value = str(language or '').strip().lower()
+        if not value or value in ('auto', 'automatic'):
+            return 'auto'
+        return value.split('-', 1)[0].split('_', 1)[0]
+
+    def _resolve_language(self, language: Optional[str] = None) -> str:
+        """Resolve a task language, falling back to the saved global ASR language."""
+        if language:
+            return self._locale_to_whisper_language(language)
+
+        try:
+            from backend.core.global_state import get_global_state
+            state = get_global_state()
+            if hasattr(state, 'get_user_setting'):
+                configured = state.get_user_setting('language', 'asr', None)
+            else:
+                configured = (getattr(state, 'user_settings', {}).get('language', {}) or {}).get('asr')
+        except Exception:
+            configured = None
+
+        return self._locale_to_whisper_language(configured or 'en-US')
+
     def recognize_whisper(self, audio_path: str,
-                         language: str = 'zh',
+                         language: Optional[str] = None,
                          task: str = 'transcribe') -> Dict:
         """
         使用Whisper进行语音识别
@@ -77,12 +101,13 @@ class ASREngine:
         """
         try:
             self._load_whisper_model()
+            language = self._resolve_language(language)
 
             logger.info(f'开始Whisper识别: {audio_path}')
 
             result = self.whisper_model.transcribe(
                 audio_path,
-                language=language,
+                language=None if language == 'auto' else language,
                 task=task,
                 verbose=False
             )
@@ -150,7 +175,7 @@ class ASREngine:
 
     def recognize(self, audio_path: str,
                  engine: Optional[str] = None,
-                 language: str = 'zh',
+                 language: Optional[str] = None,
                  **kwargs) -> Dict:
         """
         统一的语音识别接口

@@ -341,6 +341,19 @@ class AutoClipController:
 
         audio_files = []
         narrations = narration_script.get('narrations', [])
+        tts_voice = self.config.get('tts_voice')
+        if not tts_voice:
+            try:
+                from backend.core.global_state import get_global_state
+                language = get_global_state().get_user_setting('language', 'tts', 'zh-CN')
+                tts_voice = {
+                    'en': 'en-US-JennyNeural',
+                    'ja': 'ja-JP-NanamiNeural',
+                    'ko': 'ko-KR-SunHiNeural',
+                }.get(str(language or '').lower().split('-', 1)[0], 'zh-CN-XiaoxiaoNeural')
+            except Exception:
+                from backend.services.voiceover_service import VoiceoverService
+                tts_voice = VoiceoverService._default_voice_id()
 
         for i, narration in enumerate(narrations):
             text = narration['text']
@@ -359,7 +372,7 @@ class AutoClipController:
                 text=text,
                 output_path=str(audio_path),
                 engine=self.config.get('tts_provider', None),
-                voice=self.config.get('tts_voice', 'zh-CN-XiaoxiaoNeural')
+                voice=tts_voice
             )
             if not ok or not audio_path.exists():
                 logger.error(f"  ❗ 音频生成失败: {audio_filename}")

@@ -52,6 +52,31 @@ class TTSEngine:
         logger.info(f'✅ TTS引擎初始化完成，默认引擎: {self.default_engine}，可用引擎: {self.available_engines}')
 
     @staticmethod
+    def _default_voice_id(language: Optional[str] = None) -> str:
+        if not language:
+            try:
+                from backend.core.global_state import get_global_state
+                state = get_global_state()
+                if hasattr(state, 'get_user_setting'):
+                    language = state.get_user_setting('language', 'tts', None)
+                else:
+                    language = (getattr(state, 'user_settings', {}).get('language', {}) or {}).get('tts')
+            except Exception:
+                language = None
+        prefix = str(language or 'en-US').strip().lower().split('-', 1)[0].split('_', 1)[0]
+        return {
+            'en': 'en-US-JennyNeural',
+            'ja': 'ja-JP-NanamiNeural',
+            'ko': 'ko-KR-SunHiNeural',
+            'es': 'es-ES-ElviraNeural',
+            'fr': 'fr-FR-DeniseNeural',
+        }.get(prefix, 'zh-CN-XiaoxiaoNeural')
+
+    @classmethod
+    def _resolve_voice(cls, voice: Optional[str], language: Optional[str] = None) -> str:
+        return str(voice or '').strip() or cls._default_voice_id(language)
+
+    @staticmethod
     def _normalize_engine_name(engine: Optional[str]) -> str:
         aliases = {
             'edge': 'edge-tts',
@@ -269,7 +294,7 @@ class TTSEngine:
         return isinstance(error, aiohttp_errors + (OSError,)) or error.__class__.__name__ == 'NoAudioReceived'
 
     async def synthesize_edge_tts(self, text: str, output_path: str,
-                                  voice: str = 'zh-CN-XiaoxiaoNeural',
+                                  voice: Optional[str] = None,
                                   rate: str = '+0%', volume: str = '+0%',
                                   pitch: Optional[int] = None,
                                   advanced_config: Optional[Dict] = None) -> bool:
@@ -590,7 +615,7 @@ class TTSEngine:
                 else:
                     logger.info(f'检测到 {len(voices)} 个系统音色')
 
-                v_str = (voice or 'zh-CN-XiaoxiaoNeural').lower()
+                v_str = self._resolve_voice(voice).lower()
 
                 # 从Edge-TTS音色ID推断语言和性别
                 target_lang = 'zh'
@@ -845,12 +870,13 @@ class TTSEngine:
             return False
 
     def synthesize_azure_tts(self, text: str, output_path: str,
-                             voice: str = 'zh-CN-XiaoxiaoNeural',
+                             voice: Optional[str] = None,
                              rate: str = '+0%', volume: str = '+0%',
                              pitch: Optional[int] = None,
                              advanced_config: Optional[Dict] = None) -> bool:
         """使用 Azure TTS 合成语音（通过 REST API），支持情感SSML"""
         try:
+            voice = self._resolve_voice(voice)
             from backend.config.ai_config import get_config_manager
             from xml.sax.saxutils import escape
             cfg = get_config_manager()
@@ -917,11 +943,12 @@ class TTSEngine:
 
             escaped_voice = escape(str(voice), entities={'"': '&quot;', "'": '&apos;'})
             escaped_text = escape(str(text))
+            xml_language = str(voice).split('-', 2)[0] + '-' + str(voice).split('-', 2)[1] if '-' in str(voice) else 'zh-CN'
 
             # 构建 SSML
             if emotion_style:
                 ssml = f"""
-<speak version='1.0' xml:lang='zh-CN' xmlns:mstts='https://www.w3.org/2001/mstts'>
+<speak version='1.0' xml:lang='{xml_language}' xmlns:mstts='https://www.w3.org/2001/mstts'>
   <voice name='{escaped_voice}'>
     <mstts:express-as style='{emotion_style}' styledegree='{emotion_degree}'>
       <prosody rate='{prosody_rate}' volume='{prosody_volume}' pitch='{pitch_str}'>
@@ -933,7 +960,7 @@ class TTSEngine:
 """.strip()
             else:
                 ssml = f"""
-<speak version='1.0' xml:lang='zh-CN'>
+<speak version='1.0' xml:lang='{xml_language}'>
   <voice name='{escaped_voice}'>
     <prosody rate='{prosody_rate}' volume='{prosody_volume}' pitch='{pitch_str}'>
       {escaped_text}
@@ -964,7 +991,7 @@ class TTSEngine:
 
     def synthesize(self, text: str, output_path: str,
                   engine: Optional[str] = None,
-                  voice: str = 'zh-CN-XiaoxiaoNeural',
+                  voice: Optional[str] = None,
                   pitch: Optional[int] = None,
                   advanced_config: Optional[Dict] = None,
                   **kwargs) -> bool:
@@ -985,6 +1012,7 @@ class TTSEngine:
         """
         raw_engine = engine or self.default_engine
         engine = self._normalize_engine_name(raw_engine)
+        voice = self._resolve_voice(voice, kwargs.get('language'))
         self._set_last_error('')
         edge_rate = kwargs.get('rate', '+0%')
         edge_volume = kwargs.get('volume', '+0%')
@@ -1292,7 +1320,7 @@ class TTSEngine:
                 # 兜底 Edge-TTS
                 result = self._run_edge_synthesis(
                     self.synthesize_edge_tts(
-                        text_clean, output_path, 'zh-CN-XiaoxiaoNeural', pitch=pitch,
+                        text_clean, output_path, voice, pitch=pitch,
                         advanced_config=advanced_config, **kwargs
                     ),
                     output_path=output_path,
@@ -1315,7 +1343,7 @@ class TTSEngine:
                 text_clean = (text or '').strip()
                 if text_clean:
                     return self._run_edge_synthesis(
-                        self.synthesize_edge_tts(text_clean, output_path, 'zh-CN-XiaoxiaoNeural', pitch=pitch),
+                        self.synthesize_edge_tts(text_clean, output_path, voice, pitch=pitch),
                         output_path=output_path,
                     )
             except Exception:

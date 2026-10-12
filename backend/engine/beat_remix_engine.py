@@ -398,9 +398,11 @@ class BeatRemixEngine:
         beats = self._coalesce_beat_boundaries(beats, target_duration, min_visual_duration)
         if len(beats) < 2:
             raise RuntimeError('目标区间内没有可用节拍，无法生成覆盖 0 到目标结束的卡点时间轴')
-        if False and len(clips_analysis) < len(beats) - 1:
-            raise RuntimeError(
-                '可用素材仅 %s 个，不足以覆盖 %s 个卡点区间；未复用素材补足' %
+        
+        # 素材不足时发出警告（代码支持复用素材，但仍需告知用户）
+        if len(clips_analysis) < len(beats) - 1:
+            self.logger.warning(
+                '⚠️ 可用素材 %d 个少于卡点区间 %d 个，将启用素材复用模式' %
                 (len(clips_analysis), len(beats) - 1)
             )
 

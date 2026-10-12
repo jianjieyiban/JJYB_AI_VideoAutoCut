@@ -7,9 +7,12 @@ Video Processor
 
 import logging
 import subprocess
+import time
 from pathlib import Path
-from typing import List, Dict, Optional, Tuple
+from typing import List, Dict, Optional, Tuple, Callable
 import json
+
+from backend.utils.ffmpeg_utils import find_ffmpeg, get_ffmpeg, require_ffmpeg, check_video_file
 
 logger = logging.getLogger(__name__)
 
@@ -29,19 +32,76 @@ class VideoProcessor:
 
     def _check_ffmpeg(self):
         """检查FFmpeg是否可用"""
-        try:
-            result = subprocess.run(
-                [self.ffmpeg_path, '-version'],
-                capture_output=True,
-                text=True,
-                timeout=5
-            )
-            if result.returncode == 0:
-                logger.info('✅ FFmpeg检查通过')
-            else:
-                logger.warning('⚠️ FFmpeg可能未正确安装')
-        except Exception as e:
-            logger.error(f'❗ FFmpeg检查失败: {e}')
+        info = find_ffmpeg()
+        if info.found:
+            logger.info(f'✅ FFmpeg检查通过: {info.version}')
+            if info.error:
+                logger.warning(f'⚠️ {info.error}')
+        else:
+            logger.error(f'❗ FFmpeg检查失败: {info.error}')
+            raise RuntimeError(f'FFmpeg不可用: {info.error}')
+
+    def _run_ffmpeg_with_retry(
+        self,
+        cmd: List[str],
+        operation_name: str,
+        max_retries: int = 3,
+        retry_delay: float = 2.0,
+        validate_output: Callable[[str], bool] = None,
+        output_path: str = None
+    ) -> Tuple[bool, str]:
+        """
+        执行FFmpeg命令，支持重试机制
+
+        Args:
+            cmd: FFmpeg命令列表
+            operation_name: 操作名称（用于日志）
+            max_retries: 最大重试次数
+            retry_delay: 重试间隔（秒）
+            validate_output: 输出验证函数，接收输出路径，返回是否有效
+            output_path: 输出文件路径
+
+        Returns:
+            (成功标志, 错误信息)
+        """
+        last_error = ''
+        for attempt in range(max_retries):
+            try:
+                if attempt > 0:
+                    logger.info(f'🔄 重试 {operation_name} (第 {attempt}/{max_retries} 次)')
+                    time.sleep(retry_delay)
+
+                process = subprocess.Popen(
+                    cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True
+                )
+                stdout, stderr = process.communicate(timeout=600)
+
+                if process.returncode == 0:
+                    # 检查输出文件是否有效
+                    if output_path and validate_output:
+                        if not validate_output(output_path):
+                            last_error = '输出文件验证失败'
+                            logger.warning(f'⚠️ {operation_name} 输出验证失败，将重试')
+                            continue
+                    logger.info(f'✅ {operation_name} 成功')
+                    return True, ''
+                else:
+                    last_error = stderr.strip()
+                    logger.warning(f'⚠️ {operation_name} 失败 (尝试 {attempt+1}/{max_retries}): {last_error[:200]}')
+
+            except subprocess.TimeoutExpired:
+                last_error = f'{operation_name} 超时'
+                logger.error(f'❗ {last_error}')
+                process.kill()
+            except Exception as e:
+                last_error = str(e)
+                logger.error(f'❗ {operation_name} 异常: {e}')
+
+        logger.error(f'❌ {operation_name} 最终失败: {last_error[:200]}')
+        return False, last_error
 
     def get_video_info(self, video_path: str) -> Dict:
         """
@@ -220,21 +280,18 @@ class VideoProcessor:
             logger.info(f'执行视频剪切: {input_path} -> {output_path}')
             logger.info(f'时间范围: {start_time}s - {end_time}s')
 
-            process = subprocess.Popen(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True
+            # 使用重试机制
+            success, error = self._run_ffmpeg_with_retry(
+                cmd=cmd,
+                operation_name='视频剪切',
+                output_path=output_path,
+                validate_output=lambda p: check_video_file(p) if p else False
             )
 
-            # 等待完成
-            stdout, stderr = process.communicate()
-
-            if process.returncode == 0:
-                logger.info(f'✅ 视频剪切成功: {output_path}')
+            if success:
                 return True
             else:
-                logger.error(f'❗ 视频剪切失败: {stderr}')
+                logger.error(f'❗ 视频剪切失败: {error}')
                 return False
 
         except Exception as e:
@@ -280,23 +337,21 @@ class VideoProcessor:
 
             logger.info(f'执行视频合并: {len(input_paths)}个文件 -> {output_path}')
 
-            process = subprocess.Popen(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True
+            # 使用重试机制
+            success, error = self._run_ffmpeg_with_retry(
+                cmd=cmd,
+                operation_name='视频合并',
+                output_path=output_path,
+                validate_output=lambda p: check_video_file(p) if p else False
             )
-
-            stdout, stderr = process.communicate()
 
             # 删除临时文件列表
             list_file.unlink(missing_ok=True)
 
-            if process.returncode == 0:
-                logger.info(f'✅ 视频合并成功: {output_path}')
+            if success:
                 return True
             else:
-                logger.error(f'❗ 视频合并失败: {stderr}')
+                logger.error(f'❗ 视频合并失败: {error}')
                 return False
 
         except Exception as e:
