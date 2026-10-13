@@ -674,6 +674,13 @@ class PuppetSyncEngine:
                 has_next = i < len(timeline) - 1
                 clip_path = self._apply_transition(Path(clip_path), item, prev_item, has_next)
                 clip_paths.append(clip_path)
+                # 逐段实测校准（音画同步关键修复）：
+                # 音频段必须按视频片段的“实测”时长生成，而不是计划时长。
+                # 视频编码存在帧级时长误差，若音频按计划时长独立累积，
+                # 两轨误差会逐段放大，导致成片越往后音画错位越明显。
+                rendered_duration = self._probe_duration(clip_path)
+                if rendered_duration > 0:
+                    item['rendered_duration'] = round(rendered_duration, 3)
 
             if not clip_paths:
                 raise RuntimeError('所有片段渲染失败')
@@ -709,9 +716,16 @@ class PuppetSyncEngine:
                 ], '拼接片段（兼容编码）')
 
             # 按最终时间轴组合音频：解说段放 TTS，原声段抽取源视频原声，缺口写入等长静音。
+            # 每段时长优先取视频片段的实测时长（rendered_duration），
+            # 保证音/视频轨在每段边界同时起止，消除逐段累积漂移。
             audio_parts: List[Path] = []
             for index, item in enumerate(timeline):
-                duration = float(item.get('final_duration') or item.get('audio_duration') or 0)
+                duration = float(
+                    item.get('rendered_duration')
+                    or item.get('final_duration')
+                    or item.get('audio_duration')
+                    or 0
+                )
                 if duration <= 0:
                     continue
                 part_path = tmp_dir / f'audio_{index:04d}.wav'
@@ -805,7 +819,11 @@ class PuppetSyncEngine:
                 '-movflags', '+faststart',
                 output_path
             ])
-            expected_duration = sum(float(item.get('final_duration') or item.get('audio_duration') or 0) for item in timeline)
+            # 期望总时长同样以视频段实测值为准（逐段实测已写入 rendered_duration）
+            expected_duration = sum(
+                float(item.get('rendered_duration') or item.get('final_duration') or item.get('audio_duration') or 0)
+                for item in timeline
+            )
             self._run_ffmpeg(final_cmd, '最终合成', expected_duration=expected_duration)
             self._validate_rendered_media(output_path, expected_duration, require_audio=merged_audio.exists())
 
@@ -819,6 +837,19 @@ class PuppetSyncEngine:
                 shutil.rmtree(tmp_dir, ignore_errors=True)
             except Exception:
                 pass
+
+    @staticmethod
+    def _probe_duration(path) -> float:
+        """ffprobe 实测媒体时长（秒），失败返回 0。"""
+        try:
+            probe = subprocess.run(
+                ['ffprobe', '-v', 'error', '-show_entries', 'format=duration',
+                 '-of', 'default=noprint_wrappers=1:nokey=1', str(path)],
+                capture_output=True, text=True, timeout=60,
+            )
+            return float((probe.stdout or '').strip() or '0')
+        except Exception:
+            return 0.0
 
     @staticmethod
     def _build_dedup_filters(item: Dict[str, Any]) -> str:

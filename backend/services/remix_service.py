@@ -20,6 +20,11 @@ except ImportError:
 
 from backend.config.paths import PROJECT_ROOT
 from backend.engine.video_processor import VideoProcessor
+from backend.utils.intro_outro_detector import (
+    compute_effective_ranges,
+    clamp_clip_to_range,
+)
+from backend.utils.frame_dedup import dedup_with_refill
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +33,38 @@ class RemixService:
     """混剪模式服务 - 完整实现"""
 
     DURATION_TOLERANCE_SECONDS = 0.35
+
+    @classmethod
+    def _effective_ranges_for(cls, video_paths: List) -> Dict[str, dict]:
+        """计算素材有效区间（片头片尾剔除），失败时返回空 dict 不阻塞流程。"""
+        try:
+            paths = [str(p) for p in (video_paths or []) if p]
+            return compute_effective_ranges(paths)
+        except Exception as exc:
+            logger.warning('片头片尾检测失败，跳过该保护策略: %s', exc)
+            return {}
+
+    @staticmethod
+    def _clamp_shots_to_ranges(shots: List[Dict], ranges: Dict[str, dict]) -> List[Dict]:
+        """把智能镜头夹紧到有效区间，剔除完全落在片头/片尾保护带内的镜头。"""
+        if not ranges or not shots:
+            return shots
+        kept: List[Dict] = []
+        for shot in shots:
+            source = str(shot.get('source_video') or shot.get('video_path') or '')
+            effective = ranges.get(source)
+            if not effective:
+                kept.append(shot)
+                continue
+            clamped = clamp_clip_to_range(shot, effective)
+            if clamped is None:
+                logger.info(
+                    '片头片尾过滤: 剔除镜头 %.2f-%.2f (%s)',
+                    float(shot.get('start_time') or 0), float(shot.get('end_time') or 0), source,
+                )
+                continue
+            kept.append(clamped)
+        return kept
 
     @staticmethod
     def _require_target_duration(target_duration: object) -> float:
@@ -183,6 +220,14 @@ class RemixService:
                     break
 
         selected.sort(key=lambda c: (float(c.get('start_time') or 0) / max(0.001, max(float(x.get('end_time') or 0) for x in by_source.get(str(c.get('video_path')), [c]))), int(c.get('source_index') or 0), float(c.get('score') or 0.5)))
+
+        # 内容去重：相似画面保留高分者并从候选池补位（保持已排定的叙事顺序）。
+        try:
+            selected, dropped_unfilled = dedup_with_refill(selected, normalized)
+            if dropped_unfilled:
+                logger.info('混剪去重: %d 个重复片段无替补被移除', dropped_unfilled)
+        except Exception as exc:
+            logger.warning('片段去重失败（忽略，继续时间线规划）: %s', exc)
 
         planned: List[Dict] = []
         remaining = float(target_duration)
@@ -972,6 +1017,10 @@ class RemixService:
             candidate_clips: List[Dict] = []
             analysis_failures: List[str] = []
             preferred_matched = False
+            # 片头片尾有效区间：所有高光候选必须落在有效区间内
+            effective_ranges = self._effective_ranges_for(
+                [str(a.get('path')) for a in analyses if a.get('path')]
+            )
 
             for analysis in analyses:
                 highlights = analysis.get('highlights') or []
@@ -1012,6 +1061,15 @@ class RemixService:
                         end = float(highlight.get('end_time', highlight.get('end', 0.0)))
                     except Exception:
                         continue
+
+                    # 片头片尾保护：落在保护带内的高光直接剔除，跨界高光夹紧
+                    clamped = clamp_clip_to_range(
+                        {'video_path': analysis_path, 'start_time': start, 'end_time': end},
+                        effective_ranges.get(analysis_path),
+                    )
+                    if clamped is None:
+                        continue
+                    start, end = float(clamped['start_time']), float(clamped['end_time'])
                     clip_duration = end - start
                     if clip_duration <= 0:
                         continue
@@ -1364,6 +1422,7 @@ class RemixService:
             segmenter = SmartShotSegmenter(use_transnetv2=True)
             all_shots: List[Dict] = []
             global_shot_counter = 0
+            effective_ranges = self._effective_ranges_for(video_paths)
             for video_idx, vp in enumerate(video_paths):
                 v_path = Path(vp)
                 if not v_path.is_absolute():
@@ -1371,6 +1430,7 @@ class RemixService:
                 if not v_path.exists():
                     continue
                 shots = segmenter.detect_shots(str(v_path))
+                shots = self._clamp_shots_to_ranges(shots, effective_ranges)
                 for s in shots:
                     s['source_video'] = str(v_path)
                     # 生成全局唯一 id，避免多视频合并后 id 重复导致散列失效
@@ -1404,6 +1464,12 @@ class RemixService:
             avg_clip_dur = sum(style_config['clip_duration']) / 2.0
             needed = int(target_duration / avg_clip_dur) + 2
             top_shots = sorted_shots[:max(needed, 10)]
+            # 内容去重：相似画面只保留评分最高的一个，避免成片出现重复镜头
+            try:
+                from backend.utils.frame_dedup import dedup_clips
+                top_shots, _dropped = dedup_clips(top_shots)
+            except Exception as exc:
+                logger.warning('镜头去重失败（忽略，继续拟人匹配）: %s', exc)
             # 按时间排序（每个视频内）
             top_shots.sort(key=lambda x: (x.get('source_video', ''), x.get('start_time', 0)))
 
@@ -1543,6 +1609,7 @@ class RemixService:
             segmenter = SmartShotSegmenter(use_transnetv2=True)
             all_shots: List[Dict] = []
             global_shot_counter = 0
+            effective_ranges = self._effective_ranges_for(video_paths)
             for video_idx, vp in enumerate(video_paths):
                 v_path = Path(vp)
                 if not v_path.is_absolute():
@@ -1550,9 +1617,10 @@ class RemixService:
                 if not v_path.exists():
                     continue
                 shots = segmenter.detect_shots(str(v_path))
+                shots = self._clamp_shots_to_ranges(shots, effective_ranges)
                 for s in shots:
                     s['source_video'] = str(v_path)
-                    # 生成全局唯一 id，避免多视频合并后 id 重复导致音乐卡点 last_id 散列失效
+                    # 生成全局唯一 id，避免多视频合并后音乐卡点 last_id 散列失效
                     s['id'] = f"{video_idx}_{global_shot_counter}"
                     global_shot_counter += 1
                 all_shots.extend(shots)

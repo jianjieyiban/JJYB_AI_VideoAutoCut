@@ -779,6 +779,37 @@ class CommentaryService:
             if not normalized_voices:
                 raise ValueError('配音段列表为空或文本全部无效，无法同步')
 
+            # 片头片尾保护：解说画面不进入素材的片头/片尾保护带
+            # （对标剪映粗剪的掐头去尾：黑场/低信息画面 + 比例保护）
+            try:
+                from backend.utils.intro_outro_detector import (
+                    compute_effective_ranges, clamp_clip_to_range,
+                )
+                _shot_paths = sorted({
+                    str(s.get('source_video')) for s in normalized_shots
+                    if s.get('source_video')
+                })
+                _ranges = compute_effective_ranges(_shot_paths)
+                if _ranges:
+                    _kept_shots = []
+                    for s in normalized_shots:
+                        clamped = clamp_clip_to_range(
+                            s, _ranges.get(str(s.get('source_video')))
+                        )
+                        if clamped is None:
+                            logger.info(
+                                '片头片尾过滤: 剔除解说候选镜头 %.2f-%.2f (%s)',
+                                float(s.get('start_time') or 0),
+                                float(s.get('end_time') or 0),
+                                s.get('source_video'),
+                            )
+                            continue
+                        _kept_shots.append(clamped)
+                    if _kept_shots:
+                        normalized_shots = _kept_shots
+            except Exception as exc:
+                logger.warning('解说片头片尾过滤失败（忽略，继续分镜规划）: %s', exc)
+
             # A scene boundary is only a coarse candidate.  Expand long scenes
             # into real source windows and assign one window to every narration
             # segment before the renderer receives the timeline.
