@@ -120,8 +120,9 @@ def check_update(channel: str = 'stable') -> Dict:
         'latestTag': remote_tag,
         'notes': notes or '详见项目发布页。',
         'releaseUrl': release.get('html_url') or GITHUB_HOME,
-        'downloadUrl': (asset or {}).get('browser_download_url'),
-        'assetName': (asset or {}).get('name'),
+        # 优先 Release 资产（source.zip）；缺失时兜底 zipball（GitHub 自动打包，同样为完整源码）
+        'downloadUrl': (asset or {}).get('browser_download_url') or release.get('zipball_url'),
+        'assetName': (asset or {}).get('name') or f'{GITHUB_REPO}-{remote_tag}.zip',
         'assetSize': (asset or {}).get('size'),
         'publishedAt': release.get('published_at'),
         'homeUrl': GITHUB_HOME,
@@ -176,7 +177,7 @@ def _build_update_bat(source_dir: Path, project_root: Path) -> Path:
     bat.parent.mkdir(parents=True, exist_ok=True)
     content = f'''@echo off
 rem JJYB AI VideoAutoCut self-update script
-timeout /t 3 /nobreak >nul
+timeout /t 6 /nobreak >nul
 robocopy "{source_dir}" "{project_root}" /E /NFL /NDL /NJH /NJS /NP /XD {UPDATE_EXCLUDE_DIRS}
 if errorlevel 8 (
   echo FAILED > "{bat.parent / 'result.txt'}"
@@ -185,9 +186,9 @@ if errorlevel 8 (
 echo OK > "{bat.parent / 'result.txt'}"
 cd /d "{project_root}"
 start "" "{project_root / '启动应用.bat'}"
-timeout /t 5 /nobreak >nul
-rd /s /q "{bat.parent}"
-del "%~f0"
+rem 残留的 temp/update 由下次更新的解压环节或"清理缓存"功能回收，
+rem 此处不能 rd 自身所在目录（会因 bat 文件被占用而失败并中断脚本）。
+del "%~f0" >nul 2>&1
 '''
     # bat 用 GBK 写入（中文路径在 cmd 默认代码页下可靠）
     with open(bat, 'w', encoding='gbk', errors='replace') as f:
