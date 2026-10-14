@@ -2744,10 +2744,18 @@
                     </div>
                     <div style="flex: 1;">
                         <h3 style="margin: 0 0 10px 0; font-size: 18px; font-weight: 700; color: rgba(255,255,255,0.95);">开源协议</h3>
-                        <p style="margin: 0 0 12px 0; font-size: 14px; color: rgba(255,255,255,0.75); line-height: 1.6;">本软件基于 MIT 许可证开源，欢迎贡献代码和反馈问题</p>
-                        <a href="/README.md" target="_blank" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: rgba(99,102,241,0.2); border: 1px solid rgba(99,102,241,0.4); border-radius: 10px; color: rgba(99,102,241,1); font-size: 13px; font-weight: 600; text-decoration: none; transition: all 0.3s;" onmouseover="this.style.background='rgba(99,102,241,0.3)'" onmouseout="this.style.background='rgba(99,102,241,0.2)'">
+                        <p style="margin: 0 0 6px 0; font-size: 14px; color: rgba(255,255,255,0.75); line-height: 1.6;">本软件基于 MIT 许可证开源，欢迎贡献代码和反馈问题</p>
+                        <p style="margin: 0 0 12px 0; font-size: 13px; color: rgba(148,163,184,0.9); word-break: break-all;">
+                            <i class="fa fa-github" style="margin-right: 6px;"></i>
+                            <a href="https://github.com/jianjieyiban/JJYB_AI_VideoAutoCut" target="_blank" style="color: rgba(129,140,248,1); text-decoration: none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">github.com/jianjieyiban/JJYB_AI_VideoAutoCut</a>
+                        </p>
+                        <a href="https://github.com/jianjieyiban/JJYB_AI_VideoAutoCut" target="_blank" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: rgba(99,102,241,0.2); border: 1px solid rgba(99,102,241,0.4); border-radius: 10px; color: rgba(99,102,241,1); font-size: 13px; font-weight: 600; text-decoration: none; transition: all 0.3s; margin-right: 10px;" onmouseover="this.style.background='rgba(99,102,241,0.3)'" onmouseout="this.style.background='rgba(99,102,241,0.2)'">
                             <i class="fa fa-external-link"></i>
                             <span>访问项目仓库</span>
+                        </a>
+                        <a href="https://github.com/jianjieyiban/JJYB_AI_VideoAutoCut/releases" target="_blank" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.4); border-radius: 10px; color: rgba(16,185,129,1); font-size: 13px; font-weight: 600; text-decoration: none; transition: all 0.3s;" onmouseover="this.style.background='rgba(16,185,129,0.25)'" onmouseout="this.style.background='rgba(16,185,129,0.15)'">
+                            <i class="fa fa-download"></i>
+                            <span>发布页下载</span>
                         </a>
                     </div>
                 </div>
@@ -6307,20 +6315,87 @@
             });
         }
 
-        // 检查更新：仅显示后端返回的真实更新能力，不触发不存在的下载通道。
+        // 检查更新：请求 GitHub Releases 对比版本，发现新版可一键升级
         function checkUpdate() {
             const loading = showLoading();
             apiRequest('/api/update/check', 'GET', {}, function(response) {
                 hideLoading(loading);
                 const data = response.data || {};
                 if (data.hasUpdate) {
-                    layer.msg('发现新版本 v' + (data.version || '') + '，请按项目发布说明手动升级。', {icon: 0, time: 4000});
+                    showUpdateDialog(data);
+                } else if (data.latestVersion) {
+                    layer.msg('当前已是最新版本 v' + (data.version || ''), {icon: 1});
                 } else {
-                    layer.msg(data.notes || '当前未配置在线更新服务。', {icon: 0, time: 4000});
+                    layer.msg(data.notes || '暂时无法获取远程版本信息，请检查网络。', {icon: 0, time: 4000});
                 }
             }, function(error) {
                 hideLoading(loading);
                 layer.msg('检查更新失败: ' + (error || '网络错误'), {icon: 2});
+            });
+        }
+
+        // 一键升级弹窗：展示版本对比与更新说明
+        function showUpdateDialog(data) {
+            const esc = function(s) {
+                return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            };
+            const notes = esc((data.notes || '').split('\n').filter(function(l){return l.trim();}).slice(0, 8).join('<br>'));
+            const sizeMb = data.assetSize ? (data.assetSize / 1024 / 1024).toFixed(1) + ' MB' : '';
+            const content = '<div style="padding: 20px 24px; line-height: 1.7;">' +
+                '<div style="display: flex; align-items: center; gap: 14px; margin-bottom: 16px;">' +
+                '<div style="width: 48px; height: 48px; background: linear-gradient(135deg, #6366f1, #8b5cf6); border-radius: 12px; display: flex; align-items: center; justify-content: center;"><i class="fa fa-rocket" style="color:#fff; font-size: 22px;"></i></div>' +
+                '<div>' +
+                '<div style="font-size: 17px; font-weight: 700; color: rgba(255,255,255,0.95);">发现新版本 v' + esc(data.latestVersion) + '</div>' +
+                '<div style="font-size: 12px; color: rgba(255,255,255,0.55);">当前版本 v' + esc(data.version) + (sizeMb ? ' · 更新包 ' + sizeMb : '') + '</div>' +
+                '</div></div>' +
+                '<div style="max-height: 220px; overflow-y: auto; padding: 14px; background: rgba(30,41,59,0.6); border-radius: 12px; border: 1px solid rgba(99,102,241,0.2); font-size: 13px; color: rgba(255,255,255,0.75);">' +
+                (notes || '详见项目发布页。') +
+                '</div>' +
+                '<div style="margin-top: 14px; padding: 10px 14px; background: rgba(59,130,246,0.1); border-radius: 10px; font-size: 12px; color: rgba(147,197,253,0.9);">' +
+                '<i class="fa fa-shield" style="margin-right: 6px;"></i>升级会自动保留你的项目数据、配置与 API Key，完成后应用将自动重启。' +
+                '</div></div>';
+            layer.open({
+                type: 1,
+                title: '软件更新',
+                area: ['480px', '520px'],
+                btn: ['一键升级', '访问发布页', '稍后再说'],
+                btn1: function(index) {
+                    doOneClickUpgrade(data, index, this);
+                    return false; // 不自动关闭，升级过程展示状态
+                },
+                btn2: function() {
+                    window.open(data.releaseUrl || 'https://github.com/jianjieyiban/JJYB_AI_VideoAutoCut/releases', '_blank');
+                },
+                btn3: function(index) { layer.close(index); },
+                content: content
+            });
+        }
+
+        // 执行一键升级：下载 → 应用 → 自动重启
+        function doOneClickUpgrade(data, layerIndex, btnEl) {
+            const btn = $(btnEl);
+            const titleEl = $('.layui-layer-title').last();
+            if (btn.length) { btn.text('正在下载更新包...').css('pointer-events', 'none'); }
+            apiRequest('/api/update/download', 'POST', {
+                downloadUrl: data.downloadUrl, version: data.latestVersion
+            }, function(resp) {
+                if (btn.length) { btn.text('正在应用更新...'); }
+                apiRequest('/api/update/apply', 'POST', { path: resp.data && resp.data.path }, function() {
+                    if (titleEl.length) { titleEl.text('更新中，应用即将重启...'); }
+                    if (btn.length) { btn.text('✓ 更新已应用').css('pointer-events', 'none'); }
+                    layer.msg('更新完成，应用将在数秒内自动重启', {icon: 1, time: 5000});
+                    setTimeout(function() {
+                        layer.close(layerIndex);
+                        // 重启后刷新页面（应用重启完成前由用户手动刷新亦可）
+                        setTimeout(function(){ location.reload(); }, 8000);
+                    }, 2500);
+                }, function(err) {
+                    if (btn.length) { btn.text('一键升级（重试）').css('pointer-events', 'auto'); }
+                    layer.msg('应用更新失败: ' + (err || '未知错误'), {icon: 2});
+                });
+            }, function(err) {
+                if (btn.length) { btn.text('一键升级（重试）').css('pointer-events', 'auto'); }
+                layer.msg('下载失败: ' + (err || '网络错误'), {icon: 2});
             });
         }
 

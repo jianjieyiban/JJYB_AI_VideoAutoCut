@@ -1145,10 +1145,14 @@ def voiceover_page():
 @app.route('/api/health')
 def health_check():
     """健康检查"""
+    try:
+        from backend import __version__ as app_version
+    except Exception:
+        app_version = '3.3.3'
     return jsonify({
         'status': 'ok',
         'timestamp': datetime.now().isoformat(),
-        'version': '3.1.0'
+        'version': app_version
     })
 
 # 404错误处理

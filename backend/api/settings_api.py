@@ -1581,23 +1581,11 @@ def register_settings_routes(app, db_manager):
 
     @app.route('/api/update/check', methods=['GET'])
     def check_update():
-        """检查更新
-
-        当前未集成远程更新服务，因此只返回本地版本信息，并提示无在线更新。
-        """
+        """检查更新：请求 GitHub Releases，对比本地与远程版本。"""
         try:
-            try:
-                # 优先从 backend 包中获取版本号
-                from backend import __version__ as backend_version
-                current_version = str(backend_version)
-            except Exception:
-                current_version = '3.0'
-
-            data = {
-                'hasUpdate': False,
-                'version': current_version,
-                'notes': '当前安装版本为本地构建，尚未配置远程更新服务。如需升级，请关注项目发布页或手动下载安装新版。'
-            }
+            from backend.services import update_service
+            channel = (request.args.get('channel') or 'stable').lower()
+            data = update_service.check_update(channel)
             return jsonify({'code': 0, 'msg': '获取成功', 'data': data})
         except Exception as e:
             logger.error(f'❌ 检查更新失败: {e}', exc_info=True)
@@ -1605,21 +1593,43 @@ def register_settings_routes(app, db_manager):
 
     @app.route('/api/update/download', methods=['POST'])
     def download_update():
-        """下载更新
-
-        当前未配置在线更新/下载通道，接口仅返回说明信息，不提供虚构下载链接。
-        """
+        """下载更新包（同步下载，前端等待完成提示）。"""
         try:
-            return jsonify({
-                'code': 1,
-                'msg': '当前版本未集成自动更新通道，请前往项目发布页手动下载最新安装包。',
-                'data': {
-                    'downloadUrl': None
-                }
-            })
+            from backend.services import update_service
+            payload = request.get_json(silent=True) or {}
+            url = payload.get('downloadUrl') or ''
+            version = payload.get('version') or ''
+            result = update_service.download_update(url, version)
+            if result.get('ok'):
+                return jsonify({'code': 0, 'msg': result.get('msg', '下载完成'),
+                                'data': {'path': result.get('path'), 'size': result.get('size')}})
+            return jsonify({'code': 1, 'msg': result.get('msg', '下载失败'), 'data': None})
         except Exception as e:
             logger.error(f'❌ 下载更新失败: {e}', exc_info=True)
             return jsonify({'code': 1, 'msg': f'下载失败: {str(e)}', 'data': None}), 500
+
+    @app.route('/api/update/apply', methods=['POST'])
+    def apply_update():
+        """应用更新：解压覆盖并自动重启应用。"""
+        try:
+            from backend.services import update_service
+            payload = request.get_json(silent=True) or {}
+            zip_path = payload.get('path') or ''
+            result = update_service.apply_update(zip_path)
+            if result.get('ok'):
+                # 更新脚本已独立启动，延迟退出让响应先送达前端
+                def _shutdown():
+                    import time, os
+                    time.sleep(2)
+                    logger.info('应用更新：进程退出，等待更新脚本重启...')
+                    os._exit(0)
+                import threading
+                threading.Thread(target=_shutdown, daemon=True).start()
+                return jsonify({'code': 0, 'msg': result.get('msg'), 'data': {'restarting': True}})
+            return jsonify({'code': 1, 'msg': result.get('msg', '应用更新失败'), 'data': None})
+        except Exception as e:
+            logger.error(f'❌ 应用更新失败: {e}', exc_info=True)
+            return jsonify({'code': 1, 'msg': f'应用更新失败: {str(e)}', 'data': None}), 500
 
     # ====== 辅助函数：设置实时生效 ======
     def _apply_proxy_settings(advanced_config):
