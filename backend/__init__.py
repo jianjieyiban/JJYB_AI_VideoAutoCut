@@ -4,5 +4,5 @@ JJYB_AI智剪 Backend Package
 后端模块包
 """
 
-__version__ = '3.3.3'
+__version__ = '3.4.0'
 __author__ = 'JJYB_AI智剪开发团队'

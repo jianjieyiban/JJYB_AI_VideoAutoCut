@@ -25,6 +25,7 @@ from backend.utils.intro_outro_detector import (
     clamp_clip_to_range,
 )
 from backend.utils.frame_dedup import dedup_with_refill
+from backend.utils.highlight_scorer import load_or_detect_shots, enrich_shot_scores
 
 logger = logging.getLogger(__name__)
 
@@ -771,8 +772,11 @@ class RemixService:
         shots: List[Dict] = []
         try:
             from backend.engine.smart_shot_segmenter import SmartShotSegmenter
+            from backend.utils.highlight_scorer import load_or_detect_shots, enrich_shot_scores
             segmenter = SmartShotSegmenter(threshold=0.5, use_transnetv2=True)
-            shots = segmenter.detect_shots(video_path)
+            shots = load_or_detect_shots(segmenter, video_path)
+            if shots:
+                enrich_shot_scores(shots, video_path)
             if shots:
                 for index, shot in enumerate(shots):
                     # 生成全局唯一 id，避免多视频合并后 id 重复导致音乐卡点散列失效
@@ -1337,8 +1341,9 @@ class RemixService:
             try:
                 report(base_progress, f'正在分析第 {video_number}/{requested_video_count} 个素材：{video_name}（检测）',
                        {'video_path': str(path_obj), 'video_name': video_name, 'source_index': index, 'phase': '检测'})
-                shots = segmenter.detect_shots(str(path_obj), progress_callback=segment_progress,
-                                               max_shots=max_shots_per_video)
+                shots = load_or_detect_shots(segmenter, str(path_obj), progress_callback=segment_progress,
+                                             max_shots=max_shots_per_video)
+                enrich_shot_scores(shots, str(path_obj))
                 for shot in shots:
                     shot['source_video'] = str(path_obj)
                     shot['source_index'] = index
@@ -1429,7 +1434,8 @@ class RemixService:
                     v_path = PROJECT_ROOT / vp
                 if not v_path.exists():
                     continue
-                shots = segmenter.detect_shots(str(v_path))
+                shots = load_or_detect_shots(segmenter, str(v_path))
+                enrich_shot_scores(shots, str(v_path))
                 shots = self._clamp_shots_to_ranges(shots, effective_ranges)
                 for s in shots:
                     s['source_video'] = str(v_path)
@@ -1616,7 +1622,8 @@ class RemixService:
                     v_path = PROJECT_ROOT / vp
                 if not v_path.exists():
                     continue
-                shots = segmenter.detect_shots(str(v_path))
+                shots = load_or_detect_shots(segmenter, str(v_path))
+                enrich_shot_scores(shots, str(v_path))
                 shots = self._clamp_shots_to_ranges(shots, effective_ranges)
                 for s in shots:
                     s['source_video'] = str(v_path)

@@ -307,6 +307,19 @@ class VideoAnalyzer:
             except Exception as e:
                 logger.error(f"视觉模型调用异常，将回退到本地规则描述: {e}", exc_info=True)
 
+        # Anna 平台宿主 LLM（无用户密钥时的开箱即用 AI 视觉分析）
+        if not (api_key and model):
+            try:
+                from backend.engine import anna_host_llm
+                if anna_host_llm.is_host_llm_available():
+                    host_prompt = (
+                        "请用简洁的一句话描述这张视频关键帧画面中的场景、主要人物和动作，"
+                        "不超过50字，不要出现多余的客套话。"
+                    )
+                    return anna_host_llm.sample_vision(frame_path, host_prompt, max_tokens=256)
+            except Exception as e:
+                logger.warning(f"宿主 LLM 帧分析失败，回退本地规则描述: {e}")
+
         # 回退：使用本地规则生成简要描述
         idx = None
         try:
@@ -391,6 +404,23 @@ class VideoAnalyzer:
                     logger.error(f"批次总结模型调用失败: {resp.status_code} {resp.text[:200]}")
             except Exception as e:
                 logger.error(f"批次总结模型调用异常，将回退到本地规则总结: {e}", exc_info=True)
+
+        # Anna 平台宿主 LLM（无用户密钥时的开箱即用 AI 批次总结）
+        if not (api_key and model):
+            try:
+                from backend.engine import anna_host_llm
+                if anna_host_llm.is_host_llm_available():
+                    head = observations[:20]
+                    obs_text = "\n".join(f"- {str(x)}" for x in head)
+                    host_prompt = (
+                        "下面是某一时间段内多个视频关键帧的描述，请用1-2句话总结这一整段的主要内容，"
+                        "突出场景、事件和情绪，不超过80字：\n" + obs_text
+                    )
+                    summary = anna_host_llm.sample_text(host_prompt, max_tokens=256)
+                    if summary.strip():
+                        return summary.strip()
+            except Exception as e:
+                logger.warning(f"宿主 LLM 批次总结失败，回退本地规则总结: {e}")
 
         # 回退：使用本地规则对一批帧观察进行汇总
         head = observations[:5]

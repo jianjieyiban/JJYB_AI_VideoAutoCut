@@ -13,6 +13,7 @@
 import os
 import json
 import asyncio
+from functools import partial
 from typing import Dict, List, Optional, Any
 from pathlib import Path
 from datetime import datetime
@@ -88,7 +89,14 @@ class AutoClipController:
                     "fps": 30
                 }
         """
-        self.config = config
+        self.config = {
+            # Executa/平台调用可能只传少量配置甚至空 config：
+            # LLM 三键必须兜底存在（_step1 方括号访问），无密钥时自动走宿主 LLM
+            'llm_api_key': '',
+            'llm_base_url': '',
+            'llm_model': '',
+            **(config or {}),
+        }
 
         # 创建工作目录
         from backend.config.paths import PROJECT_ROOT, get_project_output_dir, resolve_output_path
@@ -115,11 +123,22 @@ class AutoClipController:
             self.analyzer = VideoAnalyzer(output_dir=str(self.temp_dir / 'analysis'))
             logger.info("✅ VideoAnalyzer初始化完成")
 
-            # 2. 文案生成器
+            # 2. 文案生成器：无用户密钥时注入 Anna 宿主 LLM 回调（平台内开箱即用）
+            llm_api_key = self.config.get('llm_api_key')
+            host_text_gen = None
+            if not llm_api_key:
+                try:
+                    from backend.engine import anna_host_llm
+                    if anna_host_llm.is_host_llm_available():
+                        host_text_gen = partial(anna_host_llm.sample_text, max_tokens=6000)
+                        logger.info("🤖 Anna 宿主 LLM 已注入文案生成（无用户密钥，开箱即用）")
+                except Exception:
+                    pass
             self.script_generator = ScriptGenerator(
-                api_key=self.config.get('llm_api_key'),
+                api_key=llm_api_key,
                 model=self.config.get('llm_model', 'gpt-4'),
-                base_url=self.config.get('llm_base_url')
+                base_url=self.config.get('llm_base_url'),
+                text_generator=host_text_gen,
             )
             logger.info("✅ ScriptGenerator初始化完成")
 

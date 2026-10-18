@@ -510,6 +510,39 @@ class GeminiAdapter(BaseModelAdapter):
             raise
 
 
+class AnnaHostSamplingAdapter(BaseModelAdapter):
+    """Anna 平台宿主 LLM 适配器（MCP sampling 反向 RPC）。
+
+    全新安装、用户未配置任何模型密钥时，AI 能力（文案生成 + 画面理解）
+    由 Anna 平台内置大模型驱动，开箱即用；反向 RPC 通道由 Executa 插件
+    在 initialize 协商后注入 backend.engine.anna_host_llm。
+    用户配置了自己的密钥时，工厂优先使用用户配置。
+    """
+
+    def __init__(self, **kwargs):
+        super().__init__(api_key='anna-host-llm', **kwargs)
+
+    @staticmethod
+    def available() -> bool:
+        try:
+            from backend.engine import anna_host_llm
+            return anna_host_llm.is_host_llm_available()
+        except Exception:
+            return False
+
+    def generate_text(self, prompt: str, **kwargs) -> str:
+        from backend.engine.anna_host_llm import sample_text
+        max_tokens = int(kwargs.get('max_tokens') or 4000)
+        system = str(kwargs.get('system') or '')
+        self.logger.info("🤖 使用 Anna 平台宿主 LLM 生成文本（无用户密钥，开箱即用）")
+        return sample_text(prompt, max_tokens=max_tokens, system=system)
+
+    def analyze_image(self, image_path: str, prompt: str, **kwargs) -> str:
+        from backend.engine.anna_host_llm import sample_vision
+        max_tokens = int(kwargs.get('max_tokens') or 2000)
+        return sample_vision(image_path, prompt, max_tokens=max_tokens)
+
+
 class MultiModelManager:
     """多模型管理器"""
 
@@ -600,8 +633,12 @@ class MultiModelManager:
             model_type = self.config_manager.normalize_llm_provider(model_type)
 
         adapter = self.get_adapter(model_type)
+        if not adapter and AnnaHostSamplingAdapter.available():
+            # 用户未配置密钥且宿主 LLM 已协商：走 Anna 平台内置模型，开箱即用
+            adapter = AnnaHostSamplingAdapter()
+            self.adapters[model_type or 'system-default'] = adapter
         if not adapter:
-            raise Exception(f"无法获取{model_type}模型适配器（建议：设置页→模型统一后台→文本模型，填写 自定义OpenAI / 其他厂商的 API Key、Base URL、默认模型并保存）")
+            raise Exception(f"无法获取{model_type}模型适配器（建议：设置页→模型统一后台→文本模型，填写 自定义OpenAI / 其他厂商的 API Key、Base URL、默认模型并保存；在 Anna 平台内使用时无需配置，自动使用平台内置 AI）")
 
         return adapter.generate_text(prompt, **kwargs)
 
@@ -682,9 +719,20 @@ class MultiModelManager:
         if not adapter_type:
             if normalized_model in {'baidu_vision', 'tencent_vision', 'spark_vision'}:
                 raise NotImplementedError(f'{normalized_model} 视觉服务尚未接入')
+            if AnnaHostSamplingAdapter.available():
+                # 未识别的视觉模型且宿主 LLM 已协商：走 Anna 平台内置多模态模型
+                host_adapter = AnnaHostSamplingAdapter()
+                self.adapters[f'vision:{normalized_model}'] = host_adapter
+                return host_adapter.analyze_image(image_path, prompt, **kwargs)
             raise AIConfigurationError()
 
         api_key = self.config_manager.get_vision_api_key(normalized_model)
+        if not api_key and AnnaHostSamplingAdapter.available():
+            # 无视觉密钥且宿主 LLM 已协商：走 Anna 平台内置多模态模型
+            host_adapter = AnnaHostSamplingAdapter()
+            self.adapters[f'vision:{normalized_model}'] = host_adapter
+            self.logger.info("🤖 使用 Anna 平台宿主 LLM 分析图像（无用户密钥，开箱即用）")
+            return host_adapter.analyze_image(image_path, prompt, **kwargs)
         if not api_key:
             raise AIConfigurationError()
 
