@@ -96,3 +96,7 @@ _push_result.txt
 _rn.md
 _release_notes_tmp.md
 _push_result.txt
+
+# 私有构建/桥接文件（Anna 相关，不开源）
+backend/engine/anna_host_llm.py
+scripts/wsl_linux_build.sh
