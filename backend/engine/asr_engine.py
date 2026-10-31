@@ -6,6 +6,7 @@ ASR Engine
 """
 
 import logging
+import math
 from pathlib import Path
 from typing import Optional, Dict, List
 
@@ -109,17 +110,21 @@ class ASREngine:
                 audio_path,
                 language=None if language == 'auto' else language,
                 task=task,
-                verbose=False
+                verbose=False,
+                word_timestamps=True
             )
 
             # 提取文本和时间戳
             segments = []
             for segment in result.get('segments', []):
-                segments.append({
+                timed_segment = {
                     'start': segment['start'],
                     'end': segment['end'],
                     'text': segment['text'].strip()
-                })
+                }
+                if segment.get('words'):
+                    timed_segment['words'] = segment['words']
+                segments.append(timed_segment)
 
             output = {
                 'text': result.get('text', '').strip(),
@@ -134,6 +139,14 @@ class ASREngine:
         except Exception as e:
             logger.error(f'❗ Whisper识别失败: {e}', exc_info=True)
             return {'text': '', 'segments': [], 'error': str(e)}
+
+    @staticmethod
+    def _valid_time_range(start, end) -> bool:
+        try:
+            start, end = float(start), float(end)
+            return math.isfinite(start) and math.isfinite(end) and 0 <= start < end
+        except (TypeError, ValueError, OverflowError):
+            return False
 
     def recognize_funasr(self, audio_path: str,
                         model_name: str = 'paraformer-zh') -> Dict:
@@ -156,18 +169,56 @@ class ASREngine:
             result = model.generate(input=audio_path)
 
             if result and len(result) > 0:
-                text = result[0]['text']
+                item = result[0]
+                text = item['text']
+                segments = []
+                sentences = item.get('sentence_info') or []
+                if sentences and all(
+                    isinstance(sentence, dict)
+                    and self._valid_time_range(sentence.get('start'), sentence.get('end'))
+                    and sentence.get('text')
+                    for sentence in sentences
+                ):
+                    segments = [
+                        {
+                            'start': float(sentence['start']) / 1000,
+                            'end': float(sentence['end']) / 1000,
+                            'text': sentence['text']
+                        }
+                        for sentence in sentences
+                    ]
+                else:
+                    timestamps = item.get('timestamp') or []
+                    if timestamps and all(
+                        isinstance(pair, (list, tuple)) and len(pair) == 2
+                        and self._valid_time_range(pair[0], pair[1])
+                        for pair in timestamps
+                    ):
+                        # 只有 token 边界时保留整段文本，不猜测 token 与文字的对应关系。
+                        segments = [{
+                            'start': min(float(pair[0]) for pair in timestamps) / 1000,
+                            'end': max(float(pair[1]) for pair in timestamps) / 1000,
+                            'text': text
+                        }]
 
                 output = {
                     'text': text,
-                    'segments': [{'start': 0, 'end': 0, 'text': text}],
-                    'duration': 0
+                    'segments': segments,
+                    'duration': max(segment['end'] for segment in segments) if segments else None,
+                    'timestamps_available': bool(segments)
                 }
-
-                logger.info(f'✅ FunASR识别成功，文本长度: {len(text)}')
+                if not segments:
+                    output['timing_error'] = 'FunASR未返回有效的真实时间边界，无法同步字幕'
+                    logger.warning(output['timing_error'])
+                else:
+                    logger.info(f'✅ FunASR识别成功，文本长度: {len(text)}')
                 return output
             else:
-                return {'text': '', 'segments': []}
+                return {
+                    'text': '', 'segments': [], 'duration': None,
+                    'timestamps_available': False,
+                    'timing_error': 'FunASR未返回识别结果，无法同步字幕'
+                }
 
         except Exception as e:
             logger.error(f'❗ FunASR识别失败: {e}', exc_info=True)
@@ -222,6 +273,12 @@ class ASREngine:
             是否成功
         """
         try:
+            if not segments or any(
+                not self._valid_time_range(segment.get('start'), segment.get('end'))
+                for segment in segments
+            ):
+                logger.error('缺少有效的真实时间边界，拒绝生成同步字幕')
+                return False
             Path(output_path).parent.mkdir(parents=True, exist_ok=True)
 
             with open(output_path, 'w', encoding='utf-8') as f:

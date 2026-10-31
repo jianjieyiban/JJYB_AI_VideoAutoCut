@@ -6,6 +6,7 @@ Video Processor
 """
 
 import logging
+import math
 import subprocess
 import time
 from pathlib import Path
@@ -316,43 +317,9 @@ class VideoProcessor:
                 logger.error('至少需要2个视频文件进行合并')
                 return False
 
-            # 确保输出目录存在
-            Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-
-            # 创建文件列表
-            list_file = Path(output_path).parent / 'filelist.txt'
-            with open(list_file, 'w', encoding='utf-8') as f:
-                for path in input_paths:
-                    f.write(f"file '{path}'\n")
-
-            cmd = [
-                self.ffmpeg_path,
-                '-f', 'concat',
-                '-safe', '0',
-                '-i', str(list_file),
-                '-c', 'copy',
-                '-y',
-                output_path
-            ]
-
-            logger.info(f'执行视频合并: {len(input_paths)}个文件 -> {output_path}')
-
-            # 使用重试机制
-            success, error = self._run_ffmpeg_with_retry(
-                cmd=cmd,
-                operation_name='视频合并',
-                output_path=output_path,
-                validate_output=lambda p: check_video_file(p) if p else False
+            return self.merge_videos_with_transitions(
+                input_paths, output_path, transition='cut'
             )
-
-            # 删除临时文件列表
-            list_file.unlink(missing_ok=True)
-
-            if success:
-                return True
-            else:
-                logger.error(f'❗ 视频合并失败: {error}')
-                return False
 
         except Exception as e:
             logger.error(f'视频合并异常: {e}', exc_info=True)
@@ -378,10 +345,27 @@ class VideoProcessor:
                 logger.error('至少需要2个视频文件进行转场合并')
                 return False
 
-            # 没有时长信息或数量不匹配时，直接回退到普通合并
+            infos = [self.get_video_info(path) for path in input_paths]
+            if any(not info for info in infos):
+                logger.error('无法获取片段信息，不能安全归一化拼接')
+                return False
+
             if not durations or len(durations) != len(input_paths):
-                logger.warning('转场合并缺少有效的片段时长信息，回退到普通合并')
-                return self.merge_videos(input_paths, output_path)
+                durations = [info.get('duration', 0) for info in infos]
+            segment_durations = [float(duration) for duration in durations]
+            if any(not math.isfinite(duration) or duration <= 0
+                   for duration in segment_durations):
+                logger.error('片段时长必须为有限正数')
+                return False
+
+            width = max(2, int(infos[0]['width']) // 2 * 2)
+            height = max(2, int(infos[0]['height']) // 2 * 2)
+            fps = float(infos[0].get('fps') or 30)
+            if not math.isfinite(fps) or fps <= 0:
+                fps = 30.0
+            # 将片段时长对齐到输出帧，保证音频和视频使用同一条时间轴。
+            segment_durations = [math.ceil(duration * fps) / fps
+                                 for duration in segment_durations]
 
             # 高层转场到 xfade 内置转场名称的映射
             # 结合内置更丰富的 transition，让 flash/zoom/shake 视觉差异更明显
@@ -393,11 +377,6 @@ class VideoProcessor:
                 'shake': 'squeezeh'    # 横向挤压，模拟震动感
             }
             xf_transition = transition_map.get(trans_key, 'fade')
-
-            # cut 模式或未配置有效转场时，直接使用普通合并
-            if xf_transition is None:
-                logger.info('使用 cut 转场（无特效），回退到普通合并')
-                return self.merge_videos(input_paths, output_path)
 
             # 基本安全限制，并根据转场类型微调默认时长
             # 仅当未显式指定 trans_duration (为 None) 时，才使用类型默认值
@@ -418,55 +397,62 @@ class VideoProcessor:
 
             t = max(0.05, min(t, 1.0))
 
-            # 再根据片段实际时长做一次安全裁剪：转场时长不能比最短片段还长
-            try:
-                positive_durs = [float(d or 0.0) for d in durations if float(d or 0.0) > 0.0]
-            except Exception:
-                positive_durs = []
-
-            if positive_durs:
-                min_seg = min(positive_durs)
-                if min_seg > 0 and t >= min_seg:
-                    # 让转场最长不超过最短片段的 60%
-                    safe_t = max(0.05, min_seg * 0.6)
-                    if t > safe_t:
-                        logger.info(f'转场时长 {t:.3f}s 相对于最短片段 {min_seg:.3f}s 过长，自动调整为 {safe_t:.3f}s')
-                        t = safe_t
+            # 中间片段需要容纳前后两次重叠，转场不超过最短片段的一半。
+            t = min(t, min(segment_durations) / 2)
+            if xf_transition is None:
+                t = 0.0
 
             Path(output_path).parent.mkdir(parents=True, exist_ok=True)
 
-            # 构造 filter_complex，链式调用 xfade
             filter_parts = []
-            input_labels = [f'[{i}:v]' for i in range(len(input_paths))]
-            prev_label = input_labels[0]
-
-            # 使用理论片段时长累积计算 offset
-            try:
-                combined_duration = float(durations[0] or 0.0)
-            except Exception:
-                combined_duration = 0.0
-
-            out_label = None
-            for idx in range(1, len(input_paths)):
-                cur_label = input_labels[idx]
-                try:
-                    seg_dur = float(durations[idx] or 0.0)
-                except Exception:
-                    seg_dur = 0.0
-
-                # 在上一个输出的尾部附近触发转场
-                offset = max(combined_duration - t, 0.0)
-                out_label = f'[v{idx}]'
+            for idx, (info, duration) in enumerate(zip(infos, segment_durations)):
                 filter_parts.append(
-                    f"{prev_label}{cur_label} xfade=transition={xf_transition}:duration={t}:offset={offset} {out_label}"
+                    f'[{idx}:v:0]setpts=PTS-STARTPTS,'
+                    f'scale={width}:{height}:force_original_aspect_ratio=decrease,'
+                    f'pad={width}:{height}:(ow-iw)/2:(oh-ih)/2,setsar=1,'
+                    f'fps={fps},format=yuv420p,tpad=stop_mode=clone:stop_duration={duration},'
+                    f'trim=duration={duration},settb=AVTB,setpts=PTS-STARTPTS[vnorm{idx}]'
+                )
+                audio_source = (f'[{idx}:a:0]aresample=48000,'
+                                if info.get('has_audio') else
+                                'anullsrc=r=48000:cl=stereo,')
+                filter_parts.append(
+                    f'{audio_source}aformat=sample_fmts=fltp:sample_rates=48000:'
+                    f'channel_layouts=stereo,asetpts=PTS-STARTPTS,apad,'
+                    f'atrim=duration={duration},asettb=1/48000,'
+                    f'asetpts=PTS-STARTPTS[anorm{idx}]'
                 )
 
-                combined_duration = combined_duration + seg_dur - t
-                prev_label = out_label
-
-            if not filter_parts or out_label is None:
-                logger.warning('转场 filter 构建失败，回退到普通合并')
-                return self.merge_videos(input_paths, output_path)
+            out_label = '[vout]'
+            audio_label = '[aout]'
+            if xf_transition is None:
+                concat_inputs = ''.join(f'[vnorm{idx}][anorm{idx}]'
+                                        for idx in range(len(input_paths)))
+                filter_parts.append(
+                    f'{concat_inputs}concat=n={len(input_paths)}:v=1:a=1'
+                    f'{out_label}{audio_label}'
+                )
+            else:
+                prev_label = '[vnorm0]'
+                prev_audio = '[anorm0]'
+                combined_duration = segment_durations[0]
+                for idx in range(1, len(input_paths)):
+                    offset = combined_duration - t
+                    video_output = f'[vfade{idx}]'
+                    audio_output = f'[afade{idx}]'
+                    filter_parts.append(
+                        f'{prev_label}[vnorm{idx}]xfade=transition={xf_transition}:'
+                        f'duration={t}:offset={offset}{video_output}'
+                    )
+                    filter_parts.append(
+                        f'{prev_audio}[anorm{idx}]acrossfade=d={t}:c1=tri:c2=tri'
+                        f'{audio_output}'
+                    )
+                    combined_duration += segment_durations[idx] - t
+                    prev_label = video_output
+                    prev_audio = audio_output
+                out_label = prev_label
+                audio_label = prev_audio
 
             filter_complex = '; '.join(filter_parts)
 
@@ -477,7 +463,7 @@ class VideoProcessor:
             cmd.extend([
                 '-filter_complex', filter_complex,
                 '-map', out_label,
-                '-map', '0:a?',  # 映射第一个输入的音频（?表示可选）
+                '-map', audio_label,
                 '-c:v', 'libx264',
                 '-c:a', 'aac',   # 音频编码
                 '-b:a', '192k',  # 音频码率
@@ -504,12 +490,11 @@ class VideoProcessor:
                 return True
             else:
                 logger.error(f'❗ 带转场视频合并失败: {stderr}')
-                # 出错时回退到普通合并
-                return self.merge_videos(input_paths, output_path)
+                return False
 
         except Exception as e:
-            logger.error(f'带转场视频合并异常，回退到普通合并: {e}', exc_info=True)
-            return self.merge_videos(input_paths, output_path)
+            logger.error(f'带转场视频合并异常: {e}', exc_info=True)
+            return False
 
     def convert_video(self, input_path: str, output_path: str,
                      codec: str = 'libx264', bitrate: str = '2M',

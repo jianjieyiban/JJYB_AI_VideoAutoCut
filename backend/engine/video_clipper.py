@@ -11,6 +11,7 @@
 
 import os
 import subprocess
+import tempfile
 import json
 from typing import Dict, List, Optional, Tuple
 from pathlib import Path
@@ -427,19 +428,20 @@ class VideoClipper:
 
         logger.info(f"🔗 开始合并{len(clip_paths)}个视频片段")
 
-        # 创建临时文件列表
-        list_file = os.path.join(
-            os.path.dirname(output_video),
-            "concat_list.txt"
-        )
-
+        # 每次合并独占列表，Windows 路径使用正斜杠并按 concat 语法转义单引号。
+        list_file = None
         try:
-            # 写入文件列表
-            with open(list_file, 'w', encoding='utf-8') as f:
+            with tempfile.NamedTemporaryFile(
+                mode='w', encoding='utf-8', suffix='.txt', prefix='concat_',
+                dir=os.path.dirname(os.path.abspath(output_video)), delete=False
+            ) as f:
+                list_file = f.name
                 for clip_path in clip_paths:
-                    # FFmpeg concat需要绝对路径或转义路径
-                    abs_path = os.path.abspath(clip_path)
-                    f.write(f"file '{abs_path}'\n")
+                    abs_path = os.path.abspath(clip_path).replace('\\', '/')
+                    if '\n' in abs_path or '\r' in abs_path:
+                        raise ValueError('视频片段路径不能包含换行符')
+                    escaped_path = abs_path.replace("'", "'\\''")
+                    f.write(f"file '{escaped_path}'\n")
 
             # 构建合并命令
             cmd = [
@@ -476,7 +478,7 @@ class VideoClipper:
 
         finally:
             # 清理临时文件
-            if os.path.exists(list_file):
+            if list_file and os.path.exists(list_file):
                 os.remove(list_file)
 
     def get_video_info(self, video_path: str) -> Dict:

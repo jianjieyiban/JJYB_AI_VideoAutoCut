@@ -13,6 +13,7 @@
 import os
 import re
 import json
+import math
 from typing import List, Dict, Optional, Tuple
 from datetime import timedelta
 from loguru import logger
@@ -226,19 +227,26 @@ class SubtitleGenerator:
 
         srt_content = []
 
-        for i, narration in enumerate(narrations, start=1):
+        for narration in narrations:
             time_range = narration.get('time_range', '00:00:00-00:00:05')
             text = narration.get('text', '')
-
-            # 解析时间范围
-            start_time, end_time = self._parse_time_range(time_range)
-
-            # 优化文本（断句）
-            optimized_text = self._optimize_subtitle_text(text)
-
-            # 生成SRT条目
-            srt_entry = self._create_srt_entry(i, start_time, end_time, optimized_text)
-            srt_content.append(srt_entry)
+            start, end = self._parse_time_range_seconds(time_range)
+            boundaries = narration.get('boundaries') or []
+            cues = self._align_boundary_cues(text, boundaries, 'WordBoundary', start, end)
+            if not cues:
+                cues = self._align_boundary_cues(text, boundaries, 'SentenceBoundary', start, end)
+                if cues:
+                    logger.info('词边界无法完整覆盖文案，采用真实句段边界字幕')
+                else:
+                    logger.info('无完整可用边界，采用整句段字幕，不生成均分伪字级时间戳')
+                    cues = [(start, end, text)]
+            for cue_start, cue_end, cue_text in cues:
+                srt_content.append(self._create_srt_entry(
+                    len(srt_content) + 1,
+                    self._seconds_to_srt_time(cue_start),
+                    self._seconds_to_srt_time(cue_end),
+                    self._optimize_subtitle_text(cue_text)
+                ))
 
         # 写入文件
         with open(output_path, 'w', encoding='utf-8') as f:
@@ -246,6 +254,43 @@ class SubtitleGenerator:
 
         logger.success(f"✅ SRT字幕生成完成: {output_path}")
         return output_path
+
+    def _align_boundary_cues(self, text, boundaries, boundary_type, start, end):
+        """只使用能顺序覆盖全部正文的真实边界；标点保留在原文切片中。"""
+        positions = [i for i, char in enumerate(text) if char.isalnum()]
+        spoken_text = ''.join(text[i] for i in positions)
+        if not spoken_text or not isinstance(boundaries, list):
+            return []
+        selected = []
+        cursor = 0
+        previous_end = start
+        try:
+            for boundary in boundaries:
+                if boundary.get('type') != boundary_type:
+                    continue
+                token = ''.join(char for char in boundary['text'] if char.isalnum())
+                if not token:
+                    continue
+                cue_start, cue_end = float(boundary['start']), float(boundary['end'])
+                if not (math.isfinite(cue_start) and math.isfinite(cue_end) and
+                        previous_end <= cue_start < cue_end <= end and
+                        int(cue_end * 1000 + 0.5) > int(cue_start * 1000 + 0.5)):
+                    return []
+                if not spoken_text.startswith(token, cursor):
+                    return []
+                selected.append((cue_start, cue_end, cursor))
+                cursor += len(token)
+                previous_end = cue_end
+        except (KeyError, TypeError, ValueError, AttributeError):
+            return []
+        if cursor != len(spoken_text):
+            return []
+        cues = []
+        for index, (cue_start, cue_end, offset) in enumerate(selected):
+            text_start = positions[offset] if index else 0
+            text_end = positions[selected[index + 1][2]] if index + 1 < len(selected) else len(text)
+            cues.append((cue_start, cue_end, text[text_start:text_end]))
+        return cues
 
     def _parse_time_range(self, time_range: str) -> tuple:
         """
@@ -316,7 +361,7 @@ class SubtitleGenerator:
         if not text:
             return ''
         # 移除多余空白
-        text = re.sub(r'\s+', '', text)
+        text = re.sub(r'\s+', ' ', text).strip()
 
         # （1）单条字幕单行优先（横排），<= 16 字（默认 max_chars_per_line 常用值为18~22，这里稍微保守点）
         max_len = max(10, int(getattr(self, 'max_chars_per_line', 0) or 18))
@@ -365,11 +410,6 @@ class SubtitleGenerator:
             if best_split_point is not None and best_split_diff <= len(text) * 0.22:
                 line1 = ''.join(blocks[:best_split_point + 1])
                 line2 = ''.join(blocks[best_split_point + 1:])
-                # 平衡兜底：若某行还超过 max_len * 1.3，退化裁剪（通常不会发生）
-                if len(line1) > int(max_len * 1.35):
-                    line1 = line1[:int(max_len * 1.2)]
-                if len(line2) > int(max_len * 1.35):
-                    line2 = line2[:int(max_len * 1.2)]
                 # 字数差 > 6 的再尝试：把 line1 末尾的 1 个短句块挪给 line2（或反向）
                 if abs(len(line1) - len(line2)) > 6 and blocks:
                     # 差异大时放弃标点块，改成纯字数平分

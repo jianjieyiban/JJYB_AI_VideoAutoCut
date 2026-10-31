@@ -13,6 +13,10 @@
 import os
 import json
 import asyncio
+import math
+import subprocess
+import tempfile
+from fractions import Fraction
 from functools import partial
 from typing import Dict, List, Optional, Any
 from pathlib import Path
@@ -100,12 +104,13 @@ class AutoClipController:
 
         # 创建工作目录
         from backend.config.paths import PROJECT_ROOT, get_project_output_dir, resolve_output_path
-        requested_output = config.get('output_dir', '')
+        requested_output = self.config.get('output_dir', '')
         self.output_dir = get_project_output_dir() if not requested_output else resolve_output_path(requested_output, create_parent=True)
-        requested_temp = Path(config.get('temp_dir', PROJECT_ROOT / 'temp'))
-        self.temp_dir = requested_temp if requested_temp.is_absolute() else PROJECT_ROOT / requested_temp
+        requested_temp = Path(self.config.get('temp_dir', PROJECT_ROOT / 'temp'))
+        temp_root = requested_temp if requested_temp.is_absolute() else PROJECT_ROOT / requested_temp
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        self.temp_dir.mkdir(parents=True, exist_ok=True)
+        temp_root.mkdir(parents=True, exist_ok=True)
+        self.temp_dir = Path(tempfile.mkdtemp(prefix='auto_clip_', dir=str(temp_root)))
 
         logger.info("初始化AutoClipController...")
         logger.info(f"输出目录: {self.output_dir}")
@@ -383,8 +388,7 @@ class AutoClipController:
 
             # 生成音频（使用统一TTSEngine接口）
             if not text.strip():
-                logger.warning(f"  ⚠️ 第{i+1}条文案为空，跳过音频生成")
-                continue
+                raise ValueError(f"第{i+1}条解说文案为空，无法与视频片段对齐")
 
             logger.info(f"  生成音频 {i+1}/{len(narrations)}: {audio_filename}")
             ok = self.tts_engine.synthesize(
@@ -394,9 +398,22 @@ class AutoClipController:
                 voice=tts_voice
             )
             if not ok or not audio_path.exists():
-                logger.error(f"  ❗ 音频生成失败: {audio_filename}")
-                continue
+                raise RuntimeError(f"音频生成失败: {audio_filename}")
 
+            boundaries = []
+            sidecar_path = audio_path.with_suffix('.timestamps.json')
+            if sidecar_path.is_file():
+                try:
+                    with open(sidecar_path, 'r', encoding='utf-8') as metadata_file:
+                        metadata = json.load(metadata_file)
+                    if metadata.get('unit') == 'seconds' and metadata.get('text') == text:
+                        boundaries = metadata.get('boundaries') or []
+                        if not isinstance(boundaries, list):
+                            boundaries = []
+                except (OSError, ValueError, TypeError, AttributeError) as exc:
+                    logger.warning(f'时间戳读取失败，采用句段字幕: {exc}')
+
+            # 仅改变响度，不缩放边界；即使采用 _norm 文件也保留原合成边界。
             # 可选：进行响度标准化，避免不同句子音量差异过大
             try:
                 normalized_path = audio_dir / f"audio_{i:03d}_norm.mp3"
@@ -408,7 +425,8 @@ class AutoClipController:
             audio_files.append({
                 'audio_path': str(audio_path),
                 'time_range': time_range,
-                'text': text
+                'text': text,
+                'boundaries': boundaries
             })
 
         logger.success(f"✅ 配音合成完成，共{len(audio_files)}个音频")
@@ -444,6 +462,9 @@ class AutoClipController:
             output_dir=str(clips_dir)
         )
 
+        if len(video_clips) != len(clip_list):
+            raise RuntimeError(f"视频剪辑失败: 成功{len(video_clips)}/{len(clip_list)}个片段")
+
         logger.success(f"✅ 视频剪辑完成，共{len(video_clips)}个片段")
         return video_clips
 
@@ -458,43 +479,135 @@ class AutoClipController:
         """步骤5: 合成最终视频（含字幕生成）"""
         logger.info("🎞️ 步骤5/5: 合成最终视频")
 
-        # 1. 先合并所有视频片段
+        if not video_clips:
+            raise ValueError("视频片段列表为空")
+
+        narrations = (narration_script or {}).get('narrations', [])
+        # 空配音/空文案 = 纯画面导出（合法）；只有"提供了但不齐"才拒绝，
+        # 避免无解说场景被数量检查误伤，也防止缺段被静默跳过。
+        if audio_files and len(audio_files) != len(video_clips):
+            raise ValueError("视频片段与配音数量不一致，无法逐段对齐")
+        if narrations and len(narrations) != len(video_clips):
+            raise ValueError("视频片段与解说文案数量不一致，无法逐段对齐")
+
+        # 1. 先规范为零起点、统一帧率的纯视频，再以实际帧数建立公共时间轴。
+        target_fps = Fraction(str(self.config.get('fps', 30)))
+        if target_fps <= 0:
+            raise ValueError('输出帧率必须大于0')
+        normalized_clips = []
+        clip_durations = []
+        for i, clip in enumerate(video_clips):
+            normalized = self.temp_dir / f'normalized_{i:03d}.mp4'
+            try:
+                subprocess.run(
+                    [self.audio_processor.ffmpeg_path, '-hide_banner', '-loglevel', 'error',
+                     '-i', str(clip), '-map', '0:v:0', '-an',
+                     '-vf', f'fps={target_fps},setpts=PTS-STARTPTS',
+                     '-c:v', 'libx264', '-pix_fmt', 'yuv420p',
+                     '-video_track_timescale', str(target_fps.numerator),
+                     '-movie_timescale', str(target_fps.numerator), '-y', str(normalized)],
+                    capture_output=True, text=True, timeout=300, check=True
+                )
+                video_probe = subprocess.run(
+                    ['ffprobe', '-v', 'error', '-select_streams', 'v:0', '-count_frames',
+                     '-show_entries', 'stream=nb_read_frames,avg_frame_rate,start_time',
+                     '-of', 'json', str(normalized)],
+                    capture_output=True, text=True, timeout=300, check=True
+                )
+                stream = json.loads(video_probe.stdout)['streams'][0]
+                frames = int(stream['nb_read_frames'])
+                actual_fps = Fraction(stream['avg_frame_rate'])
+                start_time = float(stream['start_time'])
+                if frames <= 0 or actual_fps != target_fps or not math.isfinite(start_time) or abs(start_time) > 0.000001:
+                    raise ValueError('规范视频的帧数、帧率或时间起点无效')
+                duration = float(frames / actual_fps)
+                if not math.isfinite(duration) or duration <= 0.1:
+                    raise ValueError('规范视频帧时长无效')
+            except (subprocess.SubprocessError, OSError, ValueError, KeyError, IndexError, TypeError, ZeroDivisionError) as exc:
+                raise RuntimeError(f'第{i+1}段视频规范化或帧时长读取失败: {exc}') from exc
+            normalized_clips.append(str(normalized))
+            clip_durations.append(duration)
+
         merged_video = self.temp_dir / 'merged_video.mp4'
         if len(video_clips) > 1:
             self.clipper.merge_video_clips(
-                clip_paths=video_clips,
+                clip_paths=normalized_clips,
                 output_video=str(merged_video)
             )
         else:
-            merged_video = Path(video_clips[0])
+            merged_video = Path(normalized_clips[0])
 
-        # 2. 合并所有音频
-        merged_audio = self.temp_dir / 'merged_audio.mp3'
-        valid_audio_paths = [Path(a['audio_path']) for a in audio_files if a.get('audio_path')]
-        valid_audio_paths = [p for p in valid_audio_paths if p.exists()]
-        if not valid_audio_paths:
-            logger.warning("⚠️ 未找到可用的配音音频，跳过音频合并，使用静音占位")
-        else:
+        # 2. 合并所有配音（无配音 = 纯画面导出，跳过音轨生成，防止 concat n=0 失败）
+        merged_audio = None
+        subtitle_narrations = []
+        if audio_files:
+            merged_audio_path = self.temp_dir / 'merged_audio.wav'
+            command = [self.audio_processor.ffmpeg_path, '-hide_banner', '-loglevel', 'error']
+            filters = []
+            elapsed = 0.0
+            # 以配音列表为准逐段枚举；无文案时用空 dict 兜底。
+            # 不能用 zip(clip_durations, audio_files, narrations)：narrations 为空
+            # 时 zip 长度为 0，循环静默跳过 → filtergraph 无输入 → ffmpeg 失败，
+            # 且"第N段配音缺失"的检查永远不会执行（缺段被静默吞掉）。
+            for i, audio in enumerate(audio_files):
+                duration = clip_durations[i]
+                narration = narrations[i] if i < len(narrations) else {}
+                audio_path = Path(audio.get('audio_path') or '')
+                if not audio_path.is_file():
+                    raise RuntimeError(f"第{i+1}段配音文件不存在: {audio_path}")
+                try:
+                    probe = subprocess.run(
+                        ['ffprobe', '-v', 'error', '-show_entries', 'format=duration',
+                         '-of', 'default=noprint_wrappers=1:nokey=1', str(audio_path)],
+                        capture_output=True, text=True, timeout=30, check=True
+                    )
+                    audio_duration = float(probe.stdout.strip())
+                except (subprocess.SubprocessError, OSError, ValueError) as exc:
+                    raise RuntimeError(f"无法读取第{i+1}段配音时长: {exc}") from exc
+                if not math.isfinite(duration) or duration <= 0.1 or not math.isfinite(audio_duration) or audio_duration <= 0:
+                    raise ValueError(f"第{i+1}段视频或配音时长无效: 视频={duration}, 配音={audio_duration}")
+                speed = max(1.0, audio_duration / (duration - 0.1))
+                if speed > 2.0:
+                    raise ValueError(f"第{i+1}段配音过长，需加速 {speed:.2f} 倍才能适配视频；请缩短文案或延长片段")
+                command.extend(['-i', str(audio_path)])
+                filters.append(
+                    f'[{i}:a]aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo,'
+                    f'atempo={speed:.9f},apad,atrim=duration={duration:.9f},asetpts=PTS-STARTPTS[a{i}]'
+                )
+                transformed_boundaries = []
+                try:
+                    for boundary in audio.get('boundaries') or []:
+                        start = float(boundary['start'])
+                        end = float(boundary['end'])
+                        if not (math.isfinite(start) and math.isfinite(end) and
+                                0 <= start < end <= audio_duration):
+                            raise ValueError('边界超出配音时长或无效')
+                        transformed_boundaries.append({
+                            **boundary, 'start': elapsed + start / speed,
+                            'end': elapsed + end / speed
+                        })
+                except (ValueError, TypeError, KeyError) as exc:
+                    logger.warning(f'第{i+1}段时间戳无效，采用句段字幕: {exc}')
+                    transformed_boundaries = []
+                subtitle_narrations.append({
+                    **narration,
+                    'time_range': f'{elapsed}s-{elapsed + min(duration, audio_duration / speed)}s',
+                    'boundaries': transformed_boundaries
+                })
+                elapsed += duration
+            filters.append(''.join(f'[a{i}]' for i in range(len(audio_files))) +
+                           f'concat=n={len(audio_files)}:v=0:a=1[out]')
+            command.extend(['-filter_complex', ';'.join(filters), '-map', '[out]', '-c:a', 'pcm_s16le', '-y', str(merged_audio_path)])
             try:
-                if len(valid_audio_paths) == 1:
-                    # 单个音频，直接转换/复制为目标文件
-                    ok_merge = self.audio_processor.convert_format(
-                        input_path=str(valid_audio_paths[0]),
-                        output_path=str(merged_audio),
-                        format='mp3'
-                    )
-                else:
-                    ok_merge = self.audio_processor.merge_audios(
-                        [str(p) for p in valid_audio_paths],
-                        str(merged_audio)
-                    )
-
-                if not ok_merge or not merged_audio.exists():
-                    raise RuntimeError("音频合并失败")
-                logger.success(f"✅ 配音音频合并完成: {merged_audio}")
-            except Exception as me:
-                logger.error(f"❌ 配音音频合并失败，将退回使用第一段音频: {me}")
-                merged_audio = valid_audio_paths[0]
+                result = subprocess.run(command, capture_output=True, text=True, timeout=300)
+            except (subprocess.SubprocessError, OSError) as exc:
+                raise RuntimeError(f"逐段配音对齐失败: {exc}") from exc
+            if result.returncode != 0 or not merged_audio_path.is_file() or merged_audio_path.stat().st_size == 0:
+                raise RuntimeError(f"逐段配音对齐失败: {result.stderr}")
+            merged_audio = merged_audio_path
+            logger.info(f"配音对齐完成: {merged_audio}")
+        else:
+            logger.info("未提供配音，按纯画面导出")
 
         # 3. 生成字幕文件（如果启用）
         subtitle_path = None
@@ -503,13 +616,12 @@ class AutoClipController:
                 logger.info("📝 生成SRT字幕...")
                 subtitle_path = self.temp_dir / 'subtitle.srt'
                 self.subtitle_generator.generate_srt_from_script(
-                    narration_script,
+                    {**narration_script, 'narrations': subtitle_narrations},
                     str(subtitle_path)
                 )
                 logger.success(f"✅ 字幕生成完成: {subtitle_path}")
             except Exception as e:
-                logger.error(f"❌ 字幕生成失败: {e}")
-                subtitle_path = None
+                raise RuntimeError(f"字幕生成失败: {e}") from e
 
         # 4. 生成最终输出文件名
         if not output_filename:
@@ -522,21 +634,26 @@ class AutoClipController:
         options = {
             'voice_volume': self.config.get('voice_volume', 1.0),
             'bgm_volume': self.config.get('bgm_volume', 0.3),
-            'subtitle_enabled': bool(subtitle_path),
+            'subtitle_enabled': self.config.get('subtitle_enabled', True),
+            'strict_voiceover': True,
+            'strict_subtitles': self.config.get('subtitle_enabled', True),
             'subtitle_font_size': self.config.get('subtitle_font_size', 40),
             'subtitle_position': self.config.get('subtitle_position', 'bottom'),
             'fps': self.config.get('fps', 30),
             'threads': 2
         }
 
-        self.composer.merge_materials(
+        result = self.composer.merge_materials(
             video_path=str(merged_video),
-            audio_path=str(merged_audio),
+            audio_path=str(merged_audio) if merged_audio else None,
             output_path=str(final_output),
             subtitle_path=str(subtitle_path) if subtitle_path else None,
             bgm_path=bgm_path,
             options=options
         )
+
+        if not result or not final_output.is_file() or final_output.stat().st_size == 0:
+            raise RuntimeError(f"最终视频导出失败: {final_output}")
 
         logger.success(f"✅ 最终视频合成完成: {final_output}")
         return str(final_output)

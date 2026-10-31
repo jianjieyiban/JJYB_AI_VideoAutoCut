@@ -87,11 +87,11 @@ FONTS_DIR = ASSETS_DIR / 'fonts'
 IMAGES_DIR = ASSETS_DIR / 'images'
 AUDIO_DIR = ASSETS_DIR / 'audio'
 
-# 确保目录存在
-ASSETS_DIR.mkdir(exist_ok=True)
-FONTS_DIR.mkdir(exist_ok=True)
-IMAGES_DIR.mkdir(exist_ok=True)
-AUDIO_DIR.mkdir(exist_ok=True)
+# 确保目录存在（parents=True：云端全新环境中 PROJECT_ROOT 本身不存在）
+ASSETS_DIR.mkdir(parents=True, exist_ok=True)
+FONTS_DIR.mkdir(parents=True, exist_ok=True)
+IMAGES_DIR.mkdir(parents=True, exist_ok=True)
+AUDIO_DIR.mkdir(parents=True, exist_ok=True)
 
 # ==================== 字体配置 ====================
 
@@ -231,16 +231,16 @@ PROCESSING_DIR = TEMP_DIR / 'processing'
 # 兼容旧名称：运行时可下载输出固定到项目根 output。
 OUTPUTS_DIR = OUTPUT_DIR / 'temp_outputs'
 
-# 确保临时目录存在
-TEMP_DIR.mkdir(exist_ok=True)
-UPLOADS_DIR.mkdir(exist_ok=True)
-PROCESSING_DIR.mkdir(exist_ok=True)
-OUTPUTS_DIR.mkdir(exist_ok=True)
+# 确保临时目录存在（parents=True：云端全新环境中 PROJECT_ROOT 本身不存在）
+TEMP_DIR.mkdir(parents=True, exist_ok=True)
+UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+PROCESSING_DIR.mkdir(parents=True, exist_ok=True)
+OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
 
 # ==================== 模型目录配置（可选） ====================
 
 MODELS_DIR = BASE_DIR / 'models'
-MODELS_DIR.mkdir(exist_ok=True)
+MODELS_DIR.mkdir(parents=True, exist_ok=True)
 
 # TransNetV2 场景检测模型
 TRANSNETV2_MODEL_DIR = MODELS_DIR / 'transnetv2'
@@ -248,7 +248,7 @@ TRANSNETV2_MODEL_DIR = MODELS_DIR / 'transnetv2'
 # ==================== 工具目录配置（可选） ====================
 
 TOOLS_DIR = BASE_DIR / 'tools'
-TOOLS_DIR.mkdir(exist_ok=True)
+TOOLS_DIR.mkdir(parents=True, exist_ok=True)
 
 # ImageMagick工具路径
 IMAGEMAGICK_DIR = TOOLS_DIR / 'imagemagick'

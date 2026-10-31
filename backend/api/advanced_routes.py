@@ -564,6 +564,8 @@ def curated_remake_extract_script():
                 'full_text': full_text,
                 'segments': segments,
                 'segment_count': len(segments),
+                'timestamps_available': asr_result.get('timestamps_available', bool(segments)) if isinstance(asr_result, dict) else False,
+                'timing_error': asr_result.get('timing_error') if isinstance(asr_result, dict) else None,
                 'text_length': len(full_text),
                 'engine_used': engine_name,
                 'language': language

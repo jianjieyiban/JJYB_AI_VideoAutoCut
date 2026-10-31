@@ -72,11 +72,13 @@ class RemixCoveragePlannerTests(unittest.TestCase):
         clips = self.service._select_coverage_remix_clips(candidates, 20, 'dynamic')
 
         self.assertAlmostEqual(sum(clip['duration'] for clip in clips), 20, places=3)
+        # 覆盖规划器会把候选镜头切出子窗口（用空闲区间补足目标时长），
+        # 因此只要求每个输出窗口完整落在某个候选区间内（不越界、不凭空生成）。
         for clip in clips:
-            self.assertLessEqual(clip['end_time'], next(
-                item['end_time'] for item in candidates
-                if item['start_time'] == clip['start_time']
-            ))
+            self.assertTrue(any(
+                item['start_time'] <= clip['start_time'] and clip['end_time'] <= item['end_time']
+                for item in candidates
+            ), f"输出窗口超出候选区间: {clip}")
 
     def test_beat_allocator_splits_a_long_shot_into_non_overlapping_windows(self):
         shots = [

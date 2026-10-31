@@ -127,6 +127,37 @@ class VideoComposer:
         bgm_path: Optional[str] = None,
         options: Optional[Dict[str, Any]] = None
     ) -> str:
+        resources = []
+        temp_paths = []
+        try:
+            return self._merge_materials(
+                video_path, audio_path, output_path, subtitle_path, bgm_path,
+                options, resources, temp_paths
+            )
+        finally:
+            for clip in reversed(resources):
+                try:
+                    clip.close()
+                except Exception:
+                    pass
+            for path in temp_paths:
+                try:
+                    if os.path.exists(path):
+                        os.remove(path)
+                except OSError as exc:
+                    logger.warning(f'清理临时音频失败: {path}: {exc}')
+
+    def _merge_materials(
+        self,
+        video_path: str,
+        audio_path: str,
+        output_path: str,
+        subtitle_path: Optional[str] = None,
+        bgm_path: Optional[str] = None,
+        options: Optional[Dict[str, Any]] = None,
+        resources=None,
+        temp_paths=None
+    ) -> str:
         """
         合并视频、音频、BGM和字幕生成最终视频
 
@@ -138,6 +169,8 @@ class VideoComposer:
             bgm_path: 背景音乐文件路径，可选
             options: 其他选项配置，可包含以下字段：
                 # 音量控制
+                - strict_voiceover: 配音缺失或加载失败时抛错，默认False
+                - strict_subtitles: 字幕缺失、解析或渲染失败时抛错，默认False
                 - voice_volume: 配音音量，默认1.0
                 - bgm_volume: 背景音乐音量，默认0.3
                 - original_audio_volume: 原始音频音量，默认0.7
@@ -167,6 +200,16 @@ class VideoComposer:
         # 合并选项默认值
         if options is None:
             options = {}
+
+        strict_voiceover = options.get('strict_voiceover', False)
+        strict_subtitles = options.get('strict_subtitles', False)
+        if strict_voiceover and (not audio_path or not os.path.isfile(audio_path)):
+            raise RuntimeError(f'必需的配音文件不存在: {audio_path}')
+        if strict_subtitles and (
+            not options.get('subtitle_enabled', True) or not subtitle_path
+            or not self._is_valid_subtitle_file(subtitle_path)
+        ):
+            raise RuntimeError(f'必需的字幕未启用或文件无效: {subtitle_path}')
 
         # 音量参数
         voice_volume = options.get('voice_volume', AudioVolumeConfig.VOICE_VOLUME)
@@ -345,6 +388,7 @@ class VideoComposer:
         temp_original_path = None
         try:
             video_clip = VideoFileClip(video_path)
+            resources.append(video_clip)
 
             # 如配置了最大时长，则在加载后立即裁剪视频，确保后续音频与BGM等都基于裁剪后长度
             if max_duration is not None:
@@ -476,6 +520,7 @@ class VideoComposer:
                         output_dir or tempfile.gettempdir(),
                         f'jjyb_original_{uuid.uuid4().hex}.m4a'
                     )
+                    temp_paths.append(temp_original_path)
                     original_audio.write_audiofile(temp_original_path, codec='aac', logger=None)
 
                 # 计算音量调整系数
@@ -504,13 +549,19 @@ class VideoComposer:
         # 1. 添加配音
         if audio_path and os.path.exists(audio_path):
             try:
-                voice_audio = AudioFileClip(audio_path).with_effects([
+                voice_audio = AudioFileClip(audio_path)
+                resources.append(voice_audio)
+                voice_audio = voice_audio.with_effects([
                     afx.MultiplyVolume(voice_volume)
                 ])
                 audio_tracks.append(voice_audio)
                 logger.info(f"已添加配音音频，音量: {voice_volume:.2f}")
             except Exception as e:
                 logger.error(f"加载配音音频失败: {e}")
+                if strict_voiceover:
+                    raise RuntimeError(f'必需的配音加载失败: {e}') from e
+        elif strict_voiceover:
+            raise RuntimeError(f'必需的配音文件不存在: {audio_path}')
 
         # 2. 添加原声
         if original_audio is not None:
@@ -520,7 +571,9 @@ class VideoComposer:
         # 3. 添加BGM
         if bgm_path and os.path.exists(bgm_path):
             try:
-                bgm_clip = AudioFileClip(bgm_path).with_effects([
+                bgm_clip = AudioFileClip(bgm_path)
+                resources.append(bgm_clip)
+                bgm_clip = bgm_clip.with_effects([
                     afx.MultiplyVolume(bgm_volume),
                     afx.AudioFadeOut(3),  # 3秒淡出
                     afx.AudioLoop(duration=video_clip.duration)  # 循环至视频长度
@@ -543,6 +596,7 @@ class VideoComposer:
                         logger.warning('花字音效资源不存在或无效，已跳过: %s', sfx_path)
                         continue
                     clip = AudioFileClip(sfx_path)
+                    resources.append(clip)
                     duration = min(float(clip.duration or 0), max(0.0, video_clip.duration - start))
                     if duration <= 0:
                         clip.close()
@@ -558,6 +612,7 @@ class VideoComposer:
         # 合成最终音频轨道
         if audio_tracks:
             final_audio = CompositeAudioClip(audio_tracks)
+            resources.append(final_audio)
             try:
                 clip_total = float(getattr(video_clip, 'duration', 0.0) or 0.0)
             except Exception:
@@ -585,12 +640,19 @@ class VideoComposer:
                     subtitle_bg_color,
                     subtitle_position,
                     stroke_color,
-                    stroke_width
+                    stroke_width,
+                    strict=strict_subtitles,
+                    resources=resources
                 )
+                resources.append(video_clip)
                 subtitle_clips = getattr(video_clip, '_jjyb_subtitle_clips', [])
             except Exception as e:
                 logger.error(f"处理字幕失败: {e}")
+                if strict_subtitles:
+                    raise RuntimeError(f'必需的字幕渲染失败: {e}') from e
                 logger.warning("字幕处理失败，继续生成无字幕视频")
+        elif strict_subtitles:
+            raise RuntimeError(f'必需的字幕未启用或文件无效: {subtitle_path}')
         elif not subtitle_enabled:
             logger.info("字幕已禁用，跳过字幕处理")
         elif not subtitle_path:
@@ -873,7 +935,9 @@ class VideoComposer:
         bg_color: Optional[str],
         position: str,
         stroke_color: str,
-        stroke_width: int
+        stroke_width: int,
+        strict: bool = False,
+        resources=None
     ):
         """
         添加字幕到视频
@@ -897,6 +961,8 @@ class VideoComposer:
         # 解析 SRT 字幕
         subtitles = self._parse_srt_file(subtitle_path)
         if not subtitles:
+            if strict:
+                raise RuntimeError(f'必需的字幕解析结果为空: {subtitle_path}')
             logger.warning(f"字幕文件解析结果为空，跳过字幕渲染: {subtitle_path}")
             return video_clip
 
@@ -927,9 +993,16 @@ class VideoComposer:
                 bg_color=bg_color,
                 position=position,
                 stroke_color=stroke_color,
-                stroke_width=stroke_width
+                stroke_width=stroke_width,
+                strict=strict,
+                resources=resources
             )
             text_clips.append(clip)
+            if resources is not None:
+                resources.append(clip)
+
+        if strict and not text_clips:
+            raise RuntimeError('必需的字幕没有可渲染的时间区间')
 
         # 合成视频和字幕
         final_clip = CompositeVideoClip([video_clip, *text_clips])
@@ -949,7 +1022,9 @@ class VideoComposer:
         bg_color: Optional[str],
         position: str,
         stroke_color: str,
-        stroke_width: int
+        stroke_width: int,
+        strict: bool = False,
+        resources=None
     ):
         """创建单个字幕片段"""
         phrase = subtitle_item[1]
@@ -968,12 +1043,17 @@ class VideoComposer:
                 stroke_width=stroke_width if stroke_width > 0 else 0
             )
         except Exception as e:
+            if strict:
+                raise RuntimeError(f'创建必需的字幕片段失败: {e}') from e
             logger.warning(f"创建字幕片段失败，使用简化参数: {e}")
             _clip = TextClip(
                 text=phrase,
                 font_size=font_size,
                 color=color
             )
+
+        if resources is not None:
+            resources.append(_clip)
 
         # 设置字幕时间
         duration = subtitle_item[0][1] - subtitle_item[0][0]

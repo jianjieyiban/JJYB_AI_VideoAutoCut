@@ -142,6 +142,10 @@ class RemixService:
             return path.absolute()
 
     @classmethod
+    def _remix_source_key(cls, video_path: object) -> str:
+        return str(cls._resolve_video_path(video_path)).replace('\\', '/').lower()
+
+    @classmethod
     def _dedupe_video_paths(cls, video_paths: object) -> List[str]:
         unique: List[str] = []
         seen = set()
@@ -160,8 +164,22 @@ class RemixService:
         normalized = [c for c in (self._normalize_remix_candidate(item) for item in candidates) if c]
         if not normalized:
             return []
-        total_available = sum(float(c.get('duration') or 0) for c in normalized)
-        if total_available + 0.08 < target_duration:
+        # Count each source interval only once, even when shot proposals overlap.
+        intervals_by_source: Dict[str, List[tuple]] = {}
+        for clip in normalized:
+            source = self._remix_source_key(clip['video_path'])
+            intervals_by_source.setdefault(source, []).append((float(clip['start_time']), float(clip['end_time'])))
+        total_available = 0.0
+        for intervals in intervals_by_source.values():
+            end = None
+            for start, stop in sorted(intervals):
+                if end is None or start > end:
+                    total_available += stop - start
+                    end = stop
+                elif stop > end:
+                    total_available += stop - end
+                    end = stop
+        if total_available + 0.001 < target_duration:
             raise RuntimeError('可用智能镜头总时长 %.3fs，少于目标 %.3fs，拒绝重复、定格或从开头硬截补足' % (total_available, target_duration))
 
         style_config = self._get_style_config(style)
@@ -170,7 +188,7 @@ class RemixService:
 
         by_source: Dict[str, List[Dict]] = {}
         for clip in normalized:
-            by_source.setdefault(str(clip.get('video_path')), []).append(clip)
+            by_source.setdefault(self._remix_source_key(clip['video_path']), []).append(clip)
         for items in by_source.values():
             items.sort(key=lambda c: float(c.get('start_time') or 0))
 
@@ -183,7 +201,7 @@ class RemixService:
         used_keys = set()
 
         def clip_key(clip: Dict):
-            return (clip.get('video_path'), round(float(clip.get('start_time') or 0), 3), round(float(clip.get('end_time') or 0), 3))
+            return (self._remix_source_key(clip['video_path']), round(float(clip.get('start_time') or 0), 3), round(float(clip.get('end_time') or 0), 3))
 
         for source, items in sorted(by_source.items(), key=lambda pair: min(float(c.get('start_time') or 0) for c in pair[1])):
             span = max(0.001, source_spans.get(source, 0.001))
@@ -196,12 +214,12 @@ class RemixService:
                 bucket_items = [c for c in items if clip_key(c) not in used_keys and float(c.get('start_time') or 0) < right and float(c.get('end_time') or 0) > left]
                 if not bucket_items:
                     continue
-                best = max(bucket_items, key=lambda c: (float(c.get('score') or 0.5), float(c.get('duration') or 0)))
+                best = max(bucket_items, key=lambda c: (bool(c.get('_preferred_highlight')), float(c.get('score') or 0.5), float(c.get('duration') or 0)))
                 selected.append(best)
                 used_keys.add(clip_key(best))
 
         if len(selected) < desired_count:
-            for clip in sorted(normalized, key=lambda c: (float(c.get('score') or 0.5), float(c.get('duration') or 0)), reverse=True):
+            for clip in sorted(normalized, key=lambda c: (bool(c.get('_preferred_highlight')), float(c.get('score') or 0.5), float(c.get('duration') or 0)), reverse=True):
                 key = clip_key(clip)
                 if key in used_keys:
                     continue
@@ -211,7 +229,7 @@ class RemixService:
                     break
 
         if sum(float(c.get('duration') or 0) for c in selected) + 0.08 < target_duration:
-            for clip in sorted(normalized, key=lambda c: (float(c.get('score') or 0.5), float(c.get('duration') or 0)), reverse=True):
+            for clip in sorted(normalized, key=lambda c: (bool(c.get('_preferred_highlight')), float(c.get('score') or 0.5), float(c.get('duration') or 0)), reverse=True):
                 key = clip_key(clip)
                 if key in used_keys:
                     continue
@@ -220,7 +238,7 @@ class RemixService:
                 if sum(float(c.get('duration') or 0) for c in selected) + 0.08 >= target_duration:
                     break
 
-        selected.sort(key=lambda c: (float(c.get('start_time') or 0) / max(0.001, max(float(x.get('end_time') or 0) for x in by_source.get(str(c.get('video_path')), [c]))), int(c.get('source_index') or 0), float(c.get('score') or 0.5)))
+        selected.sort(key=lambda c: (float(c.get('start_time') or 0) / max(0.001, max(float(x.get('end_time') or 0) for x in by_source.get(self._remix_source_key(c['video_path']), [c]))), int(c.get('source_index') or 0), float(c.get('score') or 0.5)))
 
         # 内容去重：相似画面保留高分者并从候选池补位（保持已排定的叙事顺序）。
         try:
@@ -231,50 +249,48 @@ class RemixService:
             logger.warning('片段去重失败（忽略，继续时间线规划）: %s', exc)
 
         planned: List[Dict] = []
+        used_intervals: Dict[str, List[tuple]] = {}
         remaining = float(target_duration)
-        for idx, clip in enumerate(selected):
-            if remaining <= 0.001:
-                break
-            duration = float(clip.get('duration') or 0)
-            if duration <= 0:
-                continue
-            remaining_slots = max(1, len(selected) - idx)
-            budget = remaining / remaining_slots
-            # Do not let short early shots consume the equal-share budget and
-            # leave an impossible tail for the last shot.  The lower bound
-            # reserves every later candidate's real capacity, so a target that
-            # the selected, non-reused shots can cover is always covered.
-            later_capacity = sum(
-                max(0.0, float(item.get('duration') or 0))
-                for item in selected[idx + 1:]
-            )
-            required_here = max(0.0, remaining - later_capacity)
-            use_duration = min(
-                duration,
-                remaining if remaining_slots == 1 else max(0.12, budget, required_here),
-            )
-            if use_duration < 0.12 and planned:
-                planned[-1]['end_time'] = round(float(planned[-1]['end_time']) + use_duration, 3)
-                planned[-1]['duration'] = round(float(planned[-1]['duration']) + use_duration, 3)
-                remaining = 0.0
-                break
-            out = dict(clip)
-            out['start_time'] = float(clip['start_time'])
-            out['end_time'] = round(float(clip['start_time']) + use_duration, 3)
-            out['duration'] = round(use_duration, 3)
-            out['selection_strategy'] = 'coverage_highlight'
-            planned.append(out)
-            remaining -= use_duration
+        # First spread the edit across selected highlights; then consume any
+        # remaining real capacity, including unused tails and ordinary shots.
+        refill = sorted(normalized, key=lambda c: (bool(c.get('_preferred_highlight')), float(c.get('score') or 0)), reverse=True)
+        for pool, spread in ((selected, True), (refill, False)):
+            for idx, clip in enumerate(pool):
+                if remaining <= 0.001:
+                    break
+                source = self._remix_source_key(clip['video_path'])
+                cursor = float(clip['start_time'])
+                end = float(clip['end_time'])
+                free_windows = []
+                for used_start, used_end in sorted(used_intervals.get(source, [])):
+                    if used_end <= cursor:
+                        continue
+                    if used_start >= end:
+                        break
+                    if used_start > cursor:
+                        free_windows.append((cursor, min(used_start, end)))
+                    cursor = max(cursor, used_end)
+                if cursor < end:
+                    free_windows.append((cursor, end))
+                budget = max(0.12, remaining / max(1, len(pool) - idx)) if spread else remaining
+                for start, stop in free_windows:
+                    use_duration = min(stop - start, remaining, budget)
+                    if use_duration <= 0:
+                        break
+                    out = dict(clip)
+                    out['start_time'] = round(start, 3)
+                    out['end_time'] = round(start + use_duration, 3)
+                    out['duration'] = round(out['end_time'] - out['start_time'], 3)
+                    if out['duration'] <= 0:
+                        continue
+                    out['selection_strategy'] = 'coverage_highlight'
+                    planned.append(out)
+                    used_intervals.setdefault(source, []).append((out['start_time'], out['end_time']))
+                    remaining -= out['duration']
+                    budget -= out['duration']
 
-        if remaining > 0.08:
+        if remaining > 0.001:
             raise RuntimeError('覆盖式镜头规划后仍缺少 %.3fs，拒绝重复或开头硬截补足' % remaining)
-        if planned:
-            actual_total = sum(float(item.get('duration') or 0) for item in planned)
-            delta = round(actual_total - float(target_duration), 6)
-            if abs(delta) > 0.000001:
-                last = planned[-1]
-                last['duration'] = round(float(last.get('duration') or 0) - delta, 3)
-                last['end_time'] = round(float(last.get('start_time') or 0) + float(last['duration']), 3)
         return planned
 
     @staticmethod
@@ -297,8 +313,8 @@ class RemixService:
         result.append(round(target, 3))
         return result
 
-    @staticmethod
-    def _allocate_beat_source_windows(shots: List[Dict], beat_points: List[float], sections: List[Dict],
+    @classmethod
+    def _allocate_beat_source_windows(cls, shots: List[Dict], beat_points: List[float], sections: List[Dict],
                                       slow_motion_at_climax: bool) -> List[Dict]:
         """Allocate source windows without reusing a source frame.
 
@@ -306,13 +322,13 @@ class RemixService:
         safely supply several adjacent beat intervals as long as the source
         windows do not overlap.
         """
-        ranked = sorted(shots, key=lambda item: float(item.get('score') or 0), reverse=True)
+        ranked = sorted(shots, key=lambda item: (bool(item.get('_preferred_highlight')), float(item.get('score') or 0)), reverse=True)
         source_reservations: Dict[str, List[tuple]] = {}
-        previous_id = None
-        allocations: List[Dict] = []
+        allocations: Dict[int, Dict] = {}
 
         def source_key(shot: Dict) -> str:
-            return str(shot.get('source_video') or shot.get('source_video_path') or shot.get('video_path') or shot.get('id'))
+            source = shot.get('source_video') or shot.get('source_video_path') or shot.get('video_path')
+            return cls._remix_source_key(source) if source else str(shot.get('id'))
 
         def first_free_window(shot: Dict, required: float) -> Optional[tuple]:
             source = source_key(shot)
@@ -321,7 +337,7 @@ class RemixService:
             for reserved_start, reserved_end in sorted(source_reservations.get(source, [])):
                 if reserved_end <= candidate_start:
                     continue
-                if reserved_start - candidate_start + 1e-6 >= required:
+                if min(reserved_start, candidate_end) - candidate_start + 1e-6 >= required:
                     return candidate_start, candidate_start + required
                 candidate_start = max(candidate_start, reserved_end)
                 if candidate_start + required > candidate_end + 1e-6:
@@ -330,6 +346,7 @@ class RemixService:
                 return candidate_start, candidate_start + required
             return None
 
+        requests = []
         for index, beat_time in enumerate(beat_points[:-1]):
             final_duration = float(beat_points[index + 1] - beat_time)
             in_climax = any(
@@ -338,40 +355,34 @@ class RemixService:
                 for section in sections
             )
             speed = 0.7 if slow_motion_at_climax and in_climax else 1.0
-            required_source_duration = final_duration * speed
+            requests.append((index, final_duration, speed, in_climax))
 
+        # Reserve long source demands first so short beats cannot exhaust the
+        # only window capable of supplying a later long beat.
+        for index, final_duration, speed, in_climax in sorted(requests, key=lambda request: request[1] * request[2], reverse=True):
+            required_source_duration = final_duration * speed
             eligible = []
             for shot in ranked:
                 window = first_free_window(shot, required_source_duration)
                 if window:
                     eligible.append((shot, window[0], window[1]))
             if not eligible:
-                available = sum(
-                    max(0.0, float(shot.get('end_time') or 0) - float(shot.get('start_time') or 0))
-                    for shot in ranked
-                )
                 raise RuntimeError(
-                    '第%s个卡点区间需要 %.3fs 的未重复镜头窗口，但剩余真实镜头容量只有 %.3fs；'
-                    '已拒绝重复画面、定格和开头硬截补足' % (index + 1, required_source_duration, available)
+                    '第%s个卡点区间需要 %.3fs 的未重复镜头窗口，但没有足够长的剩余连续窗口；'
+                    '已拒绝重复画面、定格和开头硬截补足' % (index + 1, required_source_duration)
                 )
 
-            # Prefer a different visual when possible, then the best scored
-            # candidate.  Falling back to the previous shot remains valid only
-            # for a later, non-overlapping source window.
-            alternatives = [entry for entry in eligible if str(entry[0].get('id')) != previous_id]
-            shot, source_start, source_end = (alternatives or eligible)[0]
-            shot_id = str(shot.get('id'))
+            shot, source_start, source_end = eligible[0]
             source_reservations.setdefault(source_key(shot), []).append((source_start, source_end))
-            previous_id = shot_id
-            allocations.append({
+            allocations[index] = {
                 'shot': shot,
                 'source_start': round(source_start, 3),
                 'source_end': round(source_end, 3),
                 'final_duration': round(final_duration, 3),
                 'speed_factor': round(speed, 3),
                 'in_climax': in_climax,
-            })
-        return allocations
+            }
+        return [allocations[index] for index in range(len(requests))]
 
     def __init__(self, db_manager, socketio, task_service):
         """
@@ -1458,11 +1469,14 @@ class RemixService:
                     shot for shot in all_shots
                     if any(
                         round(float(shot.get('start_time', 0)), 3) == start and round(float(shot.get('end_time', 0)), 3) == end
-                        and (not source or str(shot.get('source_video', '')) == source)
+                        and (not source or self._remix_source_key(shot.get('source_video')) == self._remix_source_key(source))
                         for source, start, end in preferred_keys
                     )
                 ]
-                sorted_shots = preferred_shots or sorted(all_shots, key=lambda x: x.get('score', 0), reverse=True)
+                preferred_ids = {shot['id'] for shot in preferred_shots}
+                for shot in all_shots:
+                    shot['_preferred_highlight'] = shot['id'] in preferred_ids
+                sorted_shots = sorted(all_shots, key=lambda x: (bool(x.get('_preferred_highlight')), x.get('score', 0)), reverse=True)
             else:
                 sorted_shots = sorted(all_shots, key=lambda x: x.get('score', 0), reverse=True)
             # 风格配置：影响平均片段时长估算
@@ -1479,21 +1493,31 @@ class RemixService:
             # 按时间排序（每个视频内）
             top_shots.sort(key=lambda x: (x.get('source_video', ''), x.get('start_time', 0)))
 
-            # 3. 若无配音，生成占位配音段（按镜头时长）
-            if not voices:
-                voices = []
-                for i, s in enumerate(top_shots):
-                    dur = float(s.get('duration', 3.0))
-                    voices.append({
-                        'index': i,
-                        'text': f'第{i+1}段高光画面',
-                        'voice_path': '',
-                        'duration': dur,
-                    })
-
-            # 4. 拟人化匹配（允许复用，因为多视频镜头池较大）
+            # 无配音时直接按目标规划源窗口，不以完整镜头时长生成占位配音。
             engine = PuppetSyncEngine()
-            timeline = engine.match_shots_to_voices(top_shots, voices, allow_reuse=True)
+            if not voices:
+                planned = self._select_coverage_remix_clips(sorted_shots, target_duration, style)
+                timeline = []
+                for shot in planned:
+                    timeline.append({
+                        'shot_id': shot.get('id'),
+                        'source_video': shot['source_video'],
+                        'shot_start': shot['start_time'],
+                        'shot_end': shot['end_time'],
+                        'shot_duration': shot['duration'],
+                        'source_start': shot['start_time'],
+                        'source_end': shot['end_time'],
+                        'final_duration': shot['duration'],
+                        'audio_duration': shot['duration'],
+                        'speed_factor': 1.0,
+                        'freeze_tail': False,
+                        'cut_strategy': 'direct',
+                        'subtitle_text': '',
+                        'voice_paths': [],
+                    })
+                timeline = engine._finalize_timeline(timeline)
+            else:
+                timeline = engine.match_shots_to_voices(top_shots, voices, allow_reuse=True)
             dedup_plans = dedup_plans or []
             dedup_by_range = {
                 (round(float(item.get('start_time', item.get('start', 0))), 3),
@@ -1644,6 +1668,11 @@ class RemixService:
 
             beat_engine = get_beat_remix_engine()
             music_analysis = beat_engine.analyze_music(str(m_path))
+            music_duration = self._safe_float(music_analysis.get('duration'))
+            if music_duration <= 0:
+                raise RuntimeError('无法确认 BGM 实际时长，拒绝生成卡点时间轴')
+            if target_duration > music_duration + 1e-6:
+                raise ValueError('卡点目标时长 %.3fs 超过 BGM 实际时长 %.3fs，拒绝延长或循环补足' % (target_duration, music_duration))
 
             beats_all = list(music_analysis.get('beats', []) or [])
             beats_strong = list(music_analysis.get('strong_beats', []) or [])
@@ -1682,12 +1711,14 @@ class RemixService:
                     shot for shot in all_shots
                     if any(
                         round(float(shot.get('start_time', 0)), 3) == start and round(float(shot.get('end_time', 0)), 3) == end
-                        and (not source or str(shot.get('source_video', '')) == source)
+                        and (not source or self._remix_source_key(shot.get('source_video')) == self._remix_source_key(source))
                         for source, start, end in preferred_keys
                     )
                 ]
-                if preferred_shots:
-                    sorted_shots = preferred_shots
+                preferred_ids = {shot['id'] for shot in preferred_shots}
+                for shot in all_shots:
+                    shot['_preferred_highlight'] = shot['id'] in preferred_ids
+                sorted_shots = sorted(all_shots, key=lambda x: (bool(x.get('_preferred_highlight')), x.get('score', 0)), reverse=True)
             # 每个卡点区间必须使用不同且足够长的镜头；素材不足时明确失败，绝不复用、定格或极低速填补。
             style_config = self._get_style_config(style)
             style_config = self._get_style_config(style)

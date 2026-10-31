@@ -319,24 +319,51 @@ class TTSEngine:
         segment_name = Path(output_path).stem
         logger.info('Edge TTS 开始：段=%s，voice=%s，rate=%s，volume=%s，pitch=%s', segment_name, voice, rate, volume, pitch_str)
 
+        sidecar_path = Path(output_path).with_suffix('.timestamps.json')
+
+        async def save_stream():
+            boundaries = []
+            communicate = edge_tts.Communicate(
+                text, voice, rate=rate, volume=volume, pitch=pitch_str,
+                boundary='WordBoundary'
+            )
+            with open(output_path, 'wb') as audio_file:
+                async for chunk in communicate.stream():
+                    if chunk['type'] == 'audio':
+                        audio_file.write(chunk['data'])
+                    elif chunk['type'] in ('WordBoundary', 'SentenceBoundary'):
+                        # Edge offsets/durations are 100 ns ticks, not milliseconds.
+                        start = chunk['offset'] / 10_000_000
+                        boundaries.append({
+                            'type': chunk['type'], 'text': chunk['text'],
+                            'start': start,
+                            'end': start + chunk['duration'] / 10_000_000
+                        })
+            return boundaries
+
         for attempt in range(1, 4):
             self._remove_partial_output(output_path)
+            self._remove_partial_output(str(sidecar_path))
             try:
-                communicate = edge_tts.Communicate(text, voice, rate=rate, volume=volume, pitch=pitch_str)
-                await asyncio.wait_for(
-                    communicate.save(output_path), timeout=self.EDGE_REQUEST_TIMEOUT_SECONDS
+                boundaries = await asyncio.wait_for(
+                    save_stream(), timeout=self.EDGE_REQUEST_TIMEOUT_SECONDS
                 )
                 out_file = Path(output_path)
                 if not out_file.is_file() or out_file.stat().st_size < 1024:
                     raise OSError('Edge TTS 未生成有效音频文件')
+                with open(sidecar_path, 'w', encoding='utf-8') as metadata_file:
+                    json.dump({'unit': 'seconds', 'text': text, 'boundaries': boundaries},
+                              metadata_file, ensure_ascii=False)
                 logger.info('Edge TTS 成功：段=%s，尝试=%s/3，%s bytes', segment_name, attempt, out_file.stat().st_size)
                 return True
             except asyncio.TimeoutError:
                 self._remove_partial_output(output_path)
+                self._remove_partial_output(str(sidecar_path))
                 failure_kind = 'timeout'
                 error = None
             except Exception as caught_error:
                 self._remove_partial_output(output_path)
+                self._remove_partial_output(str(sidecar_path))
                 error = caught_error
                 failure_kind = 'NoAudio' if caught_error.__class__.__name__ == 'NoAudioReceived' else 'network'
                 if not self._is_retryable_edge_error(caught_error):
@@ -1010,6 +1037,8 @@ class TTSEngine:
         Returns:
             是否成功
         """
+        # A reused output path must never retain boundaries from an older synthesis.
+        self._remove_partial_output(str(Path(output_path).with_suffix('.timestamps.json')))
         raw_engine = engine or self.default_engine
         engine = self._normalize_engine_name(raw_engine)
         voice = self._resolve_voice(voice, kwargs.get('language'))
@@ -1092,6 +1121,10 @@ class TTSEngine:
             # 合成成功后，应用高级后处理（数据增强、音量变化等）
             if result and advanced_config:
                 result = self._apply_post_processing(output_path, advanced_config)
+                if any(advanced_config.get(key, 'none') not in (None, 'none', '')
+                       for key in ('time_stretch', 'pitch_shift')):
+                    # These optional filters change timing; do not expose stale raw boundaries.
+                    self._remove_partial_output(str(Path(output_path).with_suffix('.timestamps.json')))
 
             return result
 
