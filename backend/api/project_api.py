@@ -21,6 +21,15 @@ logger = logging.getLogger(__name__)
 _video_processor = None
 
 
+def _get_app_version() -> str:
+    """获取应用版本号（唯一来源 backend/__init__.__version__），失败返回空串。"""
+    try:
+        from backend import __version__ as app_version
+        return str(app_version)
+    except Exception:
+        return ''
+
+
 def _json_object(value):
     """将数据库 JSON 字段规范化为对象，损坏数据按空对象处理。"""
     if isinstance(value, dict):
@@ -694,7 +703,7 @@ def register_project_routes(app, db_manager):
                 from backend import __version__ as app_version
                 system_info['version'] = str(app_version)
             except Exception:
-                system_info['version'] = '3.0.0'
+                system_info['version'] = '3.4.2'
             try:
                 config_file = base_dir / 'config' / 'config.yaml'
                 system_info['updated_date'] = (
@@ -813,7 +822,7 @@ def register_project_routes(app, db_manager):
                 'data': {
                     'project': project_info,
                     'storage': storage,
-                    'version': 'v3.1.0'
+                    'version': f'v{app_version}' if (app_version := _get_app_version()) else 'v3.4.2'
                 }
             })
         except Exception as e:

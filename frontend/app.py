@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-JJYB_AI智剪 v3.1.0 - 智能视频剪辑工具
+JJYB_AI智剪 - 智能视频剪辑工具
 主应用入口文件 - 完整详细版
 包含所有功能的完整实现：
 - 完整的DatabaseManager类（300+行）
@@ -1536,8 +1536,12 @@ def start_desktop_app():
             logger.info('🖥️  启动桌面窗口...')
 
             # 创建窗口
+            try:
+                from backend import __version__ as _win_version
+            except Exception:
+                _win_version = '3.4.2'
             webview.create_window(
-                title='JJYB_AI智剪 v3.1.0',
+                title=f'JJYB_AI智剪 v{_win_version}',
                 url=f'http://{UI_HOST}:{APP_PORT}',
                 width=1400,
                 height=900,
@@ -1944,7 +1948,7 @@ def main():
     """主函数 - 完整实现"""
     try:
         logger.info('\n' + '='*70)
-        logger.info('🌟 JJYB_AI智剪 v3.1.0 - 智能视频剪辑工具')
+        logger.info('🌟 JJYB_AI智剪 - 智能视频剪辑工具')
         logger.info('='*70)
         logger.info(f'📅 启动时间: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
         logger.info(f'🐍 Python版本: {sys.version.split()[0]}')

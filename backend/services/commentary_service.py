@@ -666,18 +666,19 @@ class CommentaryService:
                     raise ValueError('第%s段配音生成失败，请先重录后再生成拟人化成片' % (pos + 1))
                 if render and not abs_audio:
                     raise ValueError('第%s段配音没有可用音频文件，请先完成全部配音后再生成拟人化成片' % (pos + 1))
-                duration = 0.0
-                for key in ('duration', 'duration_seconds', 'audio_duration_seconds'):
-                    try:
-                        d = float(raw_voice.get(key) or 0)
-                        if d > 0:
-                            duration = d
-                            break
-                    except (TypeError, ValueError):
-                        continue
-                if (not duration or duration <= 0) and abs_audio:
-                    duration = max(0.0, float(_probe_duration(abs_audio) or 0.0))
-                # 按字数粗略估算，避免后面匹配时全部跳过
+                # 音频文件存在时以 ffprobe 实测时长为准：前端记录的 duration 可能是
+                # TTS 估算旧值，与实际音频不符会让匹配策略算错慢放比例，
+                # 导致成片解说词尾部被裁。探测失败才回退前端值 / 字数估算。
+                duration = max(0.0, float(_probe_duration(abs_audio) or 0.0)) if abs_audio else 0.0
+                if duration <= 0:
+                    for key in ('duration', 'duration_seconds', 'audio_duration_seconds'):
+                        try:
+                            d = float(raw_voice.get(key) or 0)
+                            if d > 0:
+                                duration = d
+                                break
+                        except (TypeError, ValueError):
+                            continue
                 if not duration or duration <= 0:
                     duration = max(0.5, len(text) * 0.28)
                 merged = dict(raw_voice)

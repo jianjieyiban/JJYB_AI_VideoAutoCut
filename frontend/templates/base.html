@@ -1315,7 +1315,7 @@
             </span>
         </div>
         <div style="display: flex; align-items: center; gap: 20px;">
-            <span>版本: <strong style="color: rgba(255,255,255,0.8);">v3.1.0</strong></span>
+            <span>版本: <strong style="color: rgba(255,255,255,0.8);" data-app-version>v3.1.0</strong></span>
             <span>© 2025 JJYB_AI智剪</span>
         </div>
     </footer>
@@ -1474,7 +1474,7 @@
                         </div>
                     </div>
                     <div class="space-y-2 text-sm text-text-secondary">
-                        <div>版本：<span class="text-text-primary">v3.1.0</span></div>
+                        <div>版本：<span class="text-text-primary">${window.APP_VERSION ? 'v' + window.APP_VERSION : 'v3.1.0'}</span></div>
                         <div>状态：<span class="text-success">在线</span></div>
                     </div>
                     <div class="mt-4"><button class="operation-btn px-4 py-2 glass-card rounded-lg hover:border-primary/40" onclick="loadPage('settings');layer.closeAll();"><i class="fa fa-cog mr-2"></i><span data-i18n="openSettings">打开设置</span></button></div>
@@ -3007,5 +3007,23 @@
     <script src="{{ url_for('static', filename='js/page-transition.js') }}"></script>
 
     {% block extra_js %}{% endblock %}
+
+    <script>
+        // 全局版本号：从健康检查接口获取实际版本，填充所有 [data-app-version] 元素。
+        // 版本唯一来源为 backend/__init__.py 的 __version__，界面不再硬编码。
+        (function () {
+            function applyVersion(v) {
+                if (!v) return;
+                window.APP_VERSION = String(v);
+                document.querySelectorAll('[data-app-version]').forEach(function (el) {
+                    el.textContent = 'v' + v;
+                });
+            }
+            window.__applyAppVersion = applyVersion;
+            fetch('/api/health').then(function (r) { return r.json(); }).then(function (d) {
+                if (d && d.version) applyVersion(d.version);
+            }).catch(function () { /* 拉取失败保留占位 */ });
+        })();
+    </script>
 </body>
 </html>

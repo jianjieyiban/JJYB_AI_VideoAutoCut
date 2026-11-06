@@ -6415,7 +6415,7 @@
         }
 
         function openAboutDialog() {
-            var version = $('#about-version').text() || 'v3.1.0';
+            var version = $('#about-version').text() || (window.APP_VERSION ? 'v' + window.APP_VERSION : '');
             var os = $('#os-info').text() || '检测中...';
             var content = '<div style="padding:28px;text-align:center;">' +
                 '<div style="width:80px;height:80px;margin:0 auto 16px;background:linear-gradient(135deg,#6366f1 0%,#8b5cf6 100%);border-radius:20px;display:flex;align-items:center;justify-content:center;">' +
@@ -6437,7 +6437,7 @@
             fetch('/api/system/metrics').then(function(response){ return response.json(); }).then(function(response){
                 const data = response && response.code === 0 ? (response.data || {}) : {};
                 const storage = data.storage || {}, system = data.system || {};
-                $('#about-version').text(system.version ? 'v' + system.version : 'v3.1.0');
+                $('#about-version').text(system.version ? 'v' + system.version : (window.APP_VERSION ? 'v' + window.APP_VERSION : ''));
                 $('#about-updated-date').text(system.updated_date || '本地构建');
                 $('#os-info').text(system.os || '检测中...');
                 $('#cpu-info').text(system.cpu || '检测中...');
@@ -6453,7 +6453,7 @@
                 $('#ffmpeg-info').text(system.ffmpeg || '检测中...');
                 $('#uptime-info').text(system.uptime_seconds != null ? fmtDuration(system.uptime_seconds) : '检测中...');
             }).catch(function(){
-                $('#about-version').text('v3.1.0');
+                $('#about-version').text(window.APP_VERSION ? 'v' + window.APP_VERSION : '');
                 $('#about-updated-date').text('本地构建');
                 $('#os-info').text('检测失败');
                 $('#cpu-info').text('检测失败');
