@@ -4864,7 +4864,7 @@
                                 Notification.success('混剪完成！已生成成片预览。');
                                 showRemixResult(response.data);
                             } else {
-                                Notification.warning('任务返回已完成，但实际时长未达标；请以未达标状态处理。');
+                                Notification.warning('素材有效时长不足目标时长，已按可用时长自动出片；请查看进度区的说明。');
                                 const pgContainer = document.getElementById('progressContainer');
                                 const pgFill = document.getElementById('progressFill');
                                 const pgText = document.getElementById('progressText');
@@ -4873,7 +4873,7 @@
                                     pgFill.style.width = '100%';
                                     pgFill.textContent = '未达标';
                                     pgFill.style.background = 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
-                                    pgText.textContent = '任务返回已完成，但 FFprobe 实测时长未达目标容差，结果不标记为完成。';
+                                    pgText.textContent = '素材有效时长不足目标时长，系统已按可用时长自动出片（片头片尾保护会剔除素材开头结尾）。如需更长成片请增加素材或缩短目标时长。';
                                 }
                             }
                             return;

@@ -1148,7 +1148,7 @@ def health_check():
     try:
         from backend import __version__ as app_version
     except Exception:
-        app_version = '3.4.1'
+        app_version = '3.4.2'
     return jsonify({
         'status': 'ok',
         'timestamp': datetime.now().isoformat(),

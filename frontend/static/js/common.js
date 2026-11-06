@@ -556,7 +556,19 @@ function simplifyBackendError(raw, defaultMsg) {
         return '处理失败：无法连接后端服务，请确认服务是否正在运行。';
     }
 
-    return defaultMsg || ('处理失败：' + text);
+    // 混剪业务错误：素材有效时长不足 / 规划失败
+    if (
+        text.includes('少于目标') || text.includes('仍缺少') ||
+        text.includes('镜头总时长') || text.includes('覆盖式') ||
+        text.includes('未精确达到目标时长') || text.includes('可用智能镜头')
+    ) {
+        return '素材有效时长不足目标时长：片头片尾保护会剔除素材的开头结尾，实际可用画面可能比预期短。建议缩短目标时长、增加素材数量，或检查素材开头结尾是否为大片黑场。';
+    }
+
+    // 兜底：保留真实原因，不再把未知错误吞成一句泛化提示
+    let summary = text.replace(/\s+/g, ' ').trim();
+    if (summary.length > 200) summary = summary.slice(0, 200) + '…';
+    return (defaultMsg ? defaultMsg + ' ' : '处理失败：') + '原因：' + summary;
 }
 
 // 导出到全局

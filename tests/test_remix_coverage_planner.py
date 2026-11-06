@@ -53,13 +53,29 @@ class RemixCoveragePlannerTests(unittest.TestCase):
         self.assertTrue(any(170 <= start <= 230 for start in starts))
         self.assertTrue(any(start >= 400 for start in starts))
 
-    def test_coverage_planner_refuses_to_pad_insufficient_material(self):
+    def test_coverage_planner_adapts_target_when_material_is_short(self):
         candidates = [
             {'video_path': 'source.mp4', 'start_time': 0, 'end_time': 12, 'duration': 12, 'score': 0.9},
             {'video_path': 'source.mp4', 'start_time': 80, 'end_time': 90, 'duration': 10, 'score': 0.8},
         ]
 
-        with self.assertRaisesRegex(RuntimeError, '少于目标'):
+        # 可用 22s < 目标 60s：自动收缩目标至 22*0.95 = 20.9s 出片，
+        # 而不是硬截补足或重复使用同源区间。
+        clips = self.service._select_coverage_remix_clips(candidates, 60, 'dynamic')
+
+        self.assertAlmostEqual(sum(clip['duration'] for clip in clips), 20.9, places=1)
+        for clip in clips:
+            self.assertTrue(any(
+                item['start_time'] <= clip['start_time'] and clip['end_time'] <= item['end_time']
+                for item in candidates
+            ), f"输出窗口超出候选区间: {clip}")
+
+    def test_coverage_planner_refuses_tiny_material(self):
+        candidates = [
+            {'video_path': 'source.mp4', 'start_time': 0, 'end_time': 2, 'duration': 2, 'score': 0.9},
+        ]
+
+        with self.assertRaisesRegex(RuntimeError, '远少于目标'):
             self.service._select_coverage_remix_clips(candidates, 60, 'dynamic')
 
     def test_coverage_planner_reserves_capacity_for_a_short_early_shot(self):

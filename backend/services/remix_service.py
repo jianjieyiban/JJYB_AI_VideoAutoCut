@@ -179,8 +179,19 @@ class RemixService:
                 elif stop > end:
                     total_available += stop - end
                     end = stop
-        if total_available + 0.001 < target_duration:
-            raise RuntimeError('可用智能镜头总时长 %.3fs，少于目标 %.3fs，拒绝重复、定格或从开头硬截补足' % (total_available, target_duration))
+        # 目标时长自适应：素材有效时长（扣除片头片尾保护与重叠区间后）不足目标时，
+        # 自动把目标收缩到可用时长的 95% 继续出片，而不是硬失败。
+        # 只有可用时长过短（< 5s）才拒绝，避免产出无意义的超短成片。
+        effective_target = float(target_duration)
+        if total_available + 0.001 < effective_target:
+            if total_available < 5.0:
+                raise RuntimeError(
+                    '可用智能镜头总时长仅 %.3fs，远少于目标 %.3fs（片头片尾保护会剔除素材开头结尾）。'
+                    '请增加素材数量，或在设置中大幅缩短目标时长。' % (total_available, target_duration))
+            effective_target = round(total_available * 0.95, 3)
+            logger.info(
+                '素材有效时长 %.3fs 不足目标 %.3fs，自动收缩目标至 %.3fs 出片',
+                total_available, target_duration, effective_target)
 
         style_config = self._get_style_config(style)
         avg_clip_duration = max(1.0, sum(style_config.get('clip_duration', (3, 5))) / 2.0)
@@ -228,14 +239,14 @@ class RemixService:
                 if len(selected) >= desired_count:
                     break
 
-        if sum(float(c.get('duration') or 0) for c in selected) + 0.08 < target_duration:
+        if sum(float(c.get('duration') or 0) for c in selected) + 0.08 < effective_target:
             for clip in sorted(normalized, key=lambda c: (bool(c.get('_preferred_highlight')), float(c.get('score') or 0.5), float(c.get('duration') or 0)), reverse=True):
                 key = clip_key(clip)
                 if key in used_keys:
                     continue
                 selected.append(clip)
                 used_keys.add(key)
-                if sum(float(c.get('duration') or 0) for c in selected) + 0.08 >= target_duration:
+                if sum(float(c.get('duration') or 0) for c in selected) + 0.08 >= effective_target:
                     break
 
         selected.sort(key=lambda c: (float(c.get('start_time') or 0) / max(0.001, max(float(x.get('end_time') or 0) for x in by_source.get(self._remix_source_key(c['video_path']), [c]))), int(c.get('source_index') or 0), float(c.get('score') or 0.5)))
@@ -250,7 +261,7 @@ class RemixService:
 
         planned: List[Dict] = []
         used_intervals: Dict[str, List[tuple]] = {}
-        remaining = float(target_duration)
+        remaining = effective_target
         # First spread the edit across selected highlights; then consume any
         # remaining real capacity, including unused tails and ordinary shots.
         refill = sorted(normalized, key=lambda c: (bool(c.get('_preferred_highlight')), float(c.get('score') or 0)), reverse=True)
@@ -1120,7 +1131,11 @@ class RemixService:
                 )
 
             if clips and abs(total_duration - target_duration) > 0.08:
-                raise RuntimeError('覆盖式高光规划未精确达到目标时长：%.3fs / %.3fs' % (total_duration, target_duration))
+                # 规划器内部已有可用容量校验；这里偏差仅记录并按实际时长出片，
+                # 不再硬失败（此前差 0.08s 即整单报错，是"分割成功却渲染失败"的常见触发点）。
+                logger.warning(
+                    '覆盖式高光规划时长偏差 %.3fs（目标 %.3fs），按实际时长出片',
+                    abs(total_duration - target_duration), target_duration)
 
             plan = {
                 'clips': clips,
