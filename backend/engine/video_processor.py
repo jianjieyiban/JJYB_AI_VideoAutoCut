@@ -29,6 +29,7 @@ class VideoProcessor:
             ffmpeg_path: FFmpeg可执行文件路径
         """
         self.ffmpeg_path = ffmpeg_path
+        self._last_merge_error = ''
         self._check_ffmpeg()
 
     def _check_ffmpeg(self):
@@ -404,6 +405,32 @@ class VideoProcessor:
 
             Path(output_path).parent.mkdir(parents=True, exist_ok=True)
 
+            if xf_transition is None:
+                # cut（快切）模式：走"逐段归一化 + concat copy"路径。
+                # 原实现把全部片段塞进一条 filter_complex，片段数多时
+                # 命令行超长/内存过高导致 ffmpeg 失败（用户反馈"精彩片段合并失败"）。
+                merged = self._merge_cut_mode(
+                    input_paths, output_path, infos, segment_durations,
+                    width, height, fps)
+                if merged:
+                    return True
+                # 归一化拼接失败时回退到一次性 filter_complex 路径（小批量仍稳定）
+                logger.warning('归一化拼接失败，回退到 filter_complex 合并')
+
+            return self._merge_via_filter_complex(
+                input_paths, output_path, infos, segment_durations,
+                xf_transition, t, width, height, fps)
+
+        except Exception as e:
+            logger.error(f'带转场视频合并异常: {e}', exc_info=True)
+            self._last_merge_error = str(e)[:300]
+            return False
+
+    def _merge_via_filter_complex(self, input_paths, output_path, infos,
+                                  segment_durations, xf_transition, t,
+                                  width, height, fps) -> bool:
+        """一次性 filter_complex 合并（原实现）。转场模式必须走这里；cut 模式作为回退。"""
+        try:
             filter_parts = []
             for idx, (info, duration) in enumerate(zip(infos, segment_durations)):
                 filter_parts.append(
@@ -490,11 +517,89 @@ class VideoProcessor:
                 return True
             else:
                 logger.error(f'❗ 带转场视频合并失败: {stderr}')
+                self._last_merge_error = (stderr or '')[-300:]
                 return False
 
         except Exception as e:
             logger.error(f'带转场视频合并异常: {e}', exc_info=True)
+            self._last_merge_error = str(e)[:300]
             return False
+
+    def _merge_cut_mode(self, input_paths, output_path, infos,
+                        segment_durations, width, height, fps) -> bool:
+        """cut（快切）模式合并：逐段归一化到统一参数，再用 concat demuxer 流复制拼接。
+
+        单次 ffmpeg 只处理一路输入，规避多片段单命令的命令行超长与内存峰值问题；
+        全部片段输出统一编码参数（libx264 crf18 / aac 192k / 48kHz 立体声），
+        copy 拼接安全。无音轨片段补静音轨，保证拼接参数一致。
+        """
+        import shutil
+        tmp_dir = Path(output_path).parent / f'norm_tmp_{Path(output_path).stem}'
+        tmp_dir.mkdir(parents=True, exist_ok=True)
+        norm_paths = []
+        try:
+            for idx, (src, duration) in enumerate(zip(input_paths, segment_durations)):
+                norm = tmp_dir / f'norm_{idx:04d}.mp4'
+                vfilter = (
+                    f'scale={width}:{height}:force_original_aspect_ratio=decrease,'
+                    f'pad={width}:{height}:(ow-iw)/2:(oh-ih)/2,setsar=1,'
+                    f'fps={fps},format=yuv420p'
+                )
+                has_audio = bool(infos[idx].get('has_audio'))
+                cmd = [self.ffmpeg_path, '-hide_banner', '-loglevel', 'error']
+                if has_audio:
+                    cmd.extend(['-i', str(src)])
+                else:
+                    # 无音轨片段：补一条静音源，统一输出参数
+                    cmd.extend(['-i', str(src),
+                                '-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=stereo'])
+                cmd.extend([
+                    '-t', f'{duration:.6f}',
+                    '-vf', vfilter,
+                ])
+                if has_audio:
+                    cmd.extend(['-af', (
+                        'aresample=48000,'
+                        'aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo,'
+                        f'apad,atrim=duration={duration:.6f}'
+                    )])
+                cmd.extend([
+                    '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18',
+                    '-c:a', 'aac', '-b:a', '192k',
+                    '-movflags', '+faststart',
+                ])
+                if not has_audio:
+                    cmd.extend(['-map', '0:v:0', '-map', '1:a:0', '-shortest'])
+                cmd.extend(['-y', str(norm)])
+
+                proc = subprocess.run(cmd, capture_output=True, text=True, timeout=1800)
+                if proc.returncode != 0 or not norm.exists() or norm.stat().st_size == 0:
+                    logger.error('❗ 片段归一化失败 #%d: %s', idx, (proc.stderr or '')[-300:])
+                    self._last_merge_error = (proc.stderr or '')[-300:]
+                    return False
+                norm_paths.append(norm)
+
+            # concat demuxer 流复制拼接
+            concat_list = tmp_dir / 'concat_list.txt'
+            concat_list.write_text(
+                '\n'.join(f"file '{p.as_posix()}'" for p in norm_paths),
+                encoding='utf-8')
+            cmd = [self.ffmpeg_path, '-hide_banner', '-loglevel', 'error',
+                   '-f', 'concat', '-safe', '0', '-i', str(concat_list),
+                   '-c', 'copy', '-movflags', '+faststart', '-y', str(output_path)]
+            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=1800)
+            if proc.returncode == 0 and Path(output_path).exists() and Path(output_path).stat().st_size > 0:
+                logger.info(f'✅ 归一化拼接合并成功: {len(norm_paths)}个片段 -> {output_path}')
+                return True
+            logger.error('❗ concat copy 拼接失败: %s', (proc.stderr or '')[-300:])
+            self._last_merge_error = (proc.stderr or '')[-300:]
+            return False
+        except Exception as e:
+            logger.error('归一化拼接异常: %s', e, exc_info=True)
+            self._last_merge_error = str(e)[:300]
+            return False
+        finally:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
 
     def convert_video(self, input_path: str, output_path: str,
                      codec: str = 'libx264', bitrate: str = '2M',

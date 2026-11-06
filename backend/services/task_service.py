@@ -612,6 +612,9 @@ class TaskService:
                             merged_ok = self.video_processor.convert_video(segment_paths[0], str(merged_path))
 
                         if not merged_ok:
+                            merge_err = getattr(self.video_processor, '_last_merge_error', '')
+                            if merge_err:
+                                raise RuntimeError('精彩片段合并失败: %s' % merge_err)
                             raise RuntimeError('精彩片段合并失败')
 
                         self._emit_progress(task_id, 60, '片段合并', '正在合并视频片段...')

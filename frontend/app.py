@@ -1148,7 +1148,7 @@ def health_check():
     try:
         from backend import __version__ as app_version
     except Exception:
-        app_version = '3.4.2'
+        app_version = '3.4.3'
     return jsonify({
         'status': 'ok',
         'timestamp': datetime.now().isoformat(),
@@ -1539,7 +1539,7 @@ def start_desktop_app():
             try:
                 from backend import __version__ as _win_version
             except Exception:
-                _win_version = '3.4.2'
+                _win_version = '3.4.3'
             webview.create_window(
                 title=f'JJYB_AI智剪 v{_win_version}',
                 url=f'http://{UI_HOST}:{APP_PORT}',

@@ -703,7 +703,7 @@ def register_project_routes(app, db_manager):
                 from backend import __version__ as app_version
                 system_info['version'] = str(app_version)
             except Exception:
-                system_info['version'] = '3.4.2'
+                system_info['version'] = '3.4.3'
             try:
                 config_file = base_dir / 'config' / 'config.yaml'
                 system_info['updated_date'] = (
@@ -822,7 +822,7 @@ def register_project_routes(app, db_manager):
                 'data': {
                     'project': project_info,
                     'storage': storage,
-                    'version': f'v{app_version}' if (app_version := _get_app_version()) else 'v3.4.2'
+                    'version': f'v{app_version}' if (app_version := _get_app_version()) else 'v3.4.3'
                 }
             })
         except Exception as e:
