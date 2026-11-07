@@ -267,8 +267,23 @@ class TaskService:
                 if not auto_bgm:
                     return None
 
+                def _audio_duration(path):
+                    """探测音频时长，失败返回 0（视为不可用）。"""
+                    try:
+                        probe = subprocess.run(
+                            ['ffprobe', '-v', 'quiet', '-print_format', 'json',
+                             '-show_format', str(path)],
+                            capture_output=True, text=True, timeout=20
+                        )
+                        if probe.returncode == 0:
+                            data = json.loads(probe.stdout or '{}')
+                            return float((data.get('format') or {}).get('duration') or 0)
+                    except Exception:
+                        pass
+                    return 0.0
+
                 default_bgm = AUDIO_DIR / 'default_bgm.mp3'
-                if default_bgm.exists():
+                if default_bgm.exists() and _audio_duration(default_bgm) >= 15.0:
                     return str(default_bgm)
 
                 candidates = []
@@ -277,6 +292,10 @@ class TaskService:
                         candidates.extend(AUDIO_DIR.glob(f'**/*{ext}'))
                 except Exception:
                     candidates = []
+
+                # 过滤超短音频（<15s 的多为提示音/音效）与损坏文件，
+                # 否则配 -shortest 的 BGM 步骤会把整段成片截成音效长度。
+                candidates = [p for p in candidates if _audio_duration(p) >= 15.0]
 
                 if not candidates:
                     return None
@@ -698,7 +717,23 @@ class TaskService:
                                     replace=True
                                 )
                                 if ok:
-                                    final_path = music_out
+                                    # 兜底校验：BGM 输出明显短于合并结果时弃用，
+                                    # 保留未配乐的完整成片（绝不让 BGM 截短成片）。
+                                    base_info = self.video_processor.get_video_info(str(merge_source_path)) or {}
+                                    bgm_info = self.video_processor.get_video_info(str(music_out)) or {}
+                                    base_dur = float(base_info.get('duration') or 0)
+                                    bgm_dur = float(bgm_info.get('duration') or 0)
+                                    if base_dur > 0 and bgm_dur > 0 and bgm_dur < base_dur - 1.0:
+                                        logger.warning(
+                                            'BGM 输出时长 %.3fs 短于合并成片 %.3fs，弃用配乐保留完整成片',
+                                            bgm_dur, base_dur
+                                        )
+                                        try:
+                                            music_out.unlink(missing_ok=True)
+                                        except Exception:
+                                            pass
+                                    else:
+                                        final_path = music_out
                         except Exception as e:
                             logger.error(f'叠加BGM失败: {e}', exc_info=True)
 

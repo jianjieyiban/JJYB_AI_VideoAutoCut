@@ -579,16 +579,30 @@ class VideoProcessor:
                     return False
                 norm_paths.append(norm)
 
-            # concat demuxer 流复制拼接
+            # concat demuxer 流复制拼接。
+            # 必须写绝对路径：concat demuxer 以 list 文件所在目录为基准解析相对路径，
+            # 相对路径会导致"目录/目录/文件"重复拼接而打不开。
             concat_list = tmp_dir / 'concat_list.txt'
             concat_list.write_text(
-                '\n'.join(f"file '{p.as_posix()}'" for p in norm_paths),
+                '\n'.join(f"file '{p.resolve().as_posix()}'" for p in norm_paths),
                 encoding='utf-8')
             cmd = [self.ffmpeg_path, '-hide_banner', '-loglevel', 'error',
                    '-f', 'concat', '-safe', '0', '-i', str(concat_list),
                    '-c', 'copy', '-movflags', '+faststart', '-y', str(output_path)]
             proc = subprocess.run(cmd, capture_output=True, text=True, timeout=1800)
+            expected_total = float(sum(segment_durations))
             if proc.returncode == 0 and Path(output_path).exists() and Path(output_path).stat().st_size > 0:
+                # 拼接后校验实际时长：流复制偶发只写出极短文件（容器/时间基异常），
+                # 不达标时返回 False 让上层回退到 filter_complex 合并。
+                out_info = self.get_video_info(str(output_path)) or {}
+                out_duration = float(out_info.get('duration') or 0)
+                if expected_total > 0 and out_duration < expected_total - 1.0:
+                    logger.error(
+                        '❗ concat copy 输出时长异常: 实测 %.3fs，应为 %.3fs',
+                        out_duration, expected_total)
+                    self._last_merge_error = (
+                        f'拼接输出时长异常: 实测 {out_duration:.3f}s，应为 {expected_total:.3f}s')
+                    return False
                 logger.info(f'✅ 归一化拼接合并成功: {len(norm_paths)}个片段 -> {output_path}')
                 return True
             logger.error('❗ concat copy 拼接失败: %s', (proc.stderr or '')[-300:])
@@ -721,10 +735,14 @@ class VideoProcessor:
             Path(output_path).parent.mkdir(parents=True, exist_ok=True)
 
             if replace:
-                # 替换音频
+                # 替换音频。
+                # BGM 短于视频时用 -stream_loop 无限循环填充，
+                # -shortest 让音频随视频流结束而截断：
+                # 绝不能让"更短的音频"把整段视频截短（曾把 180s 成片截成 0.16s 音效长度）。
                 cmd = [
                     self.ffmpeg_path,
                     '-i', video_path,
+                    '-stream_loop', '-1',
                     '-i', audio_path,
                     '-c:v', 'copy',
                     '-c:a', 'aac',
