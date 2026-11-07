@@ -353,6 +353,8 @@ class TaskService:
                     'start': start,
                     'end': start + render_duration,
                     'duration': render_duration,
+                    'final_duration': render_duration,
+                    'speed_factor': source_duration / render_duration,
                     'subtitle_text': str(text or ''),
                 }
                 if beat_index is not None:
@@ -717,15 +719,15 @@ class TaskService:
                                     replace=True
                                 )
                                 if ok:
-                                    # 兜底校验：BGM 输出明显短于合并结果时弃用，
-                                    # 保留未配乐的完整成片（绝不让 BGM 截短成片）。
+                                    # 仅采纳可探测、有音轨且保持原片时长的配乐结果。
                                     base_info = self.video_processor.get_video_info(str(merge_source_path)) or {}
                                     bgm_info = self.video_processor.get_video_info(str(music_out)) or {}
                                     base_dur = float(base_info.get('duration') or 0)
                                     bgm_dur = float(bgm_info.get('duration') or 0)
-                                    if base_dur > 0 and bgm_dur > 0 and bgm_dur < base_dur - 1.0:
+                                    if not (base_dur > 0 and bgm_dur > 0 and bgm_info.get('has_audio')
+                                            and abs(bgm_dur - base_dur) <= 0.08):
                                         logger.warning(
-                                            'BGM 输出时长 %.3fs 短于合并成片 %.3fs，弃用配乐保留完整成片',
+                                            'BGM 输出无有效音轨或时长 %.3fs 与合并成片 %.3fs 不符，弃用配乐保留完整成片',
                                             bgm_dur, base_dur
                                         )
                                         try:

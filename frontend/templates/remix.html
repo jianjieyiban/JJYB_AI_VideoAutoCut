@@ -4569,6 +4569,9 @@
             const message = `即将开始智能混剪，整个过程将在后台执行，进度条和状态均基于真实后端任务返回。任务创建后，您也可以在“项目管理 - 混剪模式”中查看和管理相关项目。\n\n请确认关键信息：\n${summaryLines}\n\n现在开始处理吗？`;
 
             const doStart = async () => {
+                window.currentRemixTaskId = null;
+                window.currentRemixProjectId = null;
+                clearRemixCompletedResult();
                 document.getElementById('progressContainer').style.display = 'block';
                 document.getElementById('resultContainer').style.display = 'none';
                 updateProgress(0);
@@ -4824,8 +4827,10 @@
         // 监控混剪进度
         async function monitorRemixProgress(taskId) {
             console.log('📊 监控混剪进度:', taskId);
+            const projectId = window.currentRemixProjectId;
 
             const checkProgress = async () => {
+                if (taskId !== window.currentRemixTaskId) return;
                 try {
                     const progressRes = await fetch(`/api/remix/progress/${taskId}`);
                     if (!progressRes.ok) {
@@ -4845,7 +4850,12 @@
                         throw new Error('混剪进度接口返回空或无效响应');
                     }
 
+                    if (taskId !== window.currentRemixTaskId) return;
                     if (response.code === 0 && response.data) {
+                        response.data = Object.assign({}, response.data, {
+                            project_id: response.data.project_id || projectId,
+                            task_id: taskId
+                        });
                         const progress = response.data.progress || 0;
                         const status = response.data.status;
 
@@ -4878,6 +4888,7 @@
                             }
                             return;
                         } else if (status === 'failed') {
+                            clearRemixCompletedResult();
                             console.error('❌ 混剪失败');
                             const beatFailure = response.data && response.data.beat_remix_failure;
                             const errText = beatFailure || (response.data && response.data.error) || '后端返回失败状态';
@@ -4953,15 +4964,16 @@
             const candidates = [
                 getCompletedRemixResult(),
                 window.remixLastResult,
-                window.remixGeneratedTimeline ? { timeline: window.remixGeneratedTimeline, project_id: window.currentRemixProjectId } : null,
                 window.remixResultData,
                 window.remixGeneralResult,
-                window.remixMusicBeatResult,
-                window.remixPlan
+                window.remixMusicBeatResult
             ];
             const fallbackPath = (typeof getRemixVideoPaths === 'function' && getRemixVideoPaths()[0]) || '';
             for (const candidate of candidates) {
-                const raw = candidate && (candidate.timeline || candidate.clips);
+                if (!candidate || candidate.status !== 'completed') continue;
+                if (String(candidate.project_id || '') !== String(window.currentRemixProjectId || '')) continue;
+                if (String(candidate.task_id || '') !== String(window.currentRemixTaskId || '')) continue;
+                const raw = candidate.timeline || candidate.clips;
                 if (!Array.isArray(raw) || !raw.length) continue;
                 const timeline = raw.map(function (item) { return rxNormalizeExportClip(item, fallbackPath); }).filter(Boolean);
                 if (timeline.length) return { timeline: timeline, basis: '真实混剪时间线', result: candidate };
@@ -4984,13 +4996,22 @@
         }
 
         function clearRemixCompletedResult() {
+            window.remixRequestGeneration = (window.remixRequestGeneration || 0) + 1;
             window.remixCompletedResult = null;
+            window.remixLastResult = null;
+            window.remixGeneratedTimeline = null;
+            window.remixResultData = null;
+            window.remixGeneralResult = null;
+            window.remixMusicBeatResult = null;
+            window.remixPlan = null;
             updateRemixExportAvailability();
         }
 
         function showRemixResult(data) {
             console.log('🎬 显示混剪结果:', data);
             data = data || {};
+            if (data.project_id) window.currentRemixProjectId = data.project_id;
+            window.currentRemixTaskId = data.task_id || null;
             window.remixResultData = data;
             window.remixLastResult = data;
             if (Array.isArray(data.timeline) && data.timeline.length) window.remixGeneratedTimeline = data.timeline;
@@ -5684,6 +5705,10 @@
                 return;
             }
             const durationMode = getRemixDurationMode();
+            const existingPlan = window.remixPlan;
+            window.currentRemixTaskId = null;
+            window.currentRemixProjectId = null;
+            clearRemixCompletedResult();
             setRemixLoading('正在创建混剪项目并启动处理...');
             document.getElementById('resultContainer').style.display = 'none';
             try {
@@ -5717,7 +5742,7 @@
                     return;
                 }
                 // 第二步：构造 plan 并启动处理
-                const plan = window.remixPlan || {
+                const plan = existingPlan || {
                     video_paths: videoPaths,
                     duration_mode: durationMode,
                     target_duration_seconds: targetDuration,
@@ -5738,6 +5763,8 @@
                 if (processResp.code === 0 && processResp.data && processResp.data.task_id) {
                     if (window.Notification) Notification.success('混剪任务已启动');
                     window.currentRemixMode = selectedRemixMode || 'general';
+                    window.currentRemixProjectId = projectId;
+                    window.currentRemixTaskId = processResp.data.task_id;
                     monitorRemixProgress(processResp.data.task_id);
                 } else {
                     const msg = simplifyBackendError(processResp && processResp.msg, '混剪任务启动失败');
@@ -5776,6 +5803,10 @@
             }
             const durationMode = getRemixDurationMode();
             const style = selectedStyle || 'dynamic';
+            window.currentRemixTaskId = null;
+            clearRemixCompletedResult();
+            const generation = window.remixRequestGeneration;
+            const projectId = window.currentRemixProjectId;
             setRemixLoading('正在进行普通模式混剪（风格：' + style + '，目标时长：' + targetDuration + ' 秒）...');
             try {
                 const response = await fetch('/api/remix/general-mode', {
@@ -5790,8 +5821,13 @@
                         render: true
                     })
                 }).then(r => r.json());
+                if (window.remixRequestGeneration !== generation || window.currentRemixProjectId !== projectId) return;
                 if (response.code === 0) {
-                    window.remixGeneralResult = response.data;
+                    window.remixGeneralResult = Object.assign({}, response.data, {
+                        status: 'completed', project_id: (response.data && response.data.project_id) || projectId,
+                        task_id: null
+                    });
+                    if (window.remixGeneralResult.project_id) window.currentRemixProjectId = window.remixGeneralResult.project_id;
                     updateRemixExportAvailability();
                     if (window.Notification) Notification.success(response.msg || '普通模式混剪完成');
                     const data = response.data || {};
@@ -5816,6 +5852,7 @@
                     setRemixFailure(msg);
                 }
             } catch (error) {
+                if (window.remixRequestGeneration !== generation || window.currentRemixProjectId !== projectId) return;
                 console.error('❌ generalModeRemix 请求失败:', error);
                 const msg = simplifyBackendError(error && error.message, '普通模式混剪请求失败，请检查网络');
                 if (window.Notification) Notification.error(msg);
@@ -5853,6 +5890,10 @@
             const beatDensity = beatDensityEl ? beatDensityEl.value : 'dense';
             const slowMotionEl = document.getElementById('rxSlowMotion');
             const slowMotion = slowMotionEl ? !!slowMotionEl.checked : true;
+            window.currentRemixTaskId = null;
+            clearRemixCompletedResult();
+            const generation = window.remixRequestGeneration;
+            const projectId = window.currentRemixProjectId;
             setRemixLoading('正在进行音乐卡点混剪（密度：' + beatDensity + '）...');
             try {
                 const response = await fetch('/api/remix/music-beat', {
@@ -5869,8 +5910,13 @@
                         render: true
                     })
                 }).then(r => r.json());
+                if (window.remixRequestGeneration !== generation || window.currentRemixProjectId !== projectId) return;
                 if (response.code === 0) {
-                    window.remixMusicBeatResult = response.data;
+                    window.remixMusicBeatResult = Object.assign({}, response.data, {
+                        status: 'completed', project_id: (response.data && response.data.project_id) || projectId,
+                        task_id: null
+                    });
+                    if (window.remixMusicBeatResult.project_id) window.currentRemixProjectId = window.remixMusicBeatResult.project_id;
                     updateRemixExportAvailability();
                     if (window.Notification) Notification.success(response.msg || '音乐卡点混剪完成');
                     const data = response.data || {};
@@ -5899,6 +5945,7 @@
                     setRemixFailure(msg);
                 }
             } catch (error) {
+                if (window.remixRequestGeneration !== generation || window.currentRemixProjectId !== projectId) return;
                 console.error('❌ musicBeatRemix 请求失败:', error);
                 const msg = simplifyBackendError(error && error.message, '音乐卡点混剪请求失败，请检查网络');
                 if (window.Notification) Notification.error(msg);
@@ -5956,7 +6003,7 @@
                 if (!draftDir) {
                     throw new Error('未检测到可写的剪映草稿目录，请先点击“自动检测”或手动填写正确目录');
                 }
-                let projectId = window.currentRemixProjectId || resultData.project_id || '';
+                const projectId = resultData.project_id || '';
                 if (!projectId) {
                     throw new Error('缺少真实混剪项目ID，请先完成第6步智能混剪成片后再导出剪映草稿');
                 }

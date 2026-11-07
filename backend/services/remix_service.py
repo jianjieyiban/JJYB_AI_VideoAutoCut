@@ -179,19 +179,12 @@ class RemixService:
                 elif stop > end:
                     total_available += stop - end
                     end = stop
-        # 目标时长自适应：素材有效时长（扣除片头片尾保护与重叠区间后）不足目标时，
-        # 自动把目标收缩到可用时长的 95% 继续出片，而不是硬失败。
-        # 只有可用时长过短（< 5s）才拒绝，避免产出无意义的超短成片。
+        # 素材不足时前置拒绝，不能缩短显式目标或重复使用源区间补足。
         effective_target = float(target_duration)
         if total_available + 0.001 < effective_target:
-            if total_available < 5.0:
-                raise RuntimeError(
-                    '可用智能镜头总时长仅 %.3fs，远少于目标 %.3fs（片头片尾保护会剔除素材开头结尾）。'
-                    '请增加素材数量，或在设置中大幅缩短目标时长。' % (total_available, target_duration))
-            effective_target = round(total_available * 0.95, 3)
-            logger.info(
-                '素材有效时长 %.3fs 不足目标 %.3fs，自动收缩目标至 %.3fs 出片',
-                total_available, target_duration, effective_target)
+            raise RuntimeError(
+                '可用智能镜头总时长仅 %.3fs，少于目标 %.3fs（片头片尾保护会剔除素材开头结尾）。'
+                '请增加素材数量，或在设置中缩短目标时长。' % (total_available, target_duration))
 
         style_config = self._get_style_config(style)
         avg_clip_duration = max(1.0, sum(style_config.get('clip_duration', (3, 5))) / 2.0)
@@ -1177,7 +1170,7 @@ class RemixService:
             auto_highlight = bool((plan or {}).get('auto_highlight', mode != 'music'))
             # 已提交的智能分割结果直接转为 clips，避免主任务再次进行场景检测。
             segment_data = (plan or {}).get('segment_data')
-            if isinstance(segment_data, dict) and not has_clips:
+            if mode != 'music' and auto_highlight and isinstance(segment_data, dict) and not has_clips:
                 shots = segment_data.get('shots') or segment_data.get('all_shots') or []
                 if isinstance(shots, list):
                     segment_clips = []
@@ -1206,7 +1199,7 @@ class RemixService:
                         )
                         has_clips = True
                         logger.info('✅ 复用智能分割镜头池生成覆盖式混剪片段: %s -> %s', len(segment_clips), len(plan['clips']))
-            if video_paths and not has_clips and auto_highlight:
+            if mode != 'music' and video_paths and not has_clips and auto_highlight:
                 scene_segmentation = plan.get('scene_segmentation', 'smart_shot')
                 smart_shot_split = bool(plan.get('smart_shot_split', True))
                 analyses = self.batch_analyze_videos(
@@ -1596,7 +1589,10 @@ class RemixService:
                     )
                     result.update(self._get_render_duration_status(out, target_duration))
                     if not result['duration_within_tolerance']:
-                        result['duration_warnings'].append('渲染成片未达到目标时长容差，结果仅报告实测状态')
+                        raise RuntimeError(
+                            '普通混剪成片未达到显式目标时长：实测 %.3fs，目标 %.3fs，误差 %.3fs' %
+                            (result['actual_duration_seconds'], target_duration, result['duration_delta_seconds'])
+                        )
                     result['output_video'] = out
                     result['output_url'] = '/' + str(Path(out).relative_to(PROJECT_ROOT)).replace('\\', '/')
                 except Exception as re:

@@ -198,10 +198,11 @@ class VideoProcessor:
 
                 cmd = [
                     self.ffmpeg_path,
-                    '-i', input_path,
                     '-ss', str(start_time),
                     '-t', str(duration),
-                    '-filter:v', f'setpts={video_speed}*PTS',
+                    '-i', input_path,
+                    '-t', str(duration / speed_factor),
+                    '-filter:v', f'setpts={video_speed}*(PTS-STARTPTS)',
                 ]
 
                 if audio_filter:
@@ -364,9 +365,18 @@ class VideoProcessor:
             fps = float(infos[0].get('fps') or 30)
             if not math.isfinite(fps) or fps <= 0:
                 fps = 30.0
-            # 将片段时长对齐到输出帧，保证音频和视频使用同一条时间轴。
-            segment_durations = [math.ceil(duration * fps) / fps
-                                 for duration in segment_durations]
+            # 累计边界只取整一次，避免逐段向上取整把长混剪越拼越长。
+            frame_cursor = 0
+            elapsed = 0.0
+            aligned_durations = []
+            for duration in segment_durations:
+                elapsed += duration
+                frame_end = round(elapsed * fps)
+                if frame_end <= frame_cursor:
+                    raise ValueError('片段短于输出帧间隔，无法无损保留时间线边界')
+                aligned_durations.append((frame_end - frame_cursor) / fps)
+                frame_cursor = frame_end
+            segment_durations = aligned_durations
 
             # 高层转场到 xfade 内置转场名称的映射
             # 结合内置更丰富的 transition，让 flash/zoom/shake 视觉差异更明显
@@ -527,11 +537,10 @@ class VideoProcessor:
 
     def _merge_cut_mode(self, input_paths, output_path, infos,
                         segment_durations, width, height, fps) -> bool:
-        """cut（快切）模式合并：逐段归一化到统一参数，再用 concat demuxer 流复制拼接。
+        """逐段归一化视频与 PCM 音轨，再复制视频、一次性编码最终音频。
 
-        单次 ffmpeg 只处理一路输入，规避多片段单命令的命令行超长与内存峰值问题；
-        全部片段输出统一编码参数（libx264 crf18 / aac 192k / 48kHz 立体声），
-        copy 拼接安全。无音轨片段补静音轨，保证拼接参数一致。
+        单次归一化只处理一路输入，避免多片段命令行超长与内存峰值；
+        无音轨片段补静音，音视频共用累计帧边界，不累计 AAC 编码延迟。
         """
         import shutil
         tmp_dir = Path(output_path).parent / f'norm_tmp_{Path(output_path).stem}'
@@ -539,7 +548,7 @@ class VideoProcessor:
         norm_paths = []
         try:
             for idx, (src, duration) in enumerate(zip(input_paths, segment_durations)):
-                norm = tmp_dir / f'norm_{idx:04d}.mp4'
+                norm = tmp_dir / f'norm_{idx:04d}.mov'
                 vfilter = (
                     f'scale={width}:{height}:force_original_aspect_ratio=decrease,'
                     f'pad={width}:{height}:(ow-iw)/2:(oh-ih)/2,setsar=1,'
@@ -565,7 +574,8 @@ class VideoProcessor:
                     )])
                 cmd.extend([
                     '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18',
-                    '-c:a', 'aac', '-b:a', '192k',
+                    # 中间音轨使用 PCM，避免每段 AAC priming/padding 累积。
+                    '-c:a', 'pcm_s16le',
                     '-movflags', '+faststart',
                 ])
                 if not has_audio:
@@ -584,11 +594,16 @@ class VideoProcessor:
             # 相对路径会导致"目录/目录/文件"重复拼接而打不开。
             concat_list = tmp_dir / 'concat_list.txt'
             concat_list.write_text(
-                '\n'.join(f"file '{p.resolve().as_posix()}'" for p in norm_paths),
+                '\n'.join("file '" + p.resolve().as_posix().replace("'", "'\\''") + "'\n"
+                          + f'duration {duration:.9f}'
+                          for p, duration in zip(norm_paths, segment_durations)),
                 encoding='utf-8')
             cmd = [self.ffmpeg_path, '-hide_banner', '-loglevel', 'error',
                    '-f', 'concat', '-safe', '0', '-i', str(concat_list),
-                   '-c', 'copy', '-movflags', '+faststart', '-y', str(output_path)]
+                   '-map', '0:v:0', '-map', '0:a:0',
+                   '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k',
+                   '-t', f'{sum(segment_durations):.9f}',
+                   '-movflags', '+faststart', '-y', str(output_path)]
             proc = subprocess.run(cmd, capture_output=True, text=True, timeout=1800)
             expected_total = float(sum(segment_durations))
             if proc.returncode == 0 and Path(output_path).exists() and Path(output_path).stat().st_size > 0:
@@ -596,7 +611,7 @@ class VideoProcessor:
                 # 不达标时返回 False 让上层回退到 filter_complex 合并。
                 out_info = self.get_video_info(str(output_path)) or {}
                 out_duration = float(out_info.get('duration') or 0)
-                if expected_total > 0 and out_duration < expected_total - 1.0:
+                if out_duration <= 0 or abs(out_duration - expected_total) > 0.08:
                     logger.error(
                         '❗ concat copy 输出时长异常: 实测 %.3fs，应为 %.3fs',
                         out_duration, expected_total)

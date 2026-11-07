@@ -1,4 +1,7 @@
 import unittest
+from unittest.mock import Mock, patch
+
+from backend.config.paths import PROJECT_ROOT
 
 from backend.services.remix_service import RemixService
 from backend.engine.beat_remix_engine import BeatRemixEngine
@@ -53,29 +56,32 @@ class RemixCoveragePlannerTests(unittest.TestCase):
         self.assertTrue(any(170 <= start <= 230 for start in starts))
         self.assertTrue(any(start >= 400 for start in starts))
 
-    def test_coverage_planner_adapts_target_when_material_is_short(self):
+    def test_coverage_planner_rejects_insufficient_material_without_shrinking_target(self):
         candidates = [
             {'video_path': 'source.mp4', 'start_time': 0, 'end_time': 12, 'duration': 12, 'score': 0.9},
             {'video_path': 'source.mp4', 'start_time': 80, 'end_time': 90, 'duration': 10, 'score': 0.8},
         ]
 
-        # 可用 22s < 目标 60s：自动收缩目标至 22*0.95 = 20.9s 出片，
-        # 而不是硬截补足或重复使用同源区间。
-        clips = self.service._select_coverage_remix_clips(candidates, 60, 'dynamic')
+        with patch.object(self.service, '_get_style_config', wraps=self.service._get_style_config) as style_config:
+            with self.assertRaisesRegex(RuntimeError, r'22\.000s.*60\.000s'):
+                self.service._select_coverage_remix_clips(candidates, 60, 'dynamic')
+            style_config.assert_not_called()
 
-        self.assertAlmostEqual(sum(clip['duration'] for clip in clips), 20.9, places=1)
-        for clip in clips:
-            self.assertTrue(any(
-                item['start_time'] <= clip['start_time'] and clip['end_time'] <= item['end_time']
-                for item in candidates
-            ), f"输出窗口超出候选区间: {clip}")
+    def test_coverage_planner_counts_overlapping_source_capacity_only_once(self):
+        candidates = [
+            {'video_path': 'source.mp4', 'start_time': 0, 'end_time': 12, 'score': 0.9},
+            {'video_path': 'source.mp4', 'start_time': 8, 'end_time': 20, 'score': 0.8},
+        ]
+
+        with self.assertRaisesRegex(RuntimeError, r'20\.000s.*22\.000s'):
+            self.service._select_coverage_remix_clips(candidates, 22, 'dynamic')
 
     def test_coverage_planner_refuses_tiny_material(self):
         candidates = [
             {'video_path': 'source.mp4', 'start_time': 0, 'end_time': 2, 'duration': 2, 'score': 0.9},
         ]
 
-        with self.assertRaisesRegex(RuntimeError, '远少于目标'):
+        with self.assertRaisesRegex(RuntimeError, r'2\.000s.*60\.000s'):
             self.service._select_coverage_remix_clips(candidates, 60, 'dynamic')
 
     def test_coverage_planner_reserves_capacity_for_a_short_early_shot(self):
@@ -95,6 +101,89 @@ class RemixCoveragePlannerTests(unittest.TestCase):
                 item['start_time'] <= clip['start_time'] and clip['end_time'] <= item['end_time']
                 for item in candidates
             ), f"输出窗口超出候选区间: {clip}")
+
+    def test_process_remix_skips_highlight_generation_when_disabled_or_music(self):
+        for mode, auto_highlight in [('general', False), ('music', False), ('music', True)]:
+            for has_segments in (False, True):
+                with self.subTest(mode=mode, auto_highlight=auto_highlight, segments=has_segments):
+                    plan = {
+                        'mode': mode, 'auto_highlight': auto_highlight,
+                        'video_paths': ['source.mp4'], 'target_duration_seconds': 10,
+                    }
+                    if has_segments:
+                        plan['segment_data'] = {'shots': [{
+                            'source_video': 'source.mp4', 'start_time': 0, 'end_time': 20,
+                        }]}
+                    self.service.task_service = Mock()
+                    self.service.task_service.create_remix_task.return_value = 'task-id'
+                    with patch.object(self.service, '_select_coverage_remix_clips', return_value=[{'duration': 10}]) as select, \
+                            patch.object(self.service, 'batch_analyze_videos', return_value=[]) as analyze, \
+                            patch.object(self.service, 'create_remix_plan', return_value={'clips': [{'duration': 10}]}) as create:
+                        self.assertEqual(self.service.process_remix('project', plan), 'task-id')
+                        select.assert_not_called()
+                        analyze.assert_not_called()
+                        create.assert_not_called()
+                    self.assertNotIn('clips', plan)
+                    self.assertEqual(plan['target_duration_seconds'], 10)
+                    self.service.task_service.create_remix_task.assert_called_once_with(project_id='project', plan=plan)
+
+    def test_process_remix_reuses_segments_for_requested_general_highlights(self):
+        plan = {
+            'mode': 'general', 'auto_highlight': True,
+            'video_paths': ['source.mp4'], 'target_duration_seconds': 10,
+            'segment_data': {'shots': [{
+                'source_video': 'source.mp4', 'start_time': 0, 'end_time': 20,
+            }]},
+        }
+        self.service.task_service = Mock()
+        with patch.object(self.service, 'batch_analyze_videos') as analyze:
+            self.service.process_remix('project', plan)
+            analyze.assert_not_called()
+        self.assertAlmostEqual(sum(clip['duration'] for clip in plan['clips']), 10)
+        self.assertEqual(plan['target_duration_seconds'], 10)
+
+    def test_process_remix_rejects_short_segments_before_creating_task(self):
+        plan = {
+            'mode': 'general', 'auto_highlight': True,
+            'target_duration_seconds': 60,
+            'segment_data': {'shots': [{
+                'source_video': 'source.mp4', 'start_time': 0, 'end_time': 22,
+            }]},
+        }
+        self.service.task_service = Mock()
+        with self.assertRaisesRegex(RuntimeError, r'22\.000s.*60\.000s'):
+            self.service.process_remix('project', plan)
+        self.service.task_service.create_remix_task.assert_not_called()
+        self.assertEqual(plan['target_duration_seconds'], 60)
+        self.assertNotIn('clips', plan)
+
+    def test_general_render_enforces_actual_duration_tolerance(self):
+        from backend.engine.puppet_sync_engine import PuppetSyncEngine
+
+        source = str(PROJECT_ROOT / 'source.mp4')
+        output = str(PROJECT_ROOT / 'output' / 'remix.mp4')
+        for actual in (9.649, 10.351, 9.65, 10.35):
+            with self.subTest(actual=actual):
+                self.service.video_processor = Mock()
+                self.service.video_processor.get_video_info.return_value = {'duration': actual}
+                shots = [{'source_video': source, 'start_time': 0, 'end_time': 20, 'duration': 20, 'score': 0.9}]
+                with patch('backend.services.remix_service.Path.exists', return_value=True), \
+                        patch('backend.engine.smart_shot_segmenter.SmartShotSegmenter'), \
+                        patch('backend.services.remix_service.load_or_detect_shots', return_value=shots), \
+                        patch('backend.services.remix_service.enrich_shot_scores'), \
+                        patch.object(self.service, '_effective_ranges_for', return_value={}), \
+                        patch('backend.utils.frame_dedup.dedup_clips', side_effect=lambda clips: (clips, [])), \
+                        patch.object(PuppetSyncEngine, 'render_timeline', return_value=output) as render:
+                    if abs(actual - 10) > 0.35 + 1e-9:
+                        with self.assertRaisesRegex(RuntimeError, '普通混剪成片未达到显式目标时长'):
+                            self.service.general_mode_remix([source], target_duration=10)
+                    else:
+                        result = self.service.general_mode_remix([source], target_duration=10)
+                        self.assertTrue(result['duration_within_tolerance'])
+                        self.assertEqual(result['actual_duration_seconds'], actual)
+                        self.assertEqual(result['target_duration_seconds'], 10)
+                        self.assertEqual(result['output_video'], output)
+                    render.assert_called_once()
 
     def test_beat_allocator_splits_a_long_shot_into_non_overlapping_windows(self):
         shots = [
