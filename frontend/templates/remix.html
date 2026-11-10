@@ -5402,6 +5402,14 @@
             rxRender(html);
         }
 
+        // 版本检测不能代替目标客户端中的实际打开验证。
+        function rxClientCompatibilityTip(clientInfo) {
+            const version = (clientInfo && clientInfo.version) || '未知';
+            return '检测到客户端版本：' + version + '。版本信息不代表实际可打开，兼容性未验证；'
+                + '导出成功仅表示文件已生成，不保证被剪映或 CapCut 扫描或打开。'
+                + '请在目标客户端中验证，必要时使用成片视频与 SRT 字幕。';
+        }
+
         async function rxExportDraft(btn) {
             if (!rxSyncData || !rxSyncData.timeline) {
                 if (window.layer) window.layer.msg('请先"开始混剪"生成时间线', { icon: 0 }); return;
@@ -5430,7 +5438,10 @@
             const data = await rxCallApi(btn, '/api/remix/export-jianying-draft', body, 'POST');
             if (!data) return;
             const native = !!data.native_jianying_project;
-            let html = '<div style="font-weight:600;margin-bottom:6px;">' + (native ? '✅ 剪映原生草稿已导出，可由剪映扫描' : '✅ 本地草稿包已生成，剪映不会自动扫描') + '</div>';
+            const clientTip = rxClientCompatibilityTip(data.client_version_info);
+            let html = '<div style="font-weight:600;margin-bottom:6px;">' + (native
+                ? '剪映原生草稿已导出，兼容性未验证' : '本地草稿包已生成，兼容性未验证') + '</div>';
+            if (clientTip) html += '<div style="margin:6px 0;padding:8px 10px;background:#fff7e6;border:1px solid #ffd591;border-radius:6px;color:#874d00;">' + rxEscape(clientTip) + '</div>';
             if (data.draft_dir || data.draft_path) html += '<div style="margin:4px 0;">草稿目录：<b>' + rxEscape(data.draft_dir || data.draft_path) + '</b></div>';
             html += '<details><summary style="cursor:pointer;">完整返回数据</summary><pre style="white-space:pre-wrap;word-break:break-all;background:#fff;padding:8px;border-radius:6px;max-height:220px;overflow:auto;">' + rxEscape(JSON.stringify(data, null, 2)) + '</pre></details>';
             rxRender(html);
@@ -6030,13 +6041,19 @@
                 const native = !!data.native_jianying_project;
                 const exportedPath = data.draft_dir || data.draft_path || draftDir || '未返回目录';
                 const warnings = Array.isArray(data.warnings) ? data.warnings : (data.warnings ? [String(data.warnings)] : []);
-                const summary = (native ? '剪映原生草稿已导出，可由剪映扫描。' : '本地草稿包已生成，剪映不会自动扫描。')
+                const summary = (native ? '剪映原生草稿已导出，兼容性未验证。' : '本地草稿包已生成，兼容性未验证。')
                     + '\n草稿名称：' + (data.draft_name || '未返回')
                     + '\n草稿目录：' + exportedPath
                     + '\n原生草稿：' + (native ? '是' : '否')
                     + (warnings.length ? '\n提示：' + warnings.join('；') : '');
-                setRemixDraftDirectoryStatus(native ? 'success' : 'warning', summary);
-                if (window.Notification) Notification.success(native ? '剪映原生草稿已导出' : '本地草稿包已生成');
+                const clientTip = rxClientCompatibilityTip(data.client_version_info);
+                if (clientTip) {
+                    setRemixDraftDirectoryStatus('warning', summary + '\n' + clientTip);
+                    if (window.Notification) Notification.warning('草稿已导出，兼容性未验证，请在目标客户端中验证');
+                } else {
+                    setRemixDraftDirectoryStatus(native ? 'success' : 'warning', summary);
+                    if (window.Notification) Notification.success(native ? '剪映原生草稿已导出' : '本地草稿包已生成');
+                }
             } catch (error) {
                 console.error('❌ exportJianyingDraft 请求失败:', error);
                 const msg = simplifyBackendError(error && error.message, '剪映草稿导出请求失败，请检查网络');

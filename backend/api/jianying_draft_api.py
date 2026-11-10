@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """通用时间线草稿包导出接口（不生成剪映私有工程文件）。"""
 
+import copy
 import json
 import logging
 import re
@@ -136,7 +137,20 @@ def register_jianying_draft_routes(app, db_manager):
         if project_id and not project:
             return jsonify({'code': 1, 'msg': '项目不存在', 'data': None}), 404
 
-        request_assets = data.get('assets') or []
+        timeline_input = data.get('timeline') if isinstance(data.get('timeline'), dict) else {}
+        tracks = timeline_input.get('tracks') if isinstance(timeline_input.get('tracks'), list) else []
+        if not tracks and project:
+            project_config = parse_json(project.get('config'), {}) or {}
+            project_tracks = project_config.get('tracks') if isinstance(project_config, dict) else None
+            if isinstance(project_tracks, list):
+                tracks = project_tracks
+        tracks = copy.deepcopy(tracks)
+        request_assets = list(data.get('assets') or [])
+        for track in tracks:
+            for clip in track.get('clips', []):
+                for key in ('source', 'path', 'source_path'):
+                    if clip.get(key):
+                        request_assets.append({'path': clip[key]})
         assets = collect_project_assets(project, request_assets)
         if not assets:
             return jsonify({'code': 1, 'msg': '没有可导出的有效音频或素材文件', 'data': None}), 400
@@ -166,17 +180,17 @@ def register_jianying_draft_routes(app, db_manager):
                     'metadata': asset['metadata'],
                 })
 
-            timeline_input = data.get('timeline') if isinstance(data.get('timeline'), dict) else {}
-            tracks = timeline_input.get('tracks') if isinstance(timeline_input.get('tracks'), list) else []
-
-            # 优先复用项目 config.tracks（三大功能写入的统一时间线），
-            # 避免每次都从 assets 简单拼接。
-            if not tracks and project:
-                project_config = parse_json(project.get('config'), {}) or {}
-                project_tracks = project_config.get('tracks') if isinstance(project_config, dict) else None
-                if isinstance(project_tracks, list) and project_tracks:
-                    tracks = project_tracks
-                    logger.info('使用项目 config.tracks 构建草稿包时间线')
+            asset_by_source = {
+                asset['source']: copied for asset, copied in zip(assets, copied_assets)
+            }
+            for track in tracks:
+                for clip in track.get('clips', []):
+                    for key in ('source', 'path', 'source_path'):
+                        source = resolve_project_file(clip.get(key))
+                        if source in asset_by_source:
+                            copied = asset_by_source[source]
+                            clip[key] = copied['path']
+                            clip['asset_id'] = copied['id']
 
             if not tracks:
                 tracks = [{'id': 'media', 'type': 'media', 'clips': []}]
@@ -190,12 +204,17 @@ def register_jianying_draft_routes(app, db_manager):
                     })
                     if duration > 0:
                         current_time += duration
-            total_duration = timeline_input.get('duration') or max(
-                [float(asset['duration'] or 0) for asset in copied_assets] + [0]
+            total_duration = max(
+                [float(timeline_input.get('duration') or 0)] + [
+                    max(float(clip.get('end') or 0),
+                        float(clip.get('start') or 0) + float(clip.get('duration') or 0))
+                    for track in tracks for clip in track.get('clips', [])
+                ]
             )
             subtitles = normalize_subtitles(data.get('subtitles'), data.get('subtitle_text'), total_duration)
             if subtitles:
                 tracks.append({'id': 'subtitles', 'type': 'subtitle', 'clips': subtitles})
+                total_duration = max(total_duration, max(subtitle['end'] for subtitle in subtitles))
 
             timeline = {
                 'format': 'jjyb-generic-timeline/v1',

@@ -134,17 +134,13 @@ class MultiFormatExporter:
             # 序列基本信息
             ET.SubElement(sequence, 'uuid').text = _generate_uuid()
             ET.SubElement(sequence, 'duration').text = str(int(project.duration * project.fps))
-            ET.SubElement(sequence, 'rate', {
-                'timebase': str(project.fps),
-                'ntsc': 'FALSE'
-            })
+            _add_premiere_rate(sequence, project.fps)
             ET.SubElement(sequence, 'name').text = project.project_name
             media = ET.SubElement(sequence, 'media')
             video = ET.SubElement(media, 'video')
-            ET.SubElement(video, 'format')
             vformat = ET.SubElement(video, 'format')
             vchars = ET.SubElement(vformat, 'samplecharacteristics')
-            ET.SubElement(vchars, 'rate', {'timebase': str(project.fps), 'ntsc': 'FALSE'})
+            _add_premiere_rate(vchars, project.fps)
             ET.SubElement(vchars, 'width').text = str(project.width)
             ET.SubElement(vchars, 'height').text = str(project.height)
             ET.SubElement(vchars, 'pixelaspectratio').text = 'square'
@@ -166,7 +162,7 @@ class MultiFormatExporter:
             dom = minidom.parseString(rough)
             pretty = dom.toprettyxml(indent='  ', encoding='UTF-8').decode('UTF-8')
 
-            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+            os.makedirs(os.path.dirname(output_path) or '.', exist_ok=True)
             with open(output_path, 'w', encoding='utf-8') as f:
                 f.write(pretty)
 
@@ -184,7 +180,8 @@ class MultiFormatExporter:
             ET.SubElement(clipitem, 'name').text = os.path.basename(clip.source_path) or clip.text or 'clip'
             ET.SubElement(clipitem, 'enabled').text = 'TRUE'
             ET.SubElement(clipitem, 'duration').text = str(int(clip.duration * fps))
-            ET.SubElement(clipitem, 'rate', {'timebase': str(fps), 'ntsc': 'FALSE'})
+            _add_premiere_rate(clipitem, fps)
+            _add_premiere_speed(clipitem, clip)
             ET.SubElement(clipitem, 'start').text = str(int(clip.timeline_start * fps))
             ET.SubElement(clipitem, 'end').text = str(int(clip.timeline_end * fps))
             ET.SubElement(clipitem, 'in').text = str(int(clip.source_start * fps))
@@ -198,7 +195,6 @@ class MultiFormatExporter:
             # 滤镜链（变换）
             if clip.scale != 1.0 or clip.opacity != 1.0:
                 filterel = ET.SubElement(clipitem, 'filter')
-                ET.SubElement(filterel, 'effect')
                 effect = ET.SubElement(filterel, 'effect')
                 ET.SubElement(effect, 'name').text = 'Transform'
                 # 简化参数
@@ -215,12 +211,15 @@ class MultiFormatExporter:
             ET.SubElement(clipitem, 'name').text = os.path.basename(clip.source_path) or 'audio'
             ET.SubElement(clipitem, 'enabled').text = 'TRUE'
             ET.SubElement(clipitem, 'duration').text = str(int(clip.duration * fps))
-            ET.SubElement(clipitem, 'rate', {'timebase': str(fps), 'ntsc': 'FALSE'})
+            _add_premiere_rate(clipitem, fps)
+            _add_premiere_speed(clipitem, clip)
             ET.SubElement(clipitem, 'start').text = str(int(clip.timeline_start * fps))
             ET.SubElement(clipitem, 'end').text = str(int(clip.timeline_end * fps))
             ET.SubElement(clipitem, 'in').text = str(int(clip.source_start * fps))
             ET.SubElement(clipitem, 'out').text = str(int(clip.source_end * fps))
-            ET.SubElement(clipitem, 'file').set('id', f'file-{clip.clip_id}')
+            fileelem = ET.SubElement(clipitem, 'file', {'id': f'file-{clip.clip_id}'})
+            ET.SubElement(fileelem, 'name').text = os.path.basename(clip.source_path) or 'audio'
+            ET.SubElement(fileelem, 'pathurl').text = _to_file_url(clip.source_path)
 
             sels = ET.SubElement(clipitem, 'sourcetrack')
             ET.SubElement(sels, 'mediatype').text = 'audio'
@@ -241,84 +240,79 @@ class MultiFormatExporter:
             fcpxml = ET.Element('fcpxml', version='1.9')
             resources = ET.SubElement(fcpxml, 'resources')
 
-            # 资源
-            for asset in project.assets:
-                fmt = ET.SubElement(resources, 'format',
-                    {'id': f'f-{asset.get("id", "default")}',
-                     'frameDuration': _to_rational(1 / project.fps),
-                     'width': str(asset.get('width', project.width)),
-                     'height': str(asset.get('height', project.height))})
-                asset_el = ET.SubElement(resources, 'asset',
-                    {'id': f'a-{asset.get("id", "default")}',
-                     'name': asset.get('name', 'asset'),
-                     'src': _to_file_url(asset.get('path', '')),
-                     'format': f'f-{asset.get("id", "default")}',
-                     'duration': _to_rational(asset.get('duration', project.duration))})
-                media_rep = ET.SubElement(asset_el, 'media-rep',
-                    {'kind': 'original-media'})
+            if any(t.clips for t in project.tracks if t.track_type in ('subtitle', 'text')):
+                raise ValueError('FCPXML 暂不支持字幕/title，请单独导出 SRT 或 ASS')
+            time = lambda value: _to_rational(value, project.fps)
+            ET.SubElement(resources, 'format', {
+                'id': 'f-default', 'frameDuration': f'1/{project.fps}s',
+                'width': str(project.width), 'height': str(project.height)})
+            source_clips = {}
+            for track in project.tracks:
+                if track.track_type in ('video', 'audio'):
+                    for clip in track.clips:
+                        if not clip.source_path:
+                            raise ValueError('FCPXML 素材缺少 source_path')
+                        source_clips.setdefault(clip.source_path, []).append((track.track_type, clip))
+            asset_map = {}
+            metadata = {a.get('path'): a for a in project.assets}
+            for index, (path, entries) in enumerate(source_clips.items(), 1):
+                asset_id = f'a-{index}'
+                asset_map[path] = asset_id
+                asset = metadata.get(path, {})
+                has_video = any(kind == 'video' for kind, _ in entries)
+                duration = max(float(asset.get('duration', 0)), max(c.source_end for _, c in entries))
+                attrs = {'id': asset_id, 'name': asset.get('name') or os.path.basename(path),
+                         'start': '0s', 'duration': time(duration),
+                         'hasVideo': '1' if has_video else '0', 'hasAudio': '1'}
+                if has_video:
+                    attrs['format'] = 'f-default'
+                attrs.update({'audioSources': '1', 'audioChannels': '2', 'audioRate': '48000'})
+                asset_el = ET.SubElement(resources, 'asset', attrs)
+                ET.SubElement(asset_el, 'media-rep', {'kind': 'original-media', 'src': _to_file_url(path)})
 
-            # 事件与序列
             library = ET.SubElement(fcpxml, 'library')
             event = ET.SubElement(library, 'event', {'name': project.project_name})
             seq = ET.SubElement(event, 'project', {'name': project.project_name})
-            sequence = ET.SubElement(seq, 'sequence',
-                {'duration': _to_rational(project.duration),
-                 'format': f'f-default',
-                 'tcStart': '0s',
-                 'tcFormat': 'NDF'})
-
+            duration = max([project.duration] + [c.timeline_end for t in project.tracks for c in t.clips])
+            sequence = ET.SubElement(seq, 'sequence', {
+                'duration': time(duration), 'format': 'f-default', 'tcStart': '0s', 'tcFormat': 'NDF'})
             spine = ET.SubElement(sequence, 'spine')
-
-            # 视频片段
+            # 用覆盖整个序列的 gap 锚定连接片段，保留空隙与并行轨道。
+            gap = ET.SubElement(spine, 'gap', {'name': 'Gap', 'offset': '0s', 'start': '0s', 'duration': time(duration)})
+            video_lane, audio_lane = 0, 0
             for track in project.tracks:
+                if track.track_type not in ('video', 'audio'):
+                    continue
                 if track.track_type == 'video':
-                    for clip in track.clips:
-                        asset_clip = ET.SubElement(spine, 'asset-clip',
-                            {'name': os.path.basename(clip.source_path) or 'clip',
-                             'ref': f'a-{clip.clip_id}',
-                             'offset': _to_rational(clip.timeline_start),
-                             'duration': _to_rational(clip.duration),
-                             'start': _to_rational(clip.source_start),
-                             'tcFormat': 'NDF'})
-                        if clip.scale != 1.0:
-                            params = ET.SubElement(asset_clip, 'adjust-transform')
-                            ET.SubElement(params, 'param', {'name': 'Scale', 'value': str(clip.scale)})
-                        if clip.opacity != 1.0:
-                            params = ET.SubElement(asset_clip, 'adjust-opacity')
-                            ET.SubElement(params, 'param', {'name': 'Opacity', 'value': str(clip.opacity)})
-
-            # 音频片段（添加到spine外层）
-            for track in project.tracks:
-                if track.track_type == 'audio':
-                    for clip in track.clips:
-                        ET.SubElement(spine, 'asset-clip',
-                            {'name': os.path.basename(clip.source_path) or 'audio',
-                             'role': 'dialogue',
-                             'ref': f'a-{clip.clip_id}',
-                             'offset': _to_rational(clip.timeline_start),
-                             'duration': _to_rational(clip.duration),
-                             'start': _to_rational(clip.source_start)})
-
-            # 字幕
-            for track in project.tracks:
-                if track.track_type in ('subtitle', 'text'):
-                    for clip in track.clips:
-                        title = ET.SubElement(spine, 'title',
-                            {'name': '字幕',
-                             'offset': _to_rational(clip.timeline_start),
-                             'duration': _to_rational(clip.duration),
-                             'ref': 'r1'})
-                        text = ET.SubElement(title, 'text')
-                        ET.SubElement(text, 'text-style',
-                            {'ref': 'ts1'})
-                        title.text = clip.text
+                    video_lane += 1
+                    lane = video_lane
+                else:
+                    audio_lane -= 1
+                    lane = audio_lane
+                for clip in track.clips:
+                    speed = _clip_speed(clip)
+                    attrs = {'name': os.path.basename(clip.source_path), 'ref': asset_map[clip.source_path],
+                             'lane': str(lane), 'offset': time(clip.timeline_start),
+                             'duration': time(clip.duration),
+                             'start': time(clip.source_start) if speed == 1 else '0s'}
+                    if track.track_type == 'audio':
+                        attrs['audioRole'] = 'dialogue'
+                    asset_clip = ET.SubElement(gap, 'asset-clip', attrs)
+                    if speed != 1:
+                        time_map = ET.SubElement(asset_clip, 'timeMap')
+                        for target, source in ((0, clip.source_start), (clip.duration, clip.source_end)):
+                            ET.SubElement(time_map, 'timept', {'time': time(target), 'value': time(source), 'interp': 'linear'})
+                    if clip.scale != 1.0:
+                        ET.SubElement(asset_clip, 'adjust-transform', {'scale': f'{clip.scale} {clip.scale}'})
+                    if clip.opacity != 1.0:
+                        ET.SubElement(asset_clip, 'adjust-blend', {'amount': str(clip.opacity)})
 
             # 美化
             rough = ET.tostring(fcpxml, encoding='unicode')
             dom = minidom.parseString(rough)
             pretty = dom.toprettyxml(indent='  ', encoding='UTF-8').decode('UTF-8')
 
-            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+            os.makedirs(os.path.dirname(output_path) or '.', exist_ok=True)
             with open(output_path, 'w', encoding='utf-8') as f:
                 f.write(pretty)
 
@@ -346,7 +340,7 @@ class MultiFormatExporter:
                         srt_lines.append('')
                         index += 1
 
-            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+            os.makedirs(os.path.dirname(output_path) or '.', exist_ok=True)
             with open(output_path, 'w', encoding='utf-8') as f:
                 f.write('\n'.join(srt_lines))
 
@@ -387,12 +381,13 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                             continue
                         start = _format_ass_time(clip.timeline_start)
                         end = _format_ass_time(clip.timeline_end)
-                        text = clip.text.strip().replace('\n', '\\N')
+                        # ASS 无通用花括号转义，使用全角括号避免把用户文本当成覆盖标签。
+                        text = clip.text.strip().replace('{', '｛').replace('}', '｝').replace('\r\n', '\n').replace('\n', '\\N')
                         lines.append(
                             f'Dialogue: 0,{start},{end},{style_name},,0,0,0,,{text}'
                         )
 
-            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+            os.makedirs(os.path.dirname(output_path) or '.', exist_ok=True)
             with open(output_path, 'w', encoding='utf-8') as f:
                 f.write('\n'.join(lines))
 
@@ -415,6 +410,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                 if track.track_type != 'video':
                     continue
                 for clip in track.clips:
+                    if _clip_speed(clip) != 1:
+                        raise ValueError('EDL 暂不支持变速片段，请使用 XML 导出')
                     src_tc_in = _to_timecode(clip.source_start, project.fps)
                     src_tc_out = _to_timecode(clip.source_end, project.fps)
                     rec_tc_in = _to_timecode(clip.timeline_start, project.fps)
@@ -428,7 +425,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                     lines.append('')
                     event_num += 1
 
-            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+            os.makedirs(os.path.dirname(output_path) or '.', exist_ok=True)
             with open(output_path, 'w', encoding='utf-8') as f:
                 f.write('\n'.join(lines))
 
@@ -440,15 +437,9 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
     def export_capcut_draft(self, project: TimelineProject, output_path: str,
                             draft_dir: Optional[str] = None) -> str:
-        """
-        导出国际版剪映（CapCut）草稿格式
-
-        CapCut草稿结构：
-        - draft_info.json (主入口)
-        - /material_IO/ (素材目录)
-        """
+        """导出 CapCut 风格简化参考 JSON，非完整草稿，客户端导入兼容性未验证。"""
         try:
-            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+            os.makedirs(os.path.dirname(output_path) or '.', exist_ok=True)
             draft = {
                 'version': '1.0.0',
                 'create_time': int(datetime.now(timezone.utc).astimezone().timestamp()),
@@ -480,9 +471,19 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
             # 构建素材列表
             material_map = {}  # path -> material_id
-            for asset in project.assets:
+            assets = {a['path']: dict(a) for a in project.assets if a.get('path')}
+            for track in project.tracks:
+                if track.track_type in ('video', 'audio'):
+                    for clip in track.clips:
+                        if not clip.source_path:
+                            raise ValueError('CapCut 参考素材缺少 source_path')
+                        asset = assets.setdefault(clip.source_path, {
+                            'path': clip.source_path, 'type': track.track_type,
+                            'name': os.path.basename(clip.source_path)})
+                        asset['duration'] = max(float(asset.get('duration', 0)), clip.source_end)
+            for asset in assets.values():
                 mat_id = _generate_uuid()
-                material_map[asset.get('path', '')] = mat_id
+                material_map[asset['path']] = mat_id
                 mat_type = asset.get('type', 'video')
                 if mat_type in ('video', 'image'):
                     draft['materials']['videos'].append({
@@ -557,13 +558,14 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                         'track_id': capcut_track['id'],
                         'source_timerange': {
                             'start': int(clip.source_start * 1_000_000),
-                            'duration': int(clip.duration * 1_000_000)
+                            'duration': int((clip.source_end - clip.source_start) * 1_000_000)
                         },
                         'target_timerange': {
                             'start': int(clip.timeline_start * 1_000_000),
                             'duration': int(clip.duration * 1_000_000)
                         },
                         'material_id': mat_id,
+                        'speed': _clip_speed(clip) if capcut_track_type != 'text' else 1.0,
                         'extra_material_refs': [],
                         'source': ' jjyb',
                         'scale': {'x': clip.scale, 'y': clip.scale},
@@ -584,7 +586,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                         'source_platform': 0
                     }
 
-                    if capcut_track_type == 'text' and clip.text:
+                    if capcut_track_type == 'text':
                         # 文本素材
                         text_mat_id = _generate_uuid()
                         draft['materials']['texts'].append({
@@ -679,15 +681,34 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                 name=track_data.get('name', '')
             )
             for clip_data in track_data.get('clips', []):
+                source_start = float(clip_data.get('source_start', 0))
+                source_end = clip_data.get('source_end')
+                duration = clip_data.get('duration')
+                timeline_start = float(clip_data.get('start', clip_data.get('timeline_start', 0)))
+                timeline_end = clip_data.get('end', clip_data.get('timeline_end'))
+
+                # 时间推导：缺失字段按 源区间长度/显式时长/时间线区间 互补推导，保持一致。
+                if timeline_end is None:
+                    if duration is not None:
+                        timeline_end = timeline_start + float(duration)
+                    elif source_end is not None:
+                        timeline_end = timeline_start + (float(source_end) - source_start)
+                    else:
+                        timeline_end = timeline_start
+                if duration is None:
+                    duration = float(timeline_end) - timeline_start
+                if source_end is None:
+                    source_end = source_start + float(duration)
+
                 clip = TimelineClip(
                     clip_id=clip_data.get('id', _generate_uuid()),
                     track_type=track.track_type,
                     source_path=clip_data.get('source', clip_data.get('path', '')),
-                    source_start=float(clip_data.get('source_start', 0)),
-                    source_end=float(clip_data.get('source_end', clip_data.get('source_start', 0) + clip_data.get('duration', 0))),
-                    timeline_start=float(clip_data.get('start', clip_data.get('timeline_start', 0))),
-                    timeline_end=float(clip_data.get('end', clip_data.get('timeline_start', 0) + clip_data.get('duration', 0))),
-                    duration=float(clip_data.get('duration', 0)),
+                    source_start=source_start,
+                    source_end=float(source_end),
+                    timeline_start=timeline_start,
+                    timeline_end=float(timeline_end),
+                    duration=float(duration),
                     text=str(clip_data.get('text', '')),
                     scale=float(clip_data.get('scale', 1.0)),
                     position_x=float(clip_data.get('position_x', 0)),
@@ -702,6 +723,10 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                 track.clips.append(clip)
             project.tracks.append(track)
 
+        clip_ends = [c.timeline_end for t in project.tracks for c in t.clips]
+        if clip_ends:
+            project.duration = max(project.duration, max(clip_ends))
+
         return project
 
 
@@ -711,12 +736,44 @@ def _generate_uuid() -> str:
     return _uuid.uuid4().hex
 
 
+def _clip_speed(clip: TimelineClip) -> float:
+    """根据源区间与时间线区间推导片段速度；无法推导时按 1.0 处理。"""
+    if clip.duration and clip.duration > 0:
+        return max(0.01, (clip.source_end - clip.source_start) / clip.duration)
+    return 1.0
+
+
+def _add_premiere_rate(parent: ET.Element, fps: int) -> None:
+    """Premiere rate 节点：timebase/ntsc 必须是子元素而非属性。"""
+    rate = ET.SubElement(parent, 'rate')
+    ET.SubElement(rate, 'timebase').text = str(int(fps))
+    ET.SubElement(rate, 'ntsc').text = 'FALSE'
+
+
+def _add_premiere_speed(clipitem: ET.Element, clip: TimelineClip) -> None:
+    """变速片段写入 timeremap 滤镜，避免速度信息被静默丢弃。"""
+    speed = _clip_speed(clip)
+    if abs(speed - 1.0) < 1e-6:
+        return
+    filterel = ET.SubElement(clipitem, 'filter')
+    effect = ET.SubElement(filterel, 'effect')
+    ET.SubElement(effect, 'name').text = 'Time Remap'
+    ET.SubElement(effect, 'effectid').text = 'timeremap'
+    ET.SubElement(effect, 'effectcategory').text = 'motion'
+    ET.SubElement(effect, 'effecttype').text = 'motion'
+    param = ET.SubElement(effect, 'parameter')
+    ET.SubElement(param, 'parameterid').text = 'speed'
+    ET.SubElement(param, 'name').text = 'speed'
+    ET.SubElement(param, 'value').text = f'{speed * 100:.1f}'
+
+
 def _to_file_url(path: str) -> str:
-    """转换为file:// URL"""
+    """转换为file:// URL，路径部分做百分号编码（空格、# 等特殊字符）。"""
     if not path:
         return ''
-    abs_path = os.path.abspath(path)
-    return 'file://localhost/' + abs_path.replace('\\', '/').lstrip('/')
+    from urllib.parse import quote
+    abs_path = os.path.abspath(path).replace('\\', '/')
+    return 'file://localhost/' + quote(abs_path.lstrip('/'))
 
 
 def _linear_to_db(linear: float) -> float:

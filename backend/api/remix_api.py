@@ -735,18 +735,24 @@ def music_beat_remix():
 def detect_jianying_draft_dir():
     """自动检测剪映草稿目录"""
     try:
-        from backend.utils.jianying_detector import detect_jianying_draft_info
+        from backend.utils.jianying_detector import detect_jianying_draft_info, detect_jianying_client_version
         info = detect_jianying_draft_info()
+        try:
+            info['client_version_info'] = detect_jianying_client_version()
+        except Exception as exc:
+            logger.debug('剪映客户端版本检测失败: %s', exc)
+        client_info = info.get('client_version_info') or {}
+        message = info['message'] or (client_info.get('message') if client_info.get('draft_encrypted') else '')
         return jsonify({
             'code': 0,
-            'msg': '检测成功' if info['detected'] and info['writable'] else info['message'],
+            'msg': '检测成功' if info['detected'] and info['writable'] else message,
             'data': info,
             # Compatibility for older remix-page helpers which read the
             # detector payload directly instead of from the data wrapper.
             'draft_dir': info['draft_dir'],
             'detected': info['detected'],
             'writable': info['writable'],
-            'message': info['message'],
+            'message': message,
         })
     except Exception as e:
         logger.error(f'检测剪映草稿目录失败: {e}', exc_info=True)
@@ -781,9 +787,14 @@ def export_jianying_draft():
         )
 
         native = bool(result.get('native_jianying_project'))
+        client_info = result.get('client_version_info') or {}
+        if native:
+            msg = '草稿结构已导出至检测到的根目录；客户端打开兼容性未验证'
+        else:
+            msg = '草稿结构已导出至指定目录；请确认目标客户端草稿路径，打开兼容性未验证'
         return jsonify({
             'code': 0,
-            'msg': '剪映原生草稿已导出' if native else '本地草稿包已生成，需放入剪映草稿根目录才会被扫描',
+            'msg': msg,
             'data': result
         })
     except Exception as e:

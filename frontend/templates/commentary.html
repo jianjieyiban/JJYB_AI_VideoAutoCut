@@ -12163,16 +12163,21 @@ body { background: linear-gradient(160deg,#070b18 0%, #0c1222 40%, #101735 100%)
                     target_duration_seconds: window.commentaryTargetSeconds || null
                 });
                 // 后端返回 {code:0, data:{native_jianying_project, draft_dir,...}}
-                const exportData = (res && res.code === 0 && res.data) ? res.data : (res && res.success !== false ? res : null);
+                const exportData = (res && res.code === 0 && res.data && typeof res.data === 'object'
+                    && !Array.isArray(res.data) && (res.data.draft_path || res.data.draft_dir)) ? res.data : null;
                 if (exportData) {
                     const native = !!exportData.native_jianying_project;
+                    const clientInfo = exportData.client_version_info || {};
                     const details = `视频段 ${exportData.video_segment_count || 0} · 配音段 ${exportData.voice_segment_count || 0} · 字幕段 ${exportData.subtitle_segment_count || 0} · 花字段 ${exportData.flower_count || 0}`;
-                    const msg = native
-                        ? ('剪映专业版草稿已导出，可由剪映自动扫描：' + (exportData.draft_path || exportData.draft_dir || ''))
-                        : ('本地草稿目录已生成（未导入剪映）：' + (exportData.draft_path || exportData.draft_dir || ''));
+                    const msg = (native ? '剪映原生草稿已导出：' : '本地草稿目录已生成（未导入剪映）：')
+                        + (exportData.draft_path || exportData.draft_dir || '');
                     Notification.success(msg + '；' + details);
                     const warnings = Array.isArray(exportData.warnings) ? exportData.warnings.filter(Boolean) : [];
-                    if (warnings.length) Notification.warning('草稿导出提示：' + warnings.join('；'));
+                    const version = clientInfo.version || '未知';
+                    Notification.warning('检测到客户端版本：' + version + '。版本信息不代表实际可打开，兼容性未验证；导出成功仅表示文件已生成，不保证被剪映或 CapCut 扫描或打开。请在目标客户端中验证，必要时使用成片视频与 SRT 字幕。');
+                    if (warnings.length) {
+                        Notification.warning('草稿导出提示：' + warnings.join('；'));
+                    }
                     if (console && console.log) console.log('Draft export:', exportData);
                 } else {
                     Notification.error(res && (res.msg || res.error) ? (res.msg || res.error) : '导出失败');

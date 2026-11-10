@@ -819,7 +819,7 @@ def export_multi_format():
             'srt': 'SRT字幕',
             'ass': 'ASS字幕（带样式）',
             'edl': 'EDL剪辑决策表',
-            'capcut': 'CapCut国际剪映草稿'
+            'capcut': 'CapCut参考工程（JSON存档，不可直接导入）'
         }
         invalid = [f for f in formats if f not in supported_formats]
         if invalid:
@@ -855,14 +855,20 @@ def export_multi_format():
                 filename = os.path.basename(path)
                 download_urls[fmt] = f'/output/{public_relative_dir}/{filename}'
 
-        success_count = sum(1 for v in results.values() if not str(v).startswith('ERROR'))
-        failed_count = len(results) - success_count
+        failures = {
+            fmt: str(results.get(fmt) or 'ERROR: 未返回导出文件')
+            for fmt in formats if fmt not in download_urls
+        }
+        success_count = len(download_urls)
+        failed_count = len(failures)
 
         return jsonify({
-            'code': 0,
-            'msg': f'导出完成：成功{success_count}项' + (f'，失败{failed_count}项' if failed_count else ''),
+            'code': 0 if success_count else 1,
+            'msg': ('导出完成' if success_count else '导出失败') + f'：成功{success_count}项' + (f'，失败{failed_count}项' if failed_count else ''),
             'data': {
                 'results': results,
+                'partial_success': bool(success_count and failed_count),
+                'failures': failures,
                 'download_urls': download_urls,
                 'output_dir': session_dir,
                 'relative_dir': relative_dir,
@@ -872,7 +878,7 @@ def export_multi_format():
                 'timeline_duration': project.duration,
                 'tracks_count': len(project.tracks)
             }
-        })
+        }), (200 if success_count else 500)
 
     except Exception as e:
         logger.error(f'多格式导出失败: {e}', exc_info=True)
@@ -892,7 +898,7 @@ def get_supported_formats():
                 {'key': 'srt', 'name': 'SRT字幕', 'ext': '.srt', 'desc': '通用字幕格式，几乎所有播放器和剪辑软件都支持'},
                 {'key': 'ass', 'name': 'ASS字幕', 'ext': '.ass', 'desc': '高级字幕格式，支持样式、特效、定位'},
                 {'key': 'edl', 'name': 'EDL剪辑决策表', 'ext': '.edl', 'desc': '编辑决策表，老牌剪辑系统通用格式'},
-                {'key': 'capcut', 'name': 'CapCut国际剪映', 'ext': '.json', 'desc': '国际版剪映CapCut草稿格式'}
+                {'key': 'capcut', 'name': 'CapCut参考工程', 'ext': '.json', 'desc': 'JSON工程存档，用于备份或二次处理；不是已验证的原生工程，剪映与 CapCut 的直接打开兼容性未验证'}
             ]
         }
     })

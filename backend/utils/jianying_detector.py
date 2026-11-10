@@ -194,6 +194,142 @@ def detect_jianying_draft_dir(require_writable: bool = True) -> str:
     return str(info['draft_dir'])
 
 
+def _find_jianying_client_executables() -> List[tuple]:
+    """返回 [(client, exe_path)]，client ∈ {'jianying', 'capcut'}；找不到返回空列表。"""
+    found: List[tuple] = []
+    if not sys.platform.startswith('win'):
+        return found
+    try:
+        import winreg  # type: ignore
+        registry_layout = (
+            ('jianying', (r'SOFTWARE\JianyingPro', r'SOFTWARE\WOW6432Node\JianyingPro', r'SOFTWARE\Bytedance\JianyingPro')),
+            ('capcut', (r'SOFTWARE\CapCut', r'SOFTWARE\WOW6432Node\CapCut', r'SOFTWARE\Bytedance\CapCut')),
+        )
+        for client, subkeys in registry_layout:
+            for subkey in subkeys:
+                try:
+                    with winreg.OpenKey(winreg.HKEY_CURRENT_USER, subkey) as key:
+                        for name in ('InstallPath', 'InstallDir', 'Path'):
+                            try:
+                                value, _ = winreg.QueryValueEx(key, name)
+                            except OSError:
+                                continue
+                            if isinstance(value, str) and value.strip():
+                                root = Path(value.strip().strip('"'))
+                                for exe_name in ('JianyingPro.exe', 'CapCut.exe'):
+                                    exe = root / exe_name
+                                    if exe.is_file():
+                                        found.append((client, exe))
+                except OSError:
+                    continue
+    except Exception:
+        pass
+    local_appdata = Path(os.environ.get('LOCALAPPDATA') or '')
+    for client, base_name, exe_name in (
+        ('jianying', 'JianyingPro', 'JianyingPro.exe'),
+        ('capcut', 'CapCut', 'CapCut.exe'),
+    ):
+        apps_dir = local_appdata / base_name / 'Apps'
+        try:
+            if apps_dir.is_dir():
+                for child in sorted(apps_dir.iterdir(), reverse=True):
+                    exe = child / exe_name
+                    if exe.is_file():
+                        found.append((client, exe))
+        except OSError:
+            continue
+    unique: List[tuple] = []
+    seen: set = set()
+    for client, exe in found:
+        key = (client, str(exe).casefold())
+        if key not in seen:
+            seen.add(key)
+            unique.append((client, exe))
+    return unique
+
+
+def _read_exe_file_version(path: Path) -> str:
+    """读取 Windows 可执行文件的 FileVersion 资源；失败返回空串。"""
+    if not sys.platform.startswith('win') or not path.is_file():
+        return ''
+    try:
+        import ctypes
+        from ctypes import wintypes
+
+        version_dll = ctypes.WinDLL('version')
+        version_dll.GetFileVersionInfoSizeW.argtypes = [wintypes.LPCWSTR, ctypes.POINTER(wintypes.DWORD)]
+        version_dll.GetFileVersionInfoSizeW.restype = wintypes.DWORD
+        version_dll.GetFileVersionInfoW.argtypes = [wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD, ctypes.c_void_p]
+        version_dll.GetFileVersionInfoW.restype = wintypes.BOOL
+        version_dll.VerQueryValueW.argtypes = [ctypes.c_void_p, wintypes.LPCWSTR, ctypes.POINTER(ctypes.c_void_p), ctypes.POINTER(wintypes.UINT)]
+        version_dll.VerQueryValueW.restype = wintypes.BOOL
+        path_str = str(path)
+        size = version_dll.GetFileVersionInfoSizeW(path_str, None)
+        if not size:
+            return ''
+        data = ctypes.create_string_buffer(size)
+        if not version_dll.GetFileVersionInfoW(path_str, 0, size, data):
+            return ''
+        pointer = ctypes.c_void_p()
+        length = wintypes.UINT()
+        if not version_dll.VerQueryValueW(data, '\\VarFileInfo\\Translation',
+                                         ctypes.byref(pointer), ctypes.byref(length)):
+            return ''
+        if length.value < 4 or not pointer.value:
+            return ''
+        import struct
+        language_id, code_page = struct.unpack('HH', ctypes.string_at(pointer, 4))
+        block = '\\StringFileInfo\\%04x%04x\\FileVersion' % (language_id, code_page)
+        pointer = ctypes.c_void_p()
+        length = wintypes.UINT()
+        if not version_dll.VerQueryValueW(data, block, ctypes.byref(pointer), ctypes.byref(length)):
+            return ''
+        if not pointer.value or not length.value:
+            return ''
+        return ctypes.wstring_at(pointer, length.value).replace('\x00', '').strip()
+    except Exception:
+        return ''
+
+
+def _parse_version_major(version: str) -> int:
+    try:
+        return int(str(version).strip().split('.')[0])
+    except (TypeError, ValueError):
+        return 0
+
+
+def detect_jianying_client_version(draft_dir: str = '') -> Dict[str, Any]:
+    """探测安装版本；版本信息不能证明草稿加密状态或客户端导入兼容性。"""
+    info: Dict[str, Any] = {
+        'checked': False, 'client': '', 'version': '', 'major': 0,
+        'draft_encrypted': None, 'compatibility_status': 'unverified',
+        'message': '未检测到剪映/CapCut客户端版本，无法判断草稿格式兼容性',
+    }
+    candidates = _find_jianying_client_executables()
+    target = str(draft_dir).replace('\\', '/').casefold()
+    expected = 'capcut' if '/capcut/' in target else ('jianying' if '/jianyingpro/' in target else '')
+    if expected:
+        candidates = [(client, exe) for client, exe in candidates if client == expected]
+    for client, exe in candidates:
+        version = _read_exe_file_version(exe)
+        if not version:
+            # 版本资源读取失败时，回退使用 Apps/<版本号>/ 目录名。
+            candidate = exe.parent.name
+            if candidate and candidate[0].isdigit():
+                version = candidate
+        if not version:
+            continue
+        info.update({
+            'checked': True, 'client': client, 'version': version,
+            'major': _parse_version_major(version),
+        })
+        break
+    if not info['checked']:
+        return info
+    info['message'] = '检测到 %s 客户端 %s；草稿打开兼容性未验证，请在目标客户端打开、保存并重开确认。' % (info['client'], info['version'])
+    return info
+
+
 def export_draft_package(
     draft_dir: str,
     project_id: str,
@@ -205,7 +341,7 @@ def export_draft_package(
     project_name: str = '',
     flower_config: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    """导出可被 JianyingPro 5.9 扫描和打开的原生草稿目录。
+    """导出原生草稿结构；客户端打开兼容性需要独立验收。
 
     素材保留在原位置，draft_content.json 使用 POSIX 绝对路径引用，不复制素材也不生成 ZIP。
     """
@@ -221,9 +357,9 @@ def export_draft_package(
     if requested_root and requested_root.exists() and requested_root.is_dir() and not _is_writable_directory(requested_root):
         raise PermissionError(f'剪映草稿目录不可写: {requested_root}。请以与剪映相同的 Windows 用户运行本工具，或授予该目录“修改”权限。')
     native_jianying_project = bool(requested_root and _is_native_jianying_root(requested_root))
-    if not native_jianying_project:
+    if requested_root is None:
         requested_root = PROJECT_ROOT / 'output' / 'jianying_drafts'
-        requested_root.mkdir(parents=True, exist_ok=True)
+    requested_root.mkdir(parents=True, exist_ok=True)
     draft_root = requested_root.resolve()
     draft_id = str(uuid.uuid4())
     safe_name = _safe_draft_name(project_name or f'JJYB原创解说_{datetime.now().strftime("%Y%m%d_%H%M%S")}')
@@ -320,27 +456,26 @@ def export_draft_package(
         if target_duration <= 0:
             warnings.append(f'时间线第 {item_index + 1} 段时长无效，已跳过。')
             continue
+        source_duration = min(source_duration, round(target_duration * speed))
+        is_original = bool(item.get('original_audio')) or item.get('kind') == 'original_audio'
+        if 'original_audio' not in item and not voice_materials and not any(item.get(field) for field in ('voice_paths', 'voice_path', 'audio_path', 'audio_url')):
+            is_original = True
         if item_video_material:
             refs: List[str] = []
             if abs(speed - 1.0) > 0.0001:
                 speed_id = _uuid()
                 materials['speeds'].append({'curve_speed': None, 'id': speed_id, 'mode': 0, 'speed': speed, 'type': 'speed'})
                 refs.append(speed_id)
-            video_segments.append(_segment(item_video_material['id'], cursor, target_duration, source_start, source_duration, speed, refs))
+            volume = max(0.0, min(1.0, _float_or(item.get('original_audio_volume'), 1.0))) if is_original else 0.0
+            video_segments.append(_segment(item_video_material['id'], cursor, target_duration, source_start, source_duration, speed, refs, volume=volume))
 
-        is_original = bool(item.get('original_audio')) or item.get('kind') == 'original_audio'
-        if is_original and item_video_material and item_video_info.get('has_audio'):
-            original_segments.append(_segment(
-                item_video_material['id'], cursor, target_duration, source_start, source_duration, speed, [],
-                volume=max(0.0, min(1.0, _positive_float(item.get('original_audio_volume', 1.0), 1.0))),
-            ))
-        elif not is_original:
+        if not is_original:
             voice_cursor = cursor
             remaining = target_duration
             item_voice_values: List[Any] = []
             for field in ('voice_paths', 'voice_path', 'audio_path', 'audio_url'):
                 value = item.get(field)
-                item_voice_values.extend(value if isinstance(value, list) else [value])
+                item_voice_values.extend(path for path in (value if isinstance(value, list) else [value]) if path)
             item_materials: List[Dict[str, Any]] = []
             for voice_path in item_voice_values:
                 voice_file = _existing_path(voice_path)
@@ -438,10 +573,19 @@ def export_draft_package(
         (draft_path / 'subtitles.srt').write_text(_srt(subtitle_clips), encoding='utf-8')
 
     logger.info('原生剪映草稿导出完成: %s', draft_path)
+    try:
+        client_info = detect_jianying_client_version(str(draft_root))
+    except Exception as exc:
+        logger.debug('剪映客户端版本检测失败: %s', exc)
+        client_info = {}
+    if client_info.get('message'):
+        warnings.append(client_info['message'])
     return {
         'draft_id': draft_id, 'draft_path': str(draft_path), 'draft_name': draft_path.name,
         'draft_root_path': draft_root.as_posix(), 'draft_content_path': str(content_path),
         'draft_meta_info_path': str(meta_path), 'native_jianying_project': native_jianying_project,
+        'client_version_info': client_info,
+        'draft_openable_in_detected_client': None,
         'archive_path': '', 'warnings': warnings, 'track_count': len(tracks), 'tracks': tracks,
         'assets_count': len(materials['videos']) + len(materials['audios']),
         'video_segment_count': len(video_segments), 'voice_segment_count': len(voice_segments),
