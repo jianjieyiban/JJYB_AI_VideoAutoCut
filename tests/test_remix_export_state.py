@@ -212,6 +212,19 @@ fetch = async (url, options) => {
 await processRemix(); assert.ok(processed); assert.equal(remixPlan, null);
 assert.equal(getRemixExportTimeline(), null);''')
 
+    def test_export_uses_completed_audio_not_current_selection(self):
+        self.run_js('''seed(); selectedBGM = 'changed.mp3';
+remixCompletedResult = {...result(), bgm_path: 'rendered.mp3', source_audio_replaced: true};
+let posted;
+requestRemixDraftJson = async (url, options) => { posted = JSON.parse(options.body); return {code: 0, data: {}}; };
+await exportJianyingDraft();
+assert.equal(posted.bgm_path, 'rendered.mp3');
+assert.equal(posted.source_audio_replaced, true);
+remixCompletedResult = {...result(), bgm_path: '', source_audio_replaced: false};
+await exportJianyingDraft();
+assert.equal(posted.bgm_path, undefined);
+assert.equal(posted.source_audio_replaced, false);''')
+
     def test_export_keeps_selected_result_project_after_async_directory_lookup(self):
         self.run_js('''currentRemixProjectId = 'A'; currentRemixTaskId = 'task-A'; remixLastResult = result();
 let posted;

@@ -1,11 +1,14 @@
 import asyncio
 import shutil
 import subprocess
+from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
 
+import backend.engine.puppet_sync_engine as puppet_sync_module
 from backend.engine.auto_clip_controller import AutoClipController
+from backend.engine.puppet_sync_engine import PuppetSyncEngine
 
 
 def _ffmpeg() -> str:
@@ -112,3 +115,52 @@ def test_later_missing_audio_is_not_silently_dropped(
             [real_video, real_video],
             [{'audio_path': str(first)}, {'audio_path': str(second)}],
             None, 'out.mp4'))
+
+
+def test_puppet_slow_down_renders_full_target_duration(real_video, tmp_path):
+    engine = PuppetSyncEngine()
+    item = {
+        'shot_id': 'slow', 'cut_strategy': 'slow_down',
+        'source_start': 0, 'source_end': 1,
+        'speed_factor': 0.5, 'final_duration': 2,
+    }
+    output = tmp_path / 'slow.mp4'
+    assert engine._render_single_clip(real_video, item, output) == str(output)
+    assert abs(engine._probe_duration(output) - 2) <= engine.ENCODING_DURATION_EPSILON
+
+
+@pytest.mark.parametrize('voice_paths, missing', [
+    (['missing.mp3'], True),
+    (['present.mp3', 'missing.mp3'], True),
+    ([], False),
+])
+def test_puppet_missing_voice_fails_but_no_voice_stays_silent(
+        real_video, tmp_path, monkeypatch, voice_paths, missing):
+    monkeypatch.setattr(puppet_sync_module, 'PROJECT_ROOT', tmp_path)
+    (tmp_path / 'present.mp3').write_bytes(b'audio')
+    engine = PuppetSyncEngine()
+    commands = []
+
+    def fake_ffmpeg(cmd, label, **kwargs):
+        commands.append(label)
+        (tmp_path / 'output' / 'videos').mkdir(parents=True, exist_ok=True)
+        Path(cmd[-1]).write_bytes(b'media')
+
+    monkeypatch.setattr(engine, '_run_ffmpeg', fake_ffmpeg)
+    monkeypatch.setattr(engine, '_render_single_clip', lambda source, item, output: str(source))
+    monkeypatch.setattr(engine, '_apply_transition', lambda path, *args: str(path))
+    monkeypatch.setattr(engine, '_probe_duration', lambda path: 1.0)
+    monkeypatch.setattr(engine, '_validate_rendered_media', lambda *args, **kwargs: None)
+    timeline = [{
+        'shot_id': 'narration', 'cut_strategy': 'direct',
+        'source_start': 0, 'source_end': 1,
+        'timeline_start': 0, 'timeline_end': 1,
+        'final_duration': 1, 'voice_paths': voice_paths,
+    }]
+    if missing:
+        with pytest.raises(FileNotFoundError, match='missing.mp3'):
+            engine.render_timeline(real_video, timeline, str(tmp_path / 'out.mp4'))
+        assert not any('生成配音空白段' in label for label in commands)
+    else:
+        assert engine.render_timeline(real_video, timeline, str(tmp_path / 'out.mp4'))
+        assert any('生成配音空白段' in label for label in commands)

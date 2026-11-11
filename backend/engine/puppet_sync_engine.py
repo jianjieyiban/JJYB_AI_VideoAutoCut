@@ -754,8 +754,12 @@ class PuppetSyncEngine:
                         voice_path = Path(path_value)
                         if not voice_path.is_absolute():
                             voice_path = PROJECT_ROOT / voice_path
-                        if voice_path.exists():
-                            voice_paths.append(voice_path.resolve())
+                        if not voice_path.is_file():
+                            raise FileNotFoundError(
+                                '时间线片段 #%s (shot=%s) 配音文件不存在: %s' %
+                                (index, item.get('shot_id'), voice_path)
+                            )
+                        voice_paths.append(voice_path.resolve())
                     if voice_paths:
                         voice_list = tmp_dir / f'voice_{index:04d}.txt'
                         with open(voice_list, 'w', encoding='utf-8', newline='\n') as handle:
@@ -950,8 +954,8 @@ class PuppetSyncEngine:
                 cmd = [
                     'ffmpeg', '-y',
                     '-ss', f'{src_start:.3f}',
-                    '-i', str(video_path),
                     '-t', f'{src_duration:.3f}',
+                    '-i', str(video_path),
                     '-filter:v', vfilter,
                     '-c:v', 'libx264', '-preset', self.PREVIEW_PRESET, '-crf', self.PREVIEW_CRF,
                     '-pix_fmt', 'yuv420p',

@@ -460,6 +460,8 @@ def export_draft_package(
         is_original = bool(item.get('original_audio')) or item.get('kind') == 'original_audio'
         if 'original_audio' not in item and not voice_materials and not any(item.get(field) for field in ('voice_paths', 'voice_path', 'audio_path', 'audio_url')):
             is_original = True
+        if item.get('source_audio_replaced') is True:
+            is_original = False
         if item_video_material:
             refs: List[str] = []
             if abs(speed - 1.0) > 0.0001:

@@ -480,6 +480,8 @@ def remix_progress(task_id):
             'beat_remix_failure': output_data.get('beat_remix_failure'),
             'timeline': output_data.get('timeline') or [],
             'audio_paths': output_data.get('audio_paths') or [],
+            'bgm_path': output_data.get('bgm_path') or '',
+            'source_audio_replaced': bool(output_data.get('source_audio_replaced', False)),
             'subtitle_text': output_data.get('subtitle_text') or '',
             'voiceover_error': output_data.get('voiceover_error'),
             'auto_voiceover_requested': bool(output_data.get('auto_voiceover_requested', False)),
@@ -774,6 +776,8 @@ def export_jianying_draft():
         except ValueError as exc:
             return jsonify({'code': 1, 'msg': str(exc), 'data': None}), 400
         final_path = _resolve_existing_media_path(data.get('final_video_path') or data.get('video_path'))
+        if data.get('source_audio_replaced') is True:
+            timeline = [dict(clip, source_audio_replaced=True) for clip in timeline]
 
         result = remix_service.export_jianying_draft(
             project_id=data['project_id'],

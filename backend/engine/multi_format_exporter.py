@@ -252,6 +252,9 @@ class MultiFormatExporter:
                     for clip in track.clips:
                         if not clip.source_path:
                             raise ValueError('FCPXML 素材缺少 source_path')
+                        known = next((a for a in project.assets if a.get('path') == clip.source_path and a.get('duration')), None)
+                        if known and clip.source_end > float(known['duration']) + 1e-6:
+                            raise ValueError('片段源区间超出素材时长: ' + clip.source_path)
                         source_clips.setdefault(clip.source_path, []).append((track.track_type, clip))
             asset_map = {}
             metadata = {a.get('path'): a for a in project.assets}
@@ -472,6 +475,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             # 构建素材列表
             material_map = {}  # path -> material_id
             assets = {a['path']: dict(a) for a in project.assets if a.get('path')}
+            known_durations = {path: float(asset['duration']) for path, asset in assets.items() if asset.get('duration')}
             for track in project.tracks:
                 if track.track_type in ('video', 'audio'):
                     for clip in track.clips:
@@ -480,6 +484,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                         asset = assets.setdefault(clip.source_path, {
                             'path': clip.source_path, 'type': track.track_type,
                             'name': os.path.basename(clip.source_path)})
+                        if clip.source_end > known_durations.get(clip.source_path, float('inf')) + 1e-6:
+                            raise ValueError('片段源区间超出素材时长: ' + clip.source_path)
                         asset['duration'] = max(float(asset.get('duration', 0)), clip.source_end)
             for asset in assets.values():
                 mat_id = _generate_uuid()
@@ -697,6 +703,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                         timeline_end = timeline_start
                 if duration is None:
                     duration = float(timeline_end) - timeline_start
+                elif abs(float(timeline_end) - timeline_start - float(duration)) > 1e-6:
+                    raise ValueError('片段时间线结束点与时长不一致')
                 if source_end is None:
                     source_end = source_start + float(duration)
 
@@ -773,7 +781,7 @@ def _to_file_url(path: str) -> str:
         return ''
     from urllib.parse import quote
     abs_path = os.path.abspath(path).replace('\\', '/')
-    return 'file://localhost/' + quote(abs_path.lstrip('/'))
+    return 'file://localhost/' + quote(abs_path.lstrip('/'), safe='/:')
 
 
 def _linear_to_db(linear: float) -> float:

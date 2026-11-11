@@ -42,6 +42,17 @@ def test_universal_timing_is_consistent(clip, expected):
     assert project.duration == expected[1]
 
 
+def test_windows_source_paths_use_valid_file_uris():
+    assert exporter._to_file_url(r'C:\素材\剪辑 #1.mp4') == 'file://localhost/C:/%E7%B4%A0%E6%9D%90/%E5%89%AA%E8%BE%91%20%231.mp4'
+
+
+def test_universal_rejects_conflicting_timeline_end_and_duration():
+    with pytest.raises(ValueError, match='时长|duration|结束'):
+        exporter.MultiFormatExporter.from_universal_timeline({
+            'tracks': [{'clips': [{'start': 0, 'end': 5, 'duration': 2}]}]
+        })
+
+
 def test_premiere_has_child_rates_and_no_empty_nodes(tmp_path):
     path = tmp_path / 'edit.xml'
     exporter.MultiFormatExporter().export_premiere_xml(make_project(), str(path))
@@ -122,6 +133,18 @@ def test_fcpxml_rejects_unsupported_titles_without_writing(tmp_path):
 def test_edl_rejects_speed_instead_of_silently_losing_it(tmp_path):
     with pytest.raises(ValueError, match='变速|speed'):
         exporter.MultiFormatExporter().export_edl(make_project(speed=2), str(tmp_path / 'edit.edl'))
+
+
+@pytest.mark.parametrize('method,suffix', [
+    ('export_fcpxml', 'fcpxml'), ('export_capcut_draft', 'json')
+])
+def test_export_rejects_source_window_beyond_known_asset_duration(tmp_path, method, suffix):
+    project = make_project()
+    project.assets = [{'path': project.tracks[0].clips[0].source_path, 'duration': 2}]
+    path = tmp_path / f'invalid.{suffix}'
+    with pytest.raises(ValueError, match='素材时长|源区间'):
+        getattr(exporter.MultiFormatExporter(), method)(project, str(path))
+    assert not path.exists()
 
 
 def test_capcut_reference_materials_and_speed(tmp_path):

@@ -6018,10 +6018,7 @@
                 if (!projectId) {
                     throw new Error('缺少真实混剪项目ID，请先完成第6步智能混剪成片后再导出剪映草稿');
                 }
-                const bgmPath = selectedBGM || (function () {
-                    const rxMp = document.getElementById('rxMusicPath');
-                    return rxMp ? (rxMp.value || '').trim() : '';
-                })();
+                const bgmPath = resultData.bgm_path || '';
                 const finalVideoPath = resultData.video_path || resultData.output_path || resultData.output_file || '';
                 const response = await requestRemixDraftJson('/api/remix/export-jianying-draft', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -6031,6 +6028,7 @@
                         final_video_path: finalVideoPath || undefined,
                         audio_paths: Array.isArray(resultData.audio_paths) ? resultData.audio_paths : [],
                         bgm_path: bgmPath || undefined,
+                        source_audio_replaced: resultData.source_audio_replaced === true,
                         subtitle_text: resultData.subtitle_text || '',
                         draft_dir: draftDir || undefined
                     })

@@ -226,6 +226,13 @@ class DraftTimelineRegressionTests(unittest.TestCase):
             self.assertEqual([t['type'] for t in result['tracks']], ['video'])
             self.assertEqual(result['tracks'][0]['segments'][0]['volume'], 0)
 
+    def test_remix_replaced_audio_mutes_video_even_without_voice(self):
+        with tempfile.TemporaryDirectory() as temp:
+            result = self._export(Path(temp), [
+                {'source_start': 0, 'source_end': 2, 'source_audio_replaced': True},
+            ])
+            self.assertEqual(result['tracks'][0]['segments'][0]['volume'], 0)
+
     def test_remix_without_voice_preserves_source_audio(self):
         with tempfile.TemporaryDirectory() as temp:
             result = self._export(Path(temp), [{'source_start': 0, 'source_end': 2}])

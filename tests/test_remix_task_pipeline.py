@@ -10,6 +10,8 @@ import pytest
 
 from backend.engine.video_processor import VideoProcessor
 from backend.services import task_service
+from backend.api import remix_api
+from flask import Flask
 from backend.services.task_service import TaskService
 
 
@@ -77,6 +79,9 @@ def test_music_timeline_preserves_export_speed(service, workdir, monkeypatch):
     assert clip['final_duration'] == 1.0
     assert clip['speed_factor'] == 1.5
     assert clip['end'] - clip['start'] == clip['final_duration']
+    output = completed_output(service)
+    assert output['bgm_path'] == str(bgm)
+    assert output['source_audio_replaced'] is True
 
 
 @pytest.mark.parametrize('bgm_duration,has_audio,accepted', [
@@ -111,11 +116,72 @@ def test_general_bgm_requires_probe_audio_and_matching_duration(
     }})
     output = completed_output(service)
     assert output['output_path'].endswith('_with_bgm.mp4') is accepted
+    assert output['bgm_path'] == (str(bgm) if accepted else '')
+    assert output['source_audio_replaced'] is accepted
     assert output['duration_tolerance_seconds'] == 0.35
     assert output['timeline'][0]['final_duration'] == 2
     assert output['timeline'][0]['speed_factor'] == 1
     if not accepted:
         assert 'BGM' in caplog.text and '弃用' in caplog.text
+
+
+def test_automatically_selected_bgm_is_saved(service, workdir, monkeypatch):
+    source = workdir / 'source.mp4'
+    source.touch()
+    audio_dir = workdir / 'audio'
+    audio_dir.mkdir()
+    bgm = audio_dir / 'default_bgm.mp3'
+    bgm.touch()
+    monkeypatch.setattr(task_service, 'AUDIO_DIR', audio_dir)
+    monkeypatch.setattr(task_service.subprocess, 'run', lambda *args, **kwargs: Mock(
+        returncode=0, stdout='{"format":{"duration":"20"}}'))
+    processor = Mock()
+
+    def render(*args, **kwargs):
+        Path(kwargs.get('output_path') or args[1]).touch()
+        return True
+
+    processor.get_video_info.return_value = {'duration': 2, 'has_audio': True}
+    processor.cut_video.side_effect = render
+    processor.convert_video.side_effect = render
+    processor.add_audio_to_video.side_effect = render
+    service.video_processor = processor
+    service._run_remix_task('auto-bgm', {'plan': {
+        'video_paths': [str(source)], 'auto_highlight': False,
+        'auto_bgm': True, 'target_duration_seconds': 2,
+    }})
+    output = completed_output(service)
+    assert output['bgm_path'] == str(bgm)
+    assert output['source_audio_replaced'] is True
+
+
+def test_progress_exposes_completed_audio_metadata(monkeypatch):
+    app = Flask(__name__)
+    app.register_blueprint(remix_api.remix_bp, url_prefix='/api/remix')
+    db = Mock()
+    db.get_task.return_value = {'id': 'done', 'status': 'completed', 'output_data': {
+        'bgm_path': 'rendered.mp3', 'source_audio_replaced': True,
+    }}
+    monkeypatch.setattr(remix_api, '_db_manager', db)
+    result = app.test_client().get('/api/remix/progress/done').json['data']
+    assert result['bgm_path'] == 'rendered.mp3'
+    assert result['source_audio_replaced'] is True
+
+
+def test_export_passes_replaced_audio_to_draft_timeline(monkeypatch, tmp_path):
+    source = tmp_path / 'source.mp4'
+    source.touch()
+    app = Flask(__name__)
+    app.register_blueprint(remix_api.remix_bp, url_prefix='/api/remix')
+    service = Mock()
+    service.export_jianying_draft.return_value = {}
+    monkeypatch.setattr(remix_api, 'remix_service', service)
+    response = app.test_client().post('/api/remix/export-jianying-draft', json={
+        'project_id': 'A', 'timeline': [{'source_video': str(source), 'source_start': 0, 'source_end': 2}],
+        'bgm_path': 'rendered.mp3', 'source_audio_replaced': True,
+    })
+    assert response.json['code'] == 0
+    assert service.export_jianying_draft.call_args.kwargs['timeline'][0]['source_audio_replaced'] is True
 
 
 def make_media(path, duration, audio=False, size='96x64', fps=30):

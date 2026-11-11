@@ -259,6 +259,7 @@ class TaskService:
             auto_highlight_used = False
             beat_remix_used = False
             beat_remix_failure: str = ''
+            applied_bgm_path = ''
 
             def _resolve_bgm_path():
                 explicit = plan.get('bgm_file') or plan.get('music_path')
@@ -491,6 +492,7 @@ class TaskService:
                                     music_out = output_dir / f'{task_id}_beat_with_bgm.mp4'
                                     self._emit_progress(task_id, 80, '添加BGM', '正在添加背景音乐...')
                                     _add_bgm_exact(str(merged_path), str(bgm_obj), str(music_out))
+                                    applied_bgm_path = str(bgm_obj)
                                     final_path = music_out
                                     used_beat_remix = True
                                     beat_remix_used = True
@@ -736,6 +738,7 @@ class TaskService:
                                             pass
                                     else:
                                         final_path = music_out
+                                        applied_bgm_path = str(bgm_obj)
                         except Exception as e:
                             logger.error(f'叠加BGM失败: {e}', exc_info=True)
 
@@ -846,6 +849,8 @@ class TaskService:
                 'advanced_style': plan.get('advanced_style') or '',
                 'timeline': timeline,
                 'audio_paths': audio_paths,
+                'bgm_path': applied_bgm_path,
+                'source_audio_replaced': bool(applied_bgm_path),
                 'subtitle_text': subtitle_text,
                 'auto_voiceover_requested': bool(plan.get('auto_voiceover', False)),
             }
@@ -928,6 +933,8 @@ class TaskService:
                         'auto_highlight_used': auto_highlight_used,
                         'timeline': timeline,
                         'audio_paths': audio_paths,
+                        'bgm_path': applied_bgm_path,
+                        'source_audio_replaced': bool(applied_bgm_path),
                         'subtitle_text': subtitle_text,
                     })
                     self.db_manager.update_project(project_id, {
