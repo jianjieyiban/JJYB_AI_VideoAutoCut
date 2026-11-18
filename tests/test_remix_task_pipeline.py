@@ -155,6 +155,45 @@ def test_automatically_selected_bgm_is_saved(service, workdir, monkeypatch):
     assert output['source_audio_replaced'] is True
 
 
+def test_draft_voiceover_excludes_clips_removed_by_target_duration(service, workdir):
+    source = workdir / 'source.mp4'
+    source.touch()
+    processor = Mock()
+    processor.get_video_info.side_effect = lambda path: {
+        'duration': 2.0 if Path(path) == source else 1.0,
+    }
+
+    def render(*args, **kwargs):
+        Path(kwargs.get('output_path') or args[1]).touch()
+        return True
+
+    processor.cut_video.side_effect = render
+    processor.convert_video.side_effect = render
+    processor.merge_videos_with_transitions.side_effect = render
+    service.video_processor = processor
+    service.tts_engine = Mock()
+
+    def synthesize(**kwargs):
+        Path(kwargs['output_path']).write_bytes(b'audio')
+        return True
+
+    service.tts_engine.synthesize.side_effect = synthesize
+    service._run_remix_task('draft-voice', {'plan': {
+        'video_paths': [str(source)], 'target_duration_seconds': 1,
+        'auto_voiceover': True, 'voice': 'test', 'auto_bgm': False,
+        'clips': [
+            {'video_path': str(source), 'start_time': 0, 'end_time': 1, 'description': '保留片段'},
+            {'video_path': str(source), 'start_time': 1, 'end_time': 2, 'description': '裁掉片段'},
+        ],
+    }})
+    output = completed_output(service)
+    assert len(output['timeline']) == 1
+    assert service.tts_engine.synthesize.call_args.kwargs['text'] == '保留片段'
+    assert output['subtitle_text'] == '保留片段'
+    assert output['audio_paths']
+    processor.add_audio_to_video.assert_not_called()
+
+
 def test_progress_exposes_completed_audio_metadata(monkeypatch):
     app = Flask(__name__)
     app.register_blueprint(remix_api.remix_bp, url_prefix='/api/remix')

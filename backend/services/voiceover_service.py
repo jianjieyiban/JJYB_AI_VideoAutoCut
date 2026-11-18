@@ -8,6 +8,7 @@ AI配音服务 - 完整实现
 import logging
 import json
 import uuid
+import shutil
 import subprocess
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -15,6 +16,7 @@ from datetime import datetime
 
 from backend.config.paths import PROJECT_ROOT
 from backend.engine.audio_processor import AudioProcessor
+from backend.utils.file_utils import get_audio_duration_safe
 
 logger = logging.getLogger(__name__)
 
@@ -197,21 +199,16 @@ class VoiceoverService:
                 reference_audio = (advanced_config or {}).get('reference_audio', '')
                 if not reference_audio:
                     raise RuntimeError('请先上传参考音频后再试听 IndexTTS2 克隆语音')
-                if output_path.exists():
-                    output_path.unlink()
                 result = self.generate_clone_voiceover(
                     text=text,
                     reference_audio=reference_audio,
                     engine='indextts2',
                     voice_config=advanced_config or {},
-                    output_dir=str(output_path.parent),
                 )
-                # 复制或移动到目标路径
-                result_path = result.get('output_path') or result.get('audio_path')
-                if result_path and Path(result_path).exists():
-                    import shutil
-                    shutil.copy2(str(result_path), str(output_path))
-                if output_path.exists() and output_path.stat().st_size > 0:
+                source = Path(result['absolute_path'])
+                if source.is_file() and source.stat().st_size > 0:
+                    output_path = output_path.with_suffix('.wav')
+                    shutil.copy2(source, output_path)
                     metadata = {
                         'engine_requested': 'indextts2',
                         'engine_used': 'indextts2',
@@ -286,21 +283,7 @@ class VoiceoverService:
 
     def _probe_audio_duration(self, path: Path) -> float:
         """使用 ffprobe 读取音频时长，失败时返回 0。"""
-        try:
-            cmd = [
-                'ffprobe', '-v', 'error',
-                '-show_entries', 'format=duration',
-                '-of', 'default=noprint_wrappers=1:nokey=1',
-                str(path)
-            ]
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
-            if result.returncode == 0:
-                dur = (result.stdout or '').strip()
-                if dur:
-                    return float(dur)
-        except Exception:
-            pass
-        return 0.0
+        return get_audio_duration_safe(str(path))
 
     def _register_audio_to_project(self, project_id: str, audio_path: Path,
                                     metadata: Optional[Dict] = None) -> None:
@@ -524,6 +507,9 @@ class VoiceoverService:
                 'cache_strategy': voice_config.get('cache_strategy', 'smart')
             }
 
+            if requested_engine == 'indextts2':
+                advanced_config['reference_audio'] = voice_config.get('reference_audio')
+
             logger.info(
                 '📋 配音配置: engine_requested=%s, voice=%s, rate=%s, volume=%s, emotion=%s',
                 requested_engine or 'default',
@@ -536,7 +522,7 @@ class VoiceoverService:
             # 生成输出路径（统一到 PROJECT_ROOT/output/audios）
             output_dir = PROJECT_ROOT / 'output' / 'audios'
             output_dir.mkdir(parents=True, exist_ok=True)
-            output_path = output_dir / f"voiceover_{datetime.now().strftime('%Y%m%d%H%M%S')}.mp3"
+            output_path = output_dir / f'voiceover_{uuid.uuid4().hex}.mp3'
 
             result = self._synthesize_with_fallback(
                 text=text,
@@ -553,7 +539,7 @@ class VoiceoverService:
             # 若提供了项目ID，将生成的音频登记为素材并写入项目统一 tracks
             if project_id:
                 try:
-                    self._register_audio_to_project(project_id, output_path, result.metadata)
+                    self._register_audio_to_project(project_id, Path(result), result.metadata)
                 except Exception as perr:
                     logger.warning(f'⚠️ 配音写入项目素材/tracks 失败（不影响生成结果）: {perr}')
 
@@ -581,9 +567,13 @@ class VoiceoverService:
 
             for i, text in enumerate(texts):
                 try:
-                    output_path = self.generate_voiceover(text, voice_config)
-                    output_paths.append(output_path)
+                    output_paths.append(self.generate_voiceover(text, voice_config))
+                except Exception as e:
+                    logger.error(f'❗ 生成第{i+1}段配音失败: {e}')
+                    output_paths.append(None)
+                    continue
 
+                try:
                     # 发送进度更新
                     progress = (i + 1) / len(texts) * 100
                     self.socketio.emit('voiceover_progress', {
@@ -593,8 +583,7 @@ class VoiceoverService:
                     })
 
                 except Exception as e:
-                    logger.error(f'❗ 生成第{i+1}段配音失败: {e}')
-                    output_paths.append(None)
+                    logger.warning('发送第 %s 段配音进度失败: %s', i + 1, e)
 
             success_count = len([p for p in output_paths if p])
             logger.info(f'✅ 批量配音完成: {success_count}/{len(texts)}')
@@ -767,9 +756,7 @@ class VoiceoverService:
 
             output_dir = PROJECT_ROOT / 'output' / 'previews'
             output_dir.mkdir(parents=True, exist_ok=True)
-            # 克隆语音的预览文件名加上引擎前缀，避免冲突
-            safe_engine = (engine or 'default').replace('/', '_').replace('\\', '_')
-            output_path = output_dir / f"preview_{safe_engine}_{voice_id[:50]}.mp3"
+            output_path = output_dir / f'preview_{uuid.uuid4().hex}.mp3'
 
             result = self._synthesize_with_fallback(
                 text=sample_text,
@@ -802,7 +789,9 @@ class VoiceoverService:
             cutoff_ts = datetime.now().timestamp() - max_age_hours * 3600
             deleted = 0
 
-            for f in preview_dir.glob('preview_*.mp3'):
+            for f in preview_dir.glob('preview_*'):
+                if f.suffix.lower() not in {'.mp3', '.wav'} or not f.is_file():
+                    continue
                 try:
                     stat = f.stat()
                     if stat.st_mtime < cutoff_ts:
@@ -1052,9 +1041,8 @@ class VoiceoverService:
                 if not target_dir.is_absolute():
                     target_dir = PROJECT_ROOT / target_dir
                 target_dir.mkdir(parents=True, exist_ok=True)
-                target_file = target_dir / f"clone_{datetime.now().strftime('%Y%m%d%H%M%S')}.wav"
-                import shutil as _shutil
-                _shutil.copy2(str(out_path), str(target_file))
+                target_file = target_dir / f'clone_{uuid.uuid4().hex}.wav'
+                shutil.copy2(out_path, target_file)
                 out_path = target_file
 
             # 计算 URL（仅当文件位于项目内时）

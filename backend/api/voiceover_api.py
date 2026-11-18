@@ -10,6 +10,7 @@ from pathlib import Path
 from flask import Blueprint, request, jsonify
 
 from backend.config.paths import PROJECT_ROOT
+from backend.utils.file_utils import get_audio_duration_safe
 
 logger = logging.getLogger(__name__)
 
@@ -165,15 +166,16 @@ def batch_generate():
             getattr(p, 'metadata', None) if p else None
             for p in output_paths
         ]
+        has_success = any(rel_list)
         return jsonify({
-            'code': 0,
-            'msg': '批量生成完成',
+            'code': 0 if has_success else 1,
+            'msg': '批量生成完成' if has_success else '批量配音未生成任何音频',
             'data': {
                 'audio_paths': rel_list,
                 'audio_urls': url_list,
                 'syntheses': metadata_list,
             },
-        })
+        }), (200 if has_success else 500)
     except Exception as e:
         logger.error(f'批量生成失败: {e}', exc_info=True)
         return jsonify({'code': 1, 'msg': f'生成失败: {str(e)}', 'data': None}), 500
@@ -228,20 +230,11 @@ def preview_voice():
 
         # 时长 / 大小 / 真实引擎 元数据
         size_kb = 0
-        duration_ms = 0
         try:
             size_kb = round(p.stat().st_size / 1024.0, 1)
         except Exception:
             pass
-        try:
-            from mutagen.mp3 import MP3 as _MP3
-            try:
-                audio_info = _MP3(str(p)).info
-                duration_ms = int(audio_info.length * 1000)
-            except Exception:
-                pass
-        except Exception:
-            duration_ms = 0
+        duration_ms = round(get_audio_duration_safe(str(p)) * 1000)
         meta = getattr(audio_path_obj, 'metadata', None) or {}
         engine_used = meta.get('engine_used') or engine or 'unknown'
         fallback_used = bool(meta.get('fallback_used', False))

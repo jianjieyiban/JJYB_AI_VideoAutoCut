@@ -9,6 +9,9 @@ import os
 import shutil
 import hashlib
 import logging
+import json
+import math
+import subprocess
 from pathlib import Path
 from typing import List, Optional, Dict
 from datetime import datetime
@@ -49,6 +52,30 @@ def get_file_size(file_path: str) -> int:
     except Exception as e:
         logger.error(f'获取文件大小失败: {e}')
         return 0
+
+
+def get_audio_duration_safe(file_path: str) -> float:
+    """读取首个具有有效时长的音频流（秒）；探测失败或无有效时长时返回 0。"""
+    try:
+        path = Path(file_path).absolute()
+        if not path.is_file():
+            return 0.0
+        result = subprocess.run(
+            ['ffprobe', '-v', 'error', '-select_streams', 'a',
+             '-show_entries', 'stream=duration', '-of', 'json', str(path)],
+            capture_output=True, text=True, timeout=15,
+        )
+        if result.returncode == 0:
+            for stream in json.loads(result.stdout).get('streams', []):
+                try:
+                    duration = float(stream.get('duration'))
+                except (TypeError, ValueError):
+                    continue
+                if math.isfinite(duration) and duration > 0:
+                    return duration
+    except (OSError, subprocess.SubprocessError, ValueError):
+        pass
+    return 0.0
 
 
 def format_file_size(size_bytes: int) -> str:

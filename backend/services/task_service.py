@@ -757,9 +757,8 @@ class TaskService:
             voiceover_error = ''
             if bool(plan.get('auto_voiceover', False)):
                 narration_parts = [
-                    str(clip.get('description') or '').strip()
-                    for clip in (plan.get('clips') or []) if isinstance(clip, dict)
-                    and str(clip.get('description') or '').strip()
+                    text for clip in timeline
+                    if (text := clip['subtitle_text'].strip())
                 ]
                 if not narration_parts:
                     voiceover_error = '未找到可用于自动配音的真实片段文本'

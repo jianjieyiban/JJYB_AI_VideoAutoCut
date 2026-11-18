@@ -1214,8 +1214,9 @@ class CommentaryServiceEnhanced:
 
     def _validated_voice_segments(self, segments: Any) -> list:
         """返回可复用的前端分段配音文件路径（按序号排序）；兼容两种结构：
-        A. 旧格式：segment.status=='ready' + segment.voice_path + segment.duration>0
-        B. 新工作台格式：segment.audio_path / segment.audio_url + (segment.duration or segment.duration_seconds)
+        A. 旧格式：segment.status=='ready' + segment.voice_path
+        B. 新工作台格式：segment.audio_path / segment.audio_url
+        两种格式均使用音频文件的实测时长。
         任一 segment 无效时，仅跳过该段，不再整体放弃，以免"已经配好很多段但因为1段空白全部重生成"。
         """
         return [Path(item['voice_path']) for item in self._validated_voice_segment_records(segments)]
@@ -1245,16 +1246,8 @@ class CommentaryServiceEnhanced:
                 path_value = path_value[len('/api/download/'):]
             if not path_value:
                 continue
-            # 时长校验（宽松：允许 0 时长，但实际文件不存在时再过滤）
-            duration = 0.0
-            for _dk in ('duration', 'duration_seconds'):
-                try:
-                    _dv = float(segment.get(_dk, 0) or 0)
-                    if _dv > 0:
-                        duration = _dv
-                        break
-                except (TypeError, ValueError):
-                    pass
+            if not status_ok:
+                continue
             # 找文件
             audio_file = Path(path_value)
             if not audio_file.is_absolute():
@@ -1269,20 +1262,9 @@ class CommentaryServiceEnhanced:
                         continue
             except Exception:
                 continue
-            # 如果 duration 还是 0，则用 ffprobe 实测兜底
+            from backend.utils.file_utils import get_audio_duration_safe
+            duration = get_audio_duration_safe(str(audio_file))
             if duration <= 0:
-                try:
-                    from backend.utils.file_utils import get_audio_duration_safe
-                    _ffd = float(get_audio_duration_safe(str(audio_file)) or 0.0)
-                    if _ffd > 0:
-                        duration = _ffd
-                        segment['duration'] = duration
-                        segment['duration_seconds'] = duration
-                except Exception:
-                    pass
-            if duration <= 0:
-                continue
-            if not status_ok:
                 continue
             text = str(segment.get('text') or '').strip()
             if not text:

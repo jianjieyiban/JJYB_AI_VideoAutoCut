@@ -506,7 +506,7 @@ class TTSEngine:
             probe = subprocess.run(
                 ['ffprobe', '-v', 'error', '-show_streams', '-show_entries',
                  'format=duration:stream=codec_type,duration', '-of', 'json', str(candidate)],
-                capture_output=True, text=True, timeout=10, check=False,
+                stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=10, check=False,
             )
             data = json.loads(probe.stdout or '{}') if probe.returncode == 0 else {}
             streams = data.get('streams') or []
@@ -517,7 +517,7 @@ class TTSEngine:
                 return False
             silence = subprocess.run(
                 ['ffmpeg', '-v', 'error', '-i', str(candidate), '-af', 'volumedetect', '-f', 'null', '-'],
-                capture_output=True, text=True, timeout=12, check=False,
+                stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=12, check=False,
             )
             match = re.search(r'max_volume:\s*(-?(?:inf|\d+(?:\.\d+)?)?)\s*dB', silence.stderr or '', re.I)
             if match and match.group(1).lower() == '-inf':
@@ -756,7 +756,7 @@ class TTSEngine:
             # 转换为 MP3
             try:
                 cmd = ['ffmpeg', '-y', '-i', str(tmp_wav), '-ar', '22050', '-ac', '1', str(out_path)]
-                proc = subprocess.run(cmd, capture_output=True, timeout=15, check=False)
+                proc = subprocess.run(cmd, stdin=subprocess.DEVNULL, capture_output=True, timeout=15, check=False)
                 if proc.returncode != 0:
                     logger.error(f'ffmpeg 转换失败: {proc.stderr[:300].decode("utf-8", errors="ignore") if hasattr(proc.stderr, "decode") else proc.stderr}')
                     return False
@@ -1078,9 +1078,9 @@ class TTSEngine:
             engine = 'edge-tts'
 
         if engine not in self.available_engines and engine != 'edge-tts':
-            logger.warning(f'引擎 {engine} 不在 available_engines 中，尝试回退 Edge-TTS')
-            # 兜底 Edge-TTS（免费、稳定）
-            engine = 'edge-tts'
+            self._set_last_error(f'TTS engine {engine} is unavailable or disabled')
+            logger.warning(self.last_error)
+            return False
 
         # 提取并记录高级配置
         if advanced_config:
@@ -1106,7 +1106,8 @@ class TTSEngine:
                 result = self.synthesize_gtts(text, output_path, voice=voice, advanced_config=advanced_config, **kwargs)
 
             elif engine == 'coqui':
-                result = self.synthesize_coqui(text, output_path, advanced_config=advanced_config, **kwargs)
+                model_kwargs = {'model_name': kwargs['model_name']} if 'model_name' in kwargs else {}
+                result = self.synthesize_coqui(text, output_path, advanced_config=advanced_config, **model_kwargs)
 
             elif engine == 'azure':
                 result = self.synthesize_azure_tts(text, output_path, voice=voice, pitch=pitch, advanced_config=advanced_config, **kwargs)
@@ -1129,6 +1130,9 @@ class TTSEngine:
             return result
 
         except Exception as e:
+            self._set_last_error(f'{engine} synthesis failed: {type(e).__name__}: {e}')
+            self._remove_partial_output(output_path)
+            self._remove_partial_output(str(Path(output_path).with_suffix('.timestamps.json')))
             logger.error(f'语音合成失败: {e}', exc_info=True)
             return False
 
@@ -1493,7 +1497,7 @@ class TTSEngine:
             ]
 
             logger.info(f'🎛️ 应用音频后处理: {" ".join(cmd)}')
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+            result = subprocess.run(cmd, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=120)
 
             if result.returncode == 0 and tmp_path.exists():
                 # 替换原文件
